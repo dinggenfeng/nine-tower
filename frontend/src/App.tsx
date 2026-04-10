@@ -1,8 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./components/Layout/MainLayout";
+import ProjectLayout from "./components/Layout/ProjectLayout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ProjectList from "./pages/project/ProjectList";
+import ProjectSettings from "./pages/project/ProjectSettings";
+import MemberManagement from "./pages/project/MemberManagement";
 import { useAuthStore } from "./stores/authStore";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -28,6 +31,10 @@ export default function App() {
       >
         <Route index element={<Navigate to="/projects" replace />} />
         <Route path="projects" element={<ProjectList />} />
+        <Route path="projects/:id" element={<ProjectLayout />}>
+          <Route path="settings" element={<ProjectSettings />} />
+          <Route path="members" element={<MemberManagement />} />
+        </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
