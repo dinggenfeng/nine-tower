@@ -8,45 +8,52 @@ import type {
   UpdateMemberRoleRequest,
 } from '../types/entity/Project';
 
-export function createProject(data: CreateProjectRequest) {
-  return request.post<Project>('/api/projects', data);
+export async function createProject(data: CreateProjectRequest): Promise<Project> {
+  const res = await request.post<Project>('/api/projects', data);
+  return res.data;
 }
 
-export function getMyProjects() {
-  return request.get<Project[]>('/api/projects');
+export async function getMyProjects(): Promise<Project[]> {
+  const res = await request.get<Project[]>('/api/projects');
+  return res.data;
 }
 
-export function getProject(id: number) {
-  return request.get<Project>(`/api/projects/${id}`);
+export async function getProject(id: number): Promise<Project> {
+  const res = await request.get<Project>(`/api/projects/${id}`);
+  return res.data;
 }
 
-export function updateProject(id: number, data: UpdateProjectRequest) {
-  return request.put<Project>(`/api/projects/${id}`, data);
+export async function updateProject(id: number, data: UpdateProjectRequest): Promise<Project> {
+  const res = await request.put<Project>(`/api/projects/${id}`, data);
+  return res.data;
 }
 
-export function deleteProject(id: number) {
-  return request.delete<void>(`/api/projects/${id}`);
+export async function deleteProject(id: number): Promise<void> {
+  await request.delete<void>(`/api/projects/${id}`);
 }
 
-export function getMembers(projectId: number) {
-  return request.get<ProjectMember[]>(`/api/projects/${projectId}/members`);
+export async function getMembers(projectId: number): Promise<ProjectMember[]> {
+  const res = await request.get<ProjectMember[]>(`/api/projects/${projectId}/members`);
+  return res.data;
 }
 
-export function addMember(projectId: number, data: AddMemberRequest) {
-  return request.post<ProjectMember>(`/api/projects/${projectId}/members`, data);
+export async function addMember(projectId: number, data: AddMemberRequest): Promise<ProjectMember> {
+  const res = await request.post<ProjectMember>(`/api/projects/${projectId}/members`, data);
+  return res.data;
 }
 
-export function removeMember(projectId: number, userId: number) {
-  return request.delete<void>(`/api/projects/${projectId}/members/${userId}`);
+export async function removeMember(projectId: number, userId: number): Promise<void> {
+  await request.delete<void>(`/api/projects/${projectId}/members/${userId}`);
 }
 
-export function updateMemberRole(
+export async function updateMemberRole(
   projectId: number,
   userId: number,
   data: UpdateMemberRoleRequest
-) {
-  return request.put<ProjectMember>(
+): Promise<ProjectMember> {
+  const res = await request.put<ProjectMember>(
     `/api/projects/${projectId}/members/${userId}`,
     data
   );
+  return res.data;
 }

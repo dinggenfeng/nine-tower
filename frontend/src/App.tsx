@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import MainLayout from "./components/Layout/MainLayout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
+import ProjectList from "./pages/project/ProjectList";
 import { useAuthStore } from "./stores/authStore";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -26,10 +27,7 @@ export default function App() {
         }
       >
         <Route index element={<Navigate to="/projects" replace />} />
-        <Route
-          path="projects"
-          element={<div style={{ padding: 24 }}>Projects — coming in Plan 2</div>}
-        />
+        <Route path="projects" element={<ProjectList />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
