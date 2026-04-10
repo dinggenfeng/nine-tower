@@ -50,7 +50,7 @@ export default function MemberManagement() {
   const handleAdd = async () => {
     const values = await form.validateFields();
     await addMember(projectId, values);
-    message.success('Member added');
+    message.success('成员添加成功');
     setAddModalOpen(false);
     form.resetFields();
     fetchMembers();
@@ -58,7 +58,7 @@ export default function MemberManagement() {
 
   const handleRemove = async (userId: number) => {
     await removeMember(projectId, userId);
-    message.success('Member removed');
+    message.success('成员已移除');
     fetchMembers();
   };
 
@@ -67,15 +67,15 @@ export default function MemberManagement() {
     role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER'
   ) => {
     await updateMemberRole(projectId, userId, { role });
-    message.success('Role updated');
+    message.success('角色更新成功');
     fetchMembers();
   };
 
   const columns = [
-    { title: 'Username', dataIndex: 'username', key: 'username' },
-    { title: 'Email', dataIndex: 'email', key: 'email' },
+    { title: '用户名', dataIndex: 'username', key: 'username' },
+    { title: '邮箱', dataIndex: 'email', key: 'email' },
     {
-      title: 'Role',
+      title: '角色',
       dataIndex: 'role',
       key: 'role',
       render: (role: string, record: ProjectMember) =>
@@ -84,19 +84,19 @@ export default function MemberManagement() {
             value={role}
             onChange={(value) => handleRoleChange(record.userId, value as 'PROJECT_ADMIN' | 'PROJECT_MEMBER')}
             options={[
-              { value: 'PROJECT_ADMIN', label: 'Admin' },
-              { value: 'PROJECT_MEMBER', label: 'Member' },
+              { value: 'PROJECT_ADMIN', label: '管理员' },
+              { value: 'PROJECT_MEMBER', label: '成员' },
             ]}
             style={{ width: 120 }}
           />
         ) : (
           <Tag color={role === 'PROJECT_ADMIN' ? 'blue' : 'default'}>
-            {role === 'PROJECT_ADMIN' ? 'Admin' : 'Member'}
+            {role === 'PROJECT_ADMIN' ? '管理员' : '成员'}
           </Tag>
         ),
     },
     {
-      title: 'Joined',
+      title: '加入时间',
       dataIndex: 'joinedAt',
       key: 'joinedAt',
       render: (date: string) => new Date(date).toLocaleDateString(),
@@ -108,11 +108,11 @@ export default function MemberManagement() {
             key: 'action',
             render: (_: unknown, record: ProjectMember) => (
               <Popconfirm
-                title="Remove this member?"
+                title="确认移除此成员？"
                 onConfirm={() => handleRemove(record.userId)}
               >
                 <Button type="link" danger>
-                  Remove
+                  移除
                 </Button>
               </Popconfirm>
             ),
@@ -124,14 +124,14 @@ export default function MemberManagement() {
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Members</h2>
+        <h2 style={{ margin: 0 }}>成员管理</h2>
         {isAdmin && (
           <Button
             type="primary"
             icon={<PlusOutlined />}
             onClick={() => setAddModalOpen(true)}
           >
-            Add Member
+            添加成员
           </Button>
         )}
       </div>
@@ -145,7 +145,7 @@ export default function MemberManagement() {
       />
 
       <Modal
-        title="Add Member"
+        title="添加成员"
         open={addModalOpen}
         onOk={handleAdd}
         onCancel={() => {
@@ -156,20 +156,20 @@ export default function MemberManagement() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="userId"
-            label="User ID"
-            rules={[{ required: true, message: 'Please enter the user ID' }]}
+            label="用户 ID"
+            rules={[{ required: true, message: '请输入用户 ID' }]}
           >
             <InputNumber style={{ width: '100%' }} min={1} />
           </Form.Item>
           <Form.Item
             name="role"
-            label="Role"
-            rules={[{ required: true, message: 'Please select a role' }]}
+            label="角色"
+            rules={[{ required: true, message: '请选择角色' }]}
           >
             <Select
               options={[
-                { value: 'PROJECT_ADMIN', label: 'Admin' },
-                { value: 'PROJECT_MEMBER', label: 'Member' },
+                { value: 'PROJECT_ADMIN', label: '管理员' },
+                { value: 'PROJECT_MEMBER', label: '成员' },
               ]}
             />
           </Form.Item>

@@ -15,11 +15,11 @@ export default function Register() {
     try {
       const res = await authApi.register(values);
       login(res.data.token, res.data.user);
-      message.success("Registration successful");
+      message.success("注册成功");
       navigate("/projects");
     } catch (err: unknown) {
       const error = err as { message?: string };
-      message.error(error?.message ?? "Registration failed");
+      message.error(error?.message ?? "注册失败");
     }
   };
 
@@ -35,44 +35,44 @@ export default function Register() {
     >
       <Card style={{ width: 400 }}>
         <Title level={2} style={{ textAlign: "center", marginBottom: 32 }}>
-          Create Account
+          创建账号
         </Title>
         <Form form={form} onFinish={onFinish} layout="vertical" size="large">
           <Form.Item
             name="username"
             rules={[
-              { required: true, message: "Please enter a username" },
-              { min: 3, message: "Username must be at least 3 characters" },
-              { max: 50, message: "Username must be at most 50 characters" },
+              { required: true, message: "请输入用户名" },
+              { min: 3, message: "用户名至少3个字符" },
+              { max: 50, message: "用户名最多50个字符" },
             ]}
           >
-            <Input prefix={<UserOutlined />} placeholder="Username" />
+            <Input prefix={<UserOutlined />} placeholder="用户名" />
           </Form.Item>
           <Form.Item
             name="email"
             rules={[
-              { required: true, message: "Please enter your email" },
-              { type: "email", message: "Please enter a valid email" },
+              { required: true, message: "请输入邮箱" },
+              { type: "email", message: "请输入有效的邮箱" },
             ]}
           >
-            <Input prefix={<MailOutlined />} placeholder="Email" />
+            <Input prefix={<MailOutlined />} placeholder="邮箱" />
           </Form.Item>
           <Form.Item
             name="password"
             rules={[
-              { required: true, message: "Please enter a password" },
-              { min: 8, message: "Password must be at least 8 characters" },
+              { required: true, message: "请输入密码" },
+              { min: 8, message: "密码至少8个字符" },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="Password" />
+            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
-              Register
+              注册
             </Button>
           </Form.Item>
           <div style={{ textAlign: "center" }}>
-            Already have an account? <Link to="/login">Login</Link>
+            已有账号？<Link to="/login">登录</Link>
           </div>
         </Form>
       </Card>

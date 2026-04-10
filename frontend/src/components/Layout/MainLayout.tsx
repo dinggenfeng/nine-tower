@@ -13,7 +13,7 @@ export default function MainLayout() {
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Logout",
+      label: "退出登录",
       onClick: () => {
         logout();
         navigate("/login");
@@ -39,7 +39,7 @@ export default function MainLayout() {
         >
           <ProjectOutlined style={{ fontSize: 20 }} />
           <Typography.Text strong style={{ fontSize: 16 }}>
-            Ansible Playbook System
+            Ansible 剧本系统
           </Typography.Text>
         </Space>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">

@@ -30,14 +30,14 @@ export default function ProjectLayout() {
   }, [id, setCurrentProject]);
 
   const menuItems = [
-    { key: 'roles', icon: <CodeOutlined />, label: 'Roles' },
-    { key: 'host-groups', icon: <DatabaseOutlined />, label: 'Host Groups' },
-    { key: 'variables', icon: <AppstoreOutlined />, label: 'Variables' },
-    { key: 'environments', icon: <CloudOutlined />, label: 'Environments' },
-    { key: 'tags', icon: <TagsOutlined />, label: 'Tags' },
-    { key: 'playbooks', icon: <PlayCircleOutlined />, label: 'Playbooks' },
-    { key: 'members', icon: <TeamOutlined />, label: 'Members' },
-    { key: 'settings', icon: <SettingOutlined />, label: 'Settings' },
+    { key: 'roles', icon: <CodeOutlined />, label: '角色列表' },
+    { key: 'host-groups', icon: <DatabaseOutlined />, label: '主机组' },
+    { key: 'variables', icon: <AppstoreOutlined />, label: '变量' },
+    { key: 'environments', icon: <CloudOutlined />, label: '环境' },
+    { key: 'tags', icon: <TagsOutlined />, label: '标签' },
+    { key: 'playbooks', icon: <PlayCircleOutlined />, label: '剧本' },
+    { key: 'members', icon: <TeamOutlined />, label: '成员' },
+    { key: 'settings', icon: <SettingOutlined />, label: '设置' },
   ];
 
   const currentKey = location.pathname.split('/').pop() || 'roles';
@@ -46,7 +46,7 @@ export default function ProjectLayout() {
     <Layout style={{ minHeight: '100%' }}>
       <Sider width={200} style={{ background: '#fff' }}>
         <div style={{ padding: '16px', fontWeight: 'bold', fontSize: 16 }}>
-          {currentProject?.name || 'Loading...'}
+          {currentProject?.name || '加载中...'}
         </div>
         <Menu
           mode="inline"

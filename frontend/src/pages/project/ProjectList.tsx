@@ -35,7 +35,7 @@ export default function ProjectList() {
   const handleCreate = async () => {
     const values = await form.validateFields();
     await createProject(values);
-    message.success('Project created');
+    message.success('项目创建成功');
     setCreateModalOpen(false);
     form.resetFields();
     fetchProjects();
@@ -43,11 +43,11 @@ export default function ProjectList() {
 
   const handleDelete = (id: number) => {
     Modal.confirm({
-      title: 'Delete project?',
-      content: 'This action cannot be undone.',
+      title: '确认删除项目？',
+      content: '此操作无法撤销。',
       onOk: async () => {
         await deleteProject(id);
-        message.success('Project deleted');
+        message.success('项目已删除');
         fetchProjects();
       },
     });
@@ -56,13 +56,13 @@ export default function ProjectList() {
   return (
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>My Projects</h2>
+        <h2 style={{ margin: 0 }}>我的项目</h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setCreateModalOpen(true)}
         >
-          New Project
+          新建项目
         </Button>
       </div>
 
@@ -70,7 +70,7 @@ export default function ProjectList() {
         grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }}
         loading={loading}
         dataSource={projects}
-        locale={{ emptyText: <Empty description="No projects yet" /> }}
+        locale={{ emptyText: <Empty description="暂无项目" /> }}
         renderItem={(project) => (
           <List.Item>
             <Card
@@ -102,11 +102,11 @@ export default function ProjectList() {
                   <span>
                     {project.name}{' '}
                     <Tag color={project.myRole === 'PROJECT_ADMIN' ? 'blue' : 'default'}>
-                      {project.myRole === 'PROJECT_ADMIN' ? 'Admin' : 'Member'}
+                      {project.myRole === 'PROJECT_ADMIN' ? '管理员' : '成员'}
                     </Tag>
                   </span>
                 }
-                description={project.description || 'No description'}
+                description={project.description || '暂无描述'}
               />
             </Card>
           </List.Item>
@@ -114,7 +114,7 @@ export default function ProjectList() {
       />
 
       <Modal
-        title="Create Project"
+        title="创建项目"
         open={createModalOpen}
         onOk={handleCreate}
         onCancel={() => {
@@ -125,12 +125,12 @@ export default function ProjectList() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Project Name"
-            rules={[{ required: true, message: 'Please enter a project name' }]}
+            label="项目名称"
+            rules={[{ required: true, message: '请输入项目名称' }]}
           >
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label="描述">
             <TextArea rows={3} maxLength={500} />
           </Form.Item>
         </Form>

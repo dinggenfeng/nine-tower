@@ -29,7 +29,7 @@ export default function ProjectSettings() {
     try {
       const updated = await updateProject(Number(id), values);
       setCurrentProject(updated);
-      message.success('Project updated');
+      message.success('项目更新成功');
     } finally {
       setLoading(false);
     }
@@ -37,41 +37,41 @@ export default function ProjectSettings() {
 
   const handleDelete = () => {
     deleteProject(Number(id)).then(() => {
-      message.success('Project deleted');
+      message.success('项目已删除');
       navigate('/projects');
     });
   };
 
   if (currentProject?.myRole !== 'PROJECT_ADMIN') {
-    return <div>Only project admins can access settings.</div>;
+    return <div>仅项目管理员可访问设置。</div>;
   }
 
   return (
     <div>
-      <h2>Project Settings</h2>
+      <h2>项目设置</h2>
       <Card style={{ maxWidth: 600 }}>
         <Form form={form} layout="vertical" onFinish={handleUpdate}>
           <Form.Item
             name="name"
-            label="Project Name"
-            rules={[{ required: true, message: 'Project name is required' }]}
+            label="项目名称"
+            rules={[{ required: true, message: '请输入项目名称' }]}
           >
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item name="description" label="Description">
+          <Form.Item name="description" label="描述">
             <TextArea rows={3} maxLength={500} />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" loading={loading}>
-              Save
+              保存
             </Button>
           </Form.Item>
         </Form>
       </Card>
 
-      <Card style={{ maxWidth: 600, marginTop: 24 }} title="Danger Zone">
+      <Card style={{ maxWidth: 600, marginTop: 24 }} title="危险区域">
         <Button danger onClick={handleDelete}>
-          Delete Project
+          删除项目
         </Button>
       </Card>
     </div>

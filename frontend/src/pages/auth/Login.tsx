@@ -15,11 +15,11 @@ export default function Login() {
     try {
       const res = await authApi.login(values);
       login(res.data.token, res.data.user);
-      message.success("Login successful");
+      message.success("登录成功");
       navigate("/projects");
     } catch (err: unknown) {
       const error = err as { message?: string };
-      message.error(error?.message ?? "Login failed");
+      message.error(error?.message ?? "登录失败");
     }
   };
 
@@ -35,28 +35,28 @@ export default function Login() {
     >
       <Card style={{ width: 400 }}>
         <Title level={2} style={{ textAlign: "center", marginBottom: 32 }}>
-          Ansible Playbook System
+          Ansible 剧本系统
         </Title>
         <Form form={form} onFinish={onFinish} layout="vertical" size="large">
           <Form.Item
             name="username"
-            rules={[{ required: true, message: "Please enter your username" }]}
+            rules={[{ required: true, message: "请输入用户名" }]}
           >
-            <Input prefix={<UserOutlined />} placeholder="Username" />
+            <Input prefix={<UserOutlined />} placeholder="用户名" />
           </Form.Item>
           <Form.Item
             name="password"
-            rules={[{ required: true, message: "Please enter your password" }]}
+            rules={[{ required: true, message: "请输入密码" }]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="Password" />
+            <Input.Password prefix={<LockOutlined />} placeholder="密码" />
           </Form.Item>
           <Form.Item>
             <Button type="primary" htmlType="submit" block>
-              Login
+              登录
             </Button>
           </Form.Item>
           <div style={{ textAlign: "center" }}>
-            Don&apos;t have an account? <Link to="/register">Register</Link>
+            还没有账号？<Link to="/register">注册</Link>
           </div>
         </Form>
       </Card>
