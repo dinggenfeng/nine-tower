@@ -1,13 +1,34 @@
 import { useEffect, useState } from 'react';
-import { Card, Skeleton, Tabs } from 'antd';
-import { useParams } from 'react-router-dom';
+import { Button, Card, Empty, Skeleton, Tabs } from 'antd';
+import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons';
+import { useParams, useNavigate } from 'react-router-dom';
 import type { Role } from '../../types/entity/Role';
 import { getRole } from '../../api/role';
 
-const { TabPane } = Tabs;
+function ComingSoon() {
+  return (
+    <Empty
+      image={<InboxOutlined style={{ fontSize: 48, color: '#94a3b8' }} />}
+      description={
+        <span style={{ color: '#64748b' }}>即将推出</span>
+      }
+      style={{ padding: '48px 0' }}
+    />
+  );
+}
+
+const tabItems = [
+  { key: 'tasks', label: 'Tasks', children: <ComingSoon /> },
+  { key: 'handlers', label: 'Handlers', children: <ComingSoon /> },
+  { key: 'templates', label: 'Templates', children: <ComingSoon /> },
+  { key: 'files', label: 'Files', children: <ComingSoon /> },
+  { key: 'vars', label: 'Vars', children: <ComingSoon /> },
+  { key: 'defaults', label: 'Defaults', children: <ComingSoon /> },
+];
 
 export default function RoleDetail() {
-  const { roleId } = useParams<{ id: string; roleId: string }>();
+  const { id, roleId } = useParams<{ id: string; roleId: string }>();
+  const navigate = useNavigate();
   const [role, setRole] = useState<Role | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -26,42 +47,32 @@ export default function RoleDetail() {
 
   return (
     <div>
-      <Card title={role?.name} style={{ marginBottom: 16 }}>
-        <p>{role?.description || '无描述'}</p>
+      <div style={{ marginBottom: 16 }}>
+        <Button
+          type="text"
+          icon={<ArrowLeftOutlined />}
+          onClick={() => navigate(`/projects/${id}/roles`)}
+          style={{ color: '#64748b', padding: '4px 8px' }}
+        >
+          返回 Roles
+        </Button>
+      </div>
+      <Card
+        style={{ marginBottom: 16 }}
+        title={
+          <span style={{ fontSize: 18, fontWeight: 600 }}>{role?.name}</span>
+        }
+      >
+        <p style={{ color: '#64748b', margin: 0 }}>
+          {role?.description || '无描述'}
+        </p>
       </Card>
       <Card bodyStyle={{ padding: 0 }}>
-        <Tabs defaultActiveKey="tasks" style={{ padding: '0 24px' }}>
-          <TabPane tab="Tasks" key="tasks">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-          <TabPane tab="Handlers" key="handlers">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-          <TabPane tab="Templates" key="templates">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-          <TabPane tab="Files" key="files">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-          <TabPane tab="Vars" key="vars">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-          <TabPane tab="Defaults" key="defaults">
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#999' }}>
-              即将推出
-            </div>
-          </TabPane>
-        </Tabs>
+        <Tabs
+          defaultActiveKey="tasks"
+          items={tabItems}
+          style={{ padding: '0 24px' }}
+        />
       </Card>
     </div>
   );
