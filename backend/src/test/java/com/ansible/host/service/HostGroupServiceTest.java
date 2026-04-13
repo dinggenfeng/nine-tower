@@ -50,12 +50,25 @@ class HostGroupServiceTest {
     request.setName("Web Servers");
     request.setDescription("All web servers");
 
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers")).thenReturn(false);
     when(hostGroupRepository.save(any(HostGroup.class))).thenReturn(testHostGroup);
 
     HostGroupResponse response = hostGroupService.createHostGroup(10L, request, 10L);
 
     assertThat(response.getName()).isEqualTo("Web Servers");
     verify(hostGroupRepository).save(any(HostGroup.class));
+  }
+
+  @Test
+  void createHostGroup_fails_when_name_duplicate() {
+    CreateHostGroupRequest request = new CreateHostGroupRequest();
+    request.setName("Web Servers");
+
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers")).thenReturn(true);
+
+    assertThatThrownBy(() -> hostGroupService.createHostGroup(10L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("already exists");
   }
 
   @Test

@@ -22,6 +22,9 @@ public class HostGroupService {
   @Transactional
   public HostGroupResponse createHostGroup(Long projectId, CreateHostGroupRequest request, Long currentUserId) {
     accessChecker.checkMembership(projectId, currentUserId);
+    if (hostGroupRepository.existsByProjectIdAndName(projectId, request.getName())) {
+      throw new IllegalArgumentException("A host group with this name already exists in the project");
+    }
     HostGroup hostGroup = new HostGroup();
     hostGroup.setProjectId(projectId);
     hostGroup.setName(request.getName());
@@ -57,6 +60,11 @@ public class HostGroupService {
             .findById(hostGroupId)
             .orElseThrow(() -> new IllegalArgumentException("Host group not found"));
     accessChecker.checkOwnerOrAdmin(hostGroup.getProjectId(), hostGroup.getCreatedBy(), currentUserId);
+    if (StringUtils.hasText(request.getName()) && !request.getName().equals(hostGroup.getName())) {
+      if (hostGroupRepository.existsByProjectIdAndName(hostGroup.getProjectId(), request.getName())) {
+        throw new IllegalArgumentException("A host group with this name already exists in the project");
+      }
+    }
     if (StringUtils.hasText(request.getName())) {
       hostGroup.setName(request.getName());
     }
