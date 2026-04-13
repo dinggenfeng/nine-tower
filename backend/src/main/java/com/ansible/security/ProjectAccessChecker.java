@@ -24,4 +24,14 @@ public class ProjectAccessChecker {
       throw new SecurityException("Only project admins can perform this action");
     }
   }
+
+  public void checkOwnerOrAdmin(Long projectId, Long resourceCreatedBy, Long currentUserId) {
+    if (resourceCreatedBy.equals(currentUserId)) {
+      return;
+    }
+    ProjectMember member = checkMembership(projectId, currentUserId);
+    if (member.getRole() != ProjectRole.PROJECT_ADMIN) {
+      throw new SecurityException("Only the creator or project admins can perform this action");
+    }
+  }
 }
