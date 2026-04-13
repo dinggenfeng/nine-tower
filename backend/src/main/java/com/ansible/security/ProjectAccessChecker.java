@@ -26,7 +26,7 @@ public class ProjectAccessChecker {
   }
 
   public void checkOwnerOrAdmin(Long projectId, Long resourceCreatedBy, Long currentUserId) {
-    if (resourceCreatedBy.equals(currentUserId)) {
+    if (currentUserId.equals(resourceCreatedBy)) {
       return;
     }
     ProjectMember member = checkMembership(projectId, currentUserId);
