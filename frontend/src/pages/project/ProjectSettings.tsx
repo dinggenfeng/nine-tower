@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import type { UpdateProjectRequest } from '../../types/entity/Project';
 import { updateProject, deleteProject } from '../../api/project';
 import { useProjectStore } from '../../stores/projectStore';
+import PageHeader from '../../components/PageHeader';
 
 const { TextArea } = Input;
 
@@ -48,7 +49,7 @@ export default function ProjectSettings() {
 
   return (
     <div>
-      <h2>项目设置</h2>
+      <PageHeader title="项目设置" description="管理项目基本信息" />
       <Card style={{ maxWidth: 600 }}>
         <Form form={form} layout="vertical" onFinish={handleUpdate}>
           <Form.Item
@@ -69,7 +70,18 @@ export default function ProjectSettings() {
         </Form>
       </Card>
 
-      <Card style={{ maxWidth: 600, marginTop: 24 }} title="危险区域">
+      <Card
+        title="危险区域"
+        style={{
+          maxWidth: 600,
+          marginTop: 24,
+          borderLeft: '3px solid #ef4444',
+          background: '#fef2f2',
+        }}
+      >
+        <p style={{ color: '#64748b', marginBottom: 16 }}>
+          删除项目后，所有数据将永久丢失且无法恢复。
+        </p>
         <Button danger onClick={handleDelete}>
           删除项目
         </Button>
