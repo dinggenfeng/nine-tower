@@ -4,6 +4,7 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { Role, CreateRoleRequest } from '../../types/entity/Role';
 import { createRole, deleteRole, getRoles, updateRole } from '../../api/role';
+import PageHeader from '../../components/PageHeader';
 
 export default function RoleList() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -72,17 +73,31 @@ export default function RoleList() {
       dataIndex: 'name',
       key: 'name',
       render: (name: string, record: Role) => (
-        <a onClick={() => navigate(`/projects/${pid}/roles/${record.id}`)}>{name}</a>
+        <a
+          onClick={() => navigate(`/projects/${pid}/roles/${record.id}`)}
+          style={{ color: '#3b82f6', fontWeight: 500 }}
+        >
+          {name}
+        </a>
       ),
     },
     { title: '描述', dataIndex: 'description', key: 'description' },
     {
       title: '操作',
       key: 'action',
+      width: 120,
       render: (_: unknown, record: Role) => (
         <Space>
-          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openModal(record)} />
-          <Popconfirm title="确认删除此 Role？" onConfirm={() => handleDelete(record.id)}>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => openModal(record)}
+          />
+          <Popconfirm
+            title="确认删除此 Role？"
+            onConfirm={() => handleDelete(record.id)}
+          >
             <Button type="text" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -92,12 +107,19 @@ export default function RoleList() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>Roles</h2>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
-          新建 Role
-        </Button>
-      </div>
+      <PageHeader
+        title="Roles"
+        description="管理 Ansible Roles"
+        action={
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => openModal()}
+          >
+            新建 Role
+          </Button>
+        }
+      />
 
       <Table
         columns={columns}
@@ -111,10 +133,17 @@ export default function RoleList() {
         title={editingRole ? '编辑 Role' : '新建 Role'}
         open={modalOpen}
         onOk={editingRole ? handleUpdate : handleCreate}
-        onCancel={() => { setModalOpen(false); form.resetFields(); }}
+        onCancel={() => {
+          setModalOpen(false);
+          form.resetFields();
+        }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item name="name" label="名称" rules={[{ required: true, message: '请输入名称' }]}>
+          <Form.Item
+            name="name"
+            label="名称"
+            rules={[{ required: true, message: '请输入名称' }]}
+          >
             <Input maxLength={100} />
           </Form.Item>
           <Form.Item name="description" label="描述">
