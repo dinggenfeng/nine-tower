@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
-import { Button, Card, Empty, List, Modal, Form, Input, message, Tag } from 'antd';
+import { Button, Empty, List, Modal, Form, Input, message, Dropdown } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
   SettingOutlined,
+  MoreOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { Project, CreateProjectRequest } from '../../types/entity/Project';
 import { getMyProjects, createProject, deleteProject } from '../../api/project';
+import { colors } from '../../theme';
 
 const { TextArea } = Input;
 
@@ -55,8 +57,15 @@ export default function ProjectList() {
 
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>我的项目</h2>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+          marginBottom: 8,
+        }}
+      >
+        <h2 style={{ margin: 0, color: '#1e293b' }}>我的项目</h2>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -65,52 +74,145 @@ export default function ProjectList() {
           新建项目
         </Button>
       </div>
+      <div style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>
+        共 {projects.length} 个项目
+      </div>
 
       <List
         grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }}
         loading={loading}
         dataSource={projects}
-        locale={{ emptyText: <Empty description="暂无项目" /> }}
-        renderItem={(project) => (
-          <List.Item>
-            <Card
-              hoverable
-              onClick={() => navigate(`/projects/${project.id}/roles`)}
-              actions={[
-                project.myRole === 'PROJECT_ADMIN' && (
-                  <SettingOutlined
-                    key="settings"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/projects/${project.id}/settings`);
+        locale={{
+          emptyText: (
+            <Empty description="暂无项目">
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setCreateModalOpen(true)}
+              >
+                创建第一个项目
+              </Button>
+            </Empty>
+          ),
+        }}
+        renderItem={(project) => {
+          const isAdmin = project.myRole === 'PROJECT_ADMIN';
+          const initial = project.name[0]?.toUpperCase() || 'P';
+
+          const menuItems = [
+            isAdmin && {
+              key: 'settings',
+              icon: <SettingOutlined />,
+              label: '项目设置',
+              onClick: () => navigate(`/projects/${project.id}/settings`),
+            },
+            isAdmin && {
+              key: 'delete',
+              icon: <DeleteOutlined />,
+              label: '删除项目',
+              danger: true,
+              onClick: () => handleDelete(project.id),
+            },
+          ].filter(Boolean);
+
+          return (
+            <List.Item>
+              <div
+                onClick={() => navigate(`/projects/${project.id}/roles`)}
+                style={{
+                  background: '#fff',
+                  borderRadius: 8,
+                  padding: 16,
+                  border: '1px solid #e2e8f0',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+                  e.currentTarget.style.borderColor = '#cbd5e1';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
+                  e.currentTarget.style.borderColor = '#e2e8f0';
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 32,
+                      height: 32,
+                      background: '#1e293b',
+                      borderRadius: 6,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 14,
+                      fontWeight: 600,
+                      color: '#f1f5f9',
                     }}
-                  />
-                ),
-                project.myRole === 'PROJECT_ADMIN' && (
-                  <DeleteOutlined
-                    key="delete"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(project.id);
-                    }}
-                  />
-                ),
-              ].filter(Boolean)}
-            >
-              <Card.Meta
-                title={
-                  <span>
-                    {project.name}{' '}
-                    <Tag color={project.myRole === 'PROJECT_ADMIN' ? 'blue' : 'default'}>
-                      {project.myRole === 'PROJECT_ADMIN' ? '管理员' : '成员'}
-                    </Tag>
-                  </span>
-                }
-                description={project.description || '暂无描述'}
-              />
-            </Card>
-          </List.Item>
-        )}
+                  >
+                    {initial}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span
+                      style={{
+                        background: isAdmin ? colors.tagAdminBg : colors.tagMemberBg,
+                        color: isAdmin ? colors.tagAdminColor : colors.tagMemberColor,
+                        fontSize: 11,
+                        padding: '2px 8px',
+                        borderRadius: 4,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {isAdmin ? '管理员' : '成员'}
+                    </span>
+                    {menuItems.length > 0 && (
+                      <Dropdown
+                        menu={{ items: menuItems }}
+                        trigger={['click']}
+                        placement="bottomRight"
+                      >
+                        <MoreOutlined
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ color: '#94a3b8', fontSize: 16 }}
+                        />
+                      </Dropdown>
+                    )}
+                  </div>
+                </div>
+                <div
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 600,
+                    color: '#1e293b',
+                    marginTop: 12,
+                  }}
+                >
+                  {project.name}
+                </div>
+                <div
+                  style={{
+                    fontSize: 13,
+                    color: '#64748b',
+                    marginTop: 4,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {project.description || '暂无描述'}
+                </div>
+              </div>
+            </List.Item>
+          );
+        }}
       />
 
       <Modal
