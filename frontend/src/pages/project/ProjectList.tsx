@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Button, Empty, List, Modal, Form, Input, message, Dropdown } from 'antd';
+import { Button, Empty, List, Modal, Form, Input, message, Dropdown, type MenuProps } from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -99,21 +99,25 @@ export default function ProjectList() {
           const isAdmin = project.myRole === 'PROJECT_ADMIN';
           const initial = project.name[0]?.toUpperCase() || 'P';
 
-          const menuItems = [
-            isAdmin && {
-              key: 'settings',
-              icon: <SettingOutlined />,
-              label: '项目设置',
-              onClick: () => navigate(`/projects/${project.id}/settings`),
-            },
-            isAdmin && {
-              key: 'delete',
-              icon: <DeleteOutlined />,
-              label: '删除项目',
-              danger: true,
-              onClick: () => handleDelete(project.id),
-            },
-          ].filter(Boolean);
+          const menuItems: MenuProps['items'] = [
+            ...(isAdmin
+              ? [
+                  {
+                    key: 'settings',
+                    icon: <SettingOutlined />,
+                    label: '项目设置',
+                    onClick: () => navigate(`/projects/${project.id}/settings`),
+                  },
+                  {
+                    key: 'delete',
+                    icon: <DeleteOutlined />,
+                    label: '删除项目',
+                    danger: true,
+                    onClick: () => handleDelete(project.id),
+                  },
+                ]
+              : []),
+          ];
 
           return (
             <List.Item>
@@ -173,7 +177,7 @@ export default function ProjectList() {
                     >
                       {isAdmin ? '管理员' : '成员'}
                     </span>
-                    {menuItems.length > 0 && (
+                    {menuItems && menuItems.length > 0 && (
                       <Dropdown
                         menu={{ items: menuItems }}
                         trigger={['click']}
