@@ -6,6 +6,9 @@ import Register from "./pages/auth/Register";
 import ProjectList from "./pages/project/ProjectList";
 import ProjectSettings from "./pages/project/ProjectSettings";
 import MemberManagement from "./pages/project/MemberManagement";
+import HostGroupManager from "./pages/host/HostGroupManager";
+import RoleList from "./pages/role/RoleList";
+import RoleDetail from "./pages/role/RoleDetail";
 import { useAuthStore } from "./stores/authStore";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -34,6 +37,9 @@ export default function App() {
         <Route path="projects/:id" element={<ProjectLayout />}>
           <Route path="settings" element={<ProjectSettings />} />
           <Route path="members" element={<MemberManagement />} />
+          <Route path="host-groups" element={<HostGroupManager />} />
+          <Route path="roles" element={<RoleList />} />
+          <Route path="roles/:roleId" element={<RoleDetail />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
