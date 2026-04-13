@@ -1,0 +1,47 @@
+/* frontend/src/components/Layout/MainLayout.module.css */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0f172a;
+  padding: 0 24px;
+  height: 56px;
+  line-height: 56px;
+  border-bottom: 1px solid #1e293b;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.logoIcon {
+  font-size: 20px;
+  color: #3b82f6;
+}
+
+.logoText {
+  font-size: 16px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.userArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.username {
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.content {
+  padding: 24px;
+  background: #f1f5f9;
+  min-height: calc(100vh - 56px);
+}

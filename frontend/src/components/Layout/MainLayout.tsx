@@ -1,57 +1,44 @@
-import { LogoutOutlined, ProjectOutlined } from "@ant-design/icons";
-import { Avatar, Dropdown, Layout, MenuProps, Space, Typography } from "antd";
-import { useNavigate, Outlet } from "react-router-dom";
-import { useAuthStore } from "../../stores/authStore";
-
-const { Header, Content } = Layout;
+import { LogoutOutlined, ProjectOutlined } from '@ant-design/icons';
+import { Avatar, Dropdown, Layout, type MenuProps } from 'antd';
+import { useNavigate, Outlet } from 'react-router-dom';
+import { useAuthStore } from '../../stores/authStore';
+import styles from './MainLayout.module.css';
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  const userMenuItems: MenuProps["items"] = [
+  const userMenuItems: MenuProps['items'] = [
     {
-      key: "logout",
+      key: 'logout',
       icon: <LogoutOutlined />,
-      label: "退出登录",
+      label: '退出登录',
       onClick: () => {
         logout();
-        navigate("/login");
+        navigate('/login');
       },
     },
   ];
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Header
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          background: "#fff",
-          padding: "0 24px",
-          borderBottom: "1px solid #f0f0f0",
-        }}
-      >
-        <Space
-          style={{ cursor: "pointer" }}
-          onClick={() => navigate("/projects")}
-        >
-          <ProjectOutlined style={{ fontSize: 20 }} />
-          <Typography.Text strong style={{ fontSize: 16 }}>
-            Ansible 剧本系统
-          </Typography.Text>
-        </Space>
+    <Layout style={{ minHeight: '100vh' }}>
+      <Layout.Header className={styles.header}>
+        <div className={styles.logo} onClick={() => navigate('/projects')}>
+          <ProjectOutlined className={styles.logoIcon} />
+          <span className={styles.logoText}>Ansible Playbook Studio</span>
+        </div>
         <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-          <Space style={{ cursor: "pointer" }}>
-            <Avatar>{user?.username?.[0]?.toUpperCase()}</Avatar>
-            <Typography.Text>{user?.username}</Typography.Text>
-          </Space>
+          <div className={styles.userArea}>
+            <Avatar size="small" style={{ backgroundColor: '#3b82f6' }}>
+              {user?.username?.[0]?.toUpperCase()}
+            </Avatar>
+            <span className={styles.username}>{user?.username}</span>
+          </div>
         </Dropdown>
-      </Header>
-      <Content style={{ padding: "24px", background: "#f0f2f5" }}>
+      </Layout.Header>
+      <Layout.Content className={styles.content}>
         <Outlet />
-      </Content>
+      </Layout.Content>
     </Layout>
   );
 }
