@@ -16,3 +16,5 @@ frontend/.env.local
 
 # Misc
 *.log
+frontend/.worktrees
+.worktrees/
