@@ -16,6 +16,8 @@ app:
   jwt:
     secret: ${JWT_SECRET:ansible-playbook-system-jwt-secret-key-must-be-at-least-256bits}
     expiration-ms: 28800000
+  encryption:
+    key: ${ENCRYPTION_KEY:dGVzdC1lbmNyeXB0aW9uLWtleS0zMi1ieXRlcw==}
 
 server:
   port: 8080
