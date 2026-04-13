@@ -1,5 +1,6 @@
 package com.ansible.common;
 
+import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import javax.crypto.Cipher;
@@ -17,6 +18,7 @@ public class EncryptionService {
   private static final String ALGORITHM = "AES/GCM/NoPadding";
   private static final int GCM_IV_LENGTH = 12;
   private static final int GCM_TAG_LENGTH = 128;
+  private static final SecureRandom RANDOM = new SecureRandom();
 
   private final SecretKeySpec secretKey;
 
@@ -34,7 +36,7 @@ public class EncryptionService {
     }
     try {
       byte[] iv = new byte[GCM_IV_LENGTH];
-      new SecureRandom().nextBytes(iv);
+      RANDOM.nextBytes(iv);
       Cipher cipher = Cipher.getInstance(ALGORITHM);
       GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
       cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec);
@@ -43,8 +45,8 @@ public class EncryptionService {
       System.arraycopy(iv, 0, combined, 0, iv.length);
       System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);
       return Base64.getEncoder().encodeToString(combined);
-    } catch (Exception e) {
-      throw new RuntimeException("Encryption failed", e);
+    } catch (GeneralSecurityException e) {
+      throw new EncryptionException("Encryption failed", e);
     }
   }
 
@@ -62,8 +64,8 @@ public class EncryptionService {
       GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
       cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
       return new String(cipher.doFinal(ciphertext), java.nio.charset.StandardCharsets.UTF_8);
-    } catch (Exception e) {
-      throw new RuntimeException("Decryption failed", e);
+    } catch (GeneralSecurityException | IllegalArgumentException e) {
+      throw new EncryptionException("Decryption failed", e);
     }
   }
 

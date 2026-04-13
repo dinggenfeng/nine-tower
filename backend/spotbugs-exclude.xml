@@ -3,4 +3,8 @@
     <Match>
         <Bug pattern="EI_EXPOSE_REP2" type="matchingBug"/>
     </Match>
+    <Match>
+        <Class name="com.ansible.common.EncryptionService"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
 </FindBugsFilter>

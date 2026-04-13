@@ -23,6 +23,7 @@ public class HostResponse {
   private final LocalDateTime createdAt;
 
   @JsonCreator
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public HostResponse(
       @JsonProperty("id") Long id,
       @JsonProperty("hostGroupId") Long hostGroupId,

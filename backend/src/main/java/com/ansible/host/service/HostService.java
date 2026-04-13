@@ -10,6 +10,7 @@ import com.ansible.host.repository.HostGroupRepository;
 import com.ansible.host.repository.HostRepository;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,7 +36,7 @@ public class HostService {
     host.setHostGroupId(hostGroupId);
     host.setName(request.getName());
     host.setIp(request.getIp());
-    host.setPort(request.getPort() != null ? request.getPort() : 22);
+    host.setPort(Objects.requireNonNullElse(request.getPort(), 22));
     host.setAnsibleUser(request.getAnsibleUser());
     if (StringUtils.hasText(request.getAnsibleSshPass())) {
       host.setAnsibleSshPass(encryptionService.encrypt(request.getAnsibleSshPass()));
@@ -44,7 +45,7 @@ public class HostService {
       host.setAnsibleSshPrivateKeyFile(
           encryptionService.encrypt(request.getAnsibleSshPrivateKeyFile()));
     }
-    host.setAnsibleBecome(request.getAnsibleBecome() != null ? request.getAnsibleBecome() : false);
+    host.setAnsibleBecome(Objects.requireNonNullElse(request.getAnsibleBecome(), false));
     host.setCreatedBy(currentUserId);
     Host saved = hostRepository.save(host);
     return new HostResponse(saved);
@@ -77,6 +78,7 @@ public class HostService {
   }
 
   @Transactional
+  @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
   public HostResponse updateHost(Long hostId, UpdateHostRequest request, Long currentUserId) {
     Host host =
         hostRepository

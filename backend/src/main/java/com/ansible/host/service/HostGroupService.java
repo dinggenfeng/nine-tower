@@ -64,8 +64,6 @@ public class HostGroupService {
       if (hostGroupRepository.existsByProjectIdAndName(hostGroup.getProjectId(), request.getName())) {
         throw new IllegalArgumentException("A host group with this name already exists in the project");
       }
-    }
-    if (StringUtils.hasText(request.getName())) {
       hostGroup.setName(request.getName());
     }
     if (request.getDescription() != null) {
