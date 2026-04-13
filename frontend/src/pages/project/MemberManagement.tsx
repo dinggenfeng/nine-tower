@@ -7,7 +7,6 @@ import {
   InputNumber,
   Select,
   message,
-  Tag,
   Popconfirm,
 } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
@@ -23,6 +22,8 @@ import {
   updateMemberRole,
 } from '../../api/project';
 import { useProjectStore } from '../../stores/projectStore';
+import { colors } from '../../theme';
+import PageHeader from '../../components/PageHeader';
 
 export default function MemberManagement() {
   const { id } = useParams<{ id: string }>();
@@ -64,7 +65,7 @@ export default function MemberManagement() {
 
   const handleRoleChange = async (
     userId: number,
-    role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER'
+    role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
   ) => {
     await updateMemberRole(projectId, userId, { role });
     message.success('角色更新成功');
@@ -82,7 +83,12 @@ export default function MemberManagement() {
         isAdmin ? (
           <Select
             value={role}
-            onChange={(value) => handleRoleChange(record.userId, value as 'PROJECT_ADMIN' | 'PROJECT_MEMBER')}
+            onChange={(value) =>
+              handleRoleChange(
+                record.userId,
+                value as 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
+              )
+            }
             options={[
               { value: 'PROJECT_ADMIN', label: '管理员' },
               { value: 'PROJECT_MEMBER', label: '成员' },
@@ -90,9 +96,24 @@ export default function MemberManagement() {
             style={{ width: 120 }}
           />
         ) : (
-          <Tag color={role === 'PROJECT_ADMIN' ? 'blue' : 'default'}>
+          <span
+            style={{
+              background:
+                role === 'PROJECT_ADMIN'
+                  ? colors.tagAdminBg
+                  : colors.tagMemberBg,
+              color:
+                role === 'PROJECT_ADMIN'
+                  ? colors.tagAdminColor
+                  : colors.tagMemberColor,
+              fontSize: 12,
+              padding: '2px 8px',
+              borderRadius: 4,
+              fontWeight: 500,
+            }}
+          >
             {role === 'PROJECT_ADMIN' ? '管理员' : '成员'}
-          </Tag>
+          </span>
         ),
     },
     {
@@ -104,14 +125,14 @@ export default function MemberManagement() {
     ...(isAdmin
       ? [
           {
-            title: 'Action',
+            title: '操作',
             key: 'action',
             render: (_: unknown, record: ProjectMember) => (
               <Popconfirm
                 title="确认移除此成员？"
                 onConfirm={() => handleRemove(record.userId)}
               >
-                <Button type="link" danger>
+                <Button type="link" danger size="small">
                   移除
                 </Button>
               </Popconfirm>
@@ -123,18 +144,21 @@ export default function MemberManagement() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-        <h2 style={{ margin: 0 }}>成员管理</h2>
-        {isAdmin && (
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setAddModalOpen(true)}
-          >
-            添加成员
-          </Button>
-        )}
-      </div>
+      <PageHeader
+        title="成员管理"
+        description="管理项目成员和权限"
+        action={
+          isAdmin ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setAddModalOpen(true)}
+            >
+              添加成员
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Table
         columns={columns}
