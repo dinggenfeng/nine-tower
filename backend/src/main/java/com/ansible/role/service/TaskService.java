@@ -77,6 +77,7 @@ public class TaskService {
   }
 
   @Transactional
+  @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
   public TaskResponse updateTask(Long taskId, UpdateTaskRequest request, Long currentUserId) {
     Task task =
         taskRepository

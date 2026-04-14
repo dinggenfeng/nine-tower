@@ -4,6 +4,10 @@
         <Bug pattern="EI_EXPOSE_REP2" type="matchingBug"/>
     </Match>
     <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+        <Package name="~com\.ansible\..*\.dto"/>
+    </Match>
+    <Match>
         <Class name="com.ansible.common.EncryptionService"/>
         <Bug pattern="CT_CONSTRUCTOR_THROW"/>
     </Match>

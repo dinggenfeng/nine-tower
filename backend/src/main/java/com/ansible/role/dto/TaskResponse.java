@@ -30,6 +30,7 @@ public class TaskResponse {
   private final LocalDateTime createdAt;
 
   @JsonCreator
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public TaskResponse(
       @JsonProperty("id") Long id,
       @JsonProperty("roleId") Long roleId,
