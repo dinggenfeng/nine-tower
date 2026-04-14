@@ -4,6 +4,8 @@ import { ArrowLeftOutlined, InboxOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Role } from '../../types/entity/Role';
 import { getRole } from '../../api/role';
+import RoleTasks from './RoleTasks';
+import RoleHandlers from './RoleHandlers';
 
 function ComingSoon() {
   return (
@@ -16,15 +18,6 @@ function ComingSoon() {
     />
   );
 }
-
-const tabItems = [
-  { key: 'tasks', label: 'Tasks', children: <ComingSoon /> },
-  { key: 'handlers', label: 'Handlers', children: <ComingSoon /> },
-  { key: 'templates', label: 'Templates', children: <ComingSoon /> },
-  { key: 'files', label: 'Files', children: <ComingSoon /> },
-  { key: 'vars', label: 'Vars', children: <ComingSoon /> },
-  { key: 'defaults', label: 'Defaults', children: <ComingSoon /> },
-];
 
 export default function RoleDetail() {
   const { id, roleId } = useParams<{ id: string; roleId: string }>();
@@ -44,6 +37,15 @@ export default function RoleDetail() {
   if (loading) {
     return <Skeleton active />;
   }
+
+  const tabItems = [
+    { key: 'tasks', label: 'Tasks', children: <RoleTasks roleId={Number(roleId)} /> },
+    { key: 'handlers', label: 'Handlers', children: <RoleHandlers roleId={Number(roleId)} /> },
+    { key: 'templates', label: 'Templates', children: <ComingSoon /> },
+    { key: 'files', label: 'Files', children: <ComingSoon /> },
+    { key: 'vars', label: 'Vars', children: <ComingSoon /> },
+    { key: 'defaults', label: 'Defaults', children: <ComingSoon /> },
+  ];
 
   return (
     <div>
