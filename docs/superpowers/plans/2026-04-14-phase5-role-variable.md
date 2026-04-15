@@ -328,6 +328,36 @@ class RoleVariableServiceTest {
   }
 
   @Test
+  void updateVariable_duplicateKey() {
+    UpdateRoleVariableRequest request = new UpdateRoleVariableRequest();
+    request.setKey("server_name");
+
+    when(roleVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleVariableRepository.existsByRoleIdAndKey(1L, "server_name")).thenReturn(true);
+
+    assertThatThrownBy(() -> roleVariableService.updateVariable(1L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Variable key already exists in this role");
+  }
+
+  @Test
+  void updateVariable_keyNotChanged() {
+    UpdateRoleVariableRequest request = new UpdateRoleVariableRequest();
+    request.setKey("http_port");
+    request.setValue("9090");
+
+    when(roleVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleVariableRepository.save(any(RoleVariable.class))).thenReturn(testVariable);
+
+    RoleVariableResponse response = roleVariableService.updateVariable(1L, request, 10L);
+
+    assertThat(response).isNotNull();
+    verify(roleVariableRepository).save(any(RoleVariable.class));
+  }
+
+  @Test
   void updateVariable_notFound() {
     UpdateRoleVariableRequest request = new UpdateRoleVariableRequest();
     request.setValue("9090");
@@ -439,7 +469,11 @@ public class RoleVariableService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), variable.getCreatedBy(), currentUserId);
 
-    if (StringUtils.hasText(request.getKey())) {
+    if (StringUtils.hasText(request.getKey())
+        && !request.getKey().equals(variable.getKey())) {
+      if (roleVariableRepository.existsByRoleIdAndKey(variable.getRoleId(), request.getKey())) {
+        throw new IllegalArgumentException("Variable key already exists in this role");
+      }
       variable.setKey(request.getKey());
     }
     if (request.getValue() != null) {
@@ -1090,6 +1124,38 @@ class RoleDefaultVariableServiceTest {
   }
 
   @Test
+  void updateDefault_duplicateKey() {
+    UpdateRoleDefaultVariableRequest request = new UpdateRoleDefaultVariableRequest();
+    request.setKey("server_name");
+
+    when(roleDefaultVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleDefaultVariableRepository.existsByRoleIdAndKey(1L, "server_name")).thenReturn(true);
+
+    assertThatThrownBy(() -> roleDefaultVariableService.updateDefault(1L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Default variable key already exists in this role");
+  }
+
+  @Test
+  void updateDefault_keyNotChanged() {
+    UpdateRoleDefaultVariableRequest request = new UpdateRoleDefaultVariableRequest();
+    request.setKey("http_port");
+    request.setValue("8080");
+
+    when(roleDefaultVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleDefaultVariableRepository.save(any(RoleDefaultVariable.class)))
+        .thenReturn(testVariable);
+
+    RoleDefaultVariableResponse response =
+        roleDefaultVariableService.updateDefault(1L, request, 10L);
+
+    assertThat(response).isNotNull();
+    verify(roleDefaultVariableRepository).save(any(RoleDefaultVariable.class));
+  }
+
+  @Test
   void updateDefault_notFound() {
     UpdateRoleDefaultVariableRequest request = new UpdateRoleDefaultVariableRequest();
     request.setValue("8080");
@@ -1201,7 +1267,12 @@ public class RoleDefaultVariableService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), variable.getCreatedBy(), currentUserId);
 
-    if (StringUtils.hasText(request.getKey())) {
+    if (StringUtils.hasText(request.getKey())
+        && !request.getKey().equals(variable.getKey())) {
+      if (roleDefaultVariableRepository.existsByRoleIdAndKey(
+          variable.getRoleId(), request.getKey())) {
+        throw new IllegalArgumentException("Default variable key already exists in this role");
+      }
       variable.setKey(request.getKey());
     }
     if (request.getValue() != null) {
