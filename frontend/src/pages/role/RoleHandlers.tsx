@@ -3,9 +3,65 @@ import { Button, Form, Input, Modal, Popconfirm, Space, Table, message } from 'a
 import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import type { Handler, CreateHandlerRequest, UpdateHandlerRequest } from '../../types/entity/Task';
 import { createHandler, getHandlers, updateHandler, deleteHandler } from '../../api/handler';
+import ModuleSelect from '../../components/role/ModuleSelect';
+import ModuleParamsForm from '../../components/role/ModuleParamsForm';
+import { getModuleDefinition } from '../../constants/ansibleModules';
 
 interface RoleHandlersProps {
   roleId: number;
+}
+
+/** Merge moduleParams + extraParams into a JSON string for the args field */
+function buildArgsJson(
+  moduleParams: Record<string, unknown> | undefined,
+  extraParams: { key: string; value: string }[] | undefined,
+): string {
+  const result: Record<string, unknown> = {};
+  if (moduleParams) {
+    for (const [k, v] of Object.entries(moduleParams)) {
+      if (v !== undefined && v !== '' && v !== null) {
+        result[k] = v;
+      }
+    }
+  }
+  if (extraParams) {
+    for (const item of extraParams) {
+      if (item.key) {
+        result[item.key] = item.value;
+      }
+    }
+  }
+  return Object.keys(result).length > 0 ? JSON.stringify(result) : '';
+}
+
+/** Parse args JSON string into moduleParams + extraParams for form population */
+function parseArgsToForm(
+  argsJson: string | undefined,
+  moduleName: string | undefined,
+): { moduleParams: Record<string, unknown>; extraParams: { key: string; value: string }[] } {
+  const moduleParams: Record<string, unknown> = {};
+  const extraParams: { key: string; value: string }[] = [];
+  if (!argsJson) return { moduleParams, extraParams };
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(argsJson);
+  } catch {
+    extraParams.push({ key: '', value: argsJson });
+    return { moduleParams, extraParams };
+  }
+
+  const moduleDef = moduleName ? getModuleDefinition(moduleName) : undefined;
+  const knownParams = new Set(moduleDef?.params.map((p) => p.name) ?? []);
+
+  for (const [k, v] of Object.entries(parsed)) {
+    if (knownParams.has(k)) {
+      moduleParams[k] = v;
+    } else {
+      extraParams.push({ key: k, value: String(v) });
+    }
+  }
+  return { moduleParams, extraParams };
 }
 
 export default function RoleHandlers({ roleId }: RoleHandlersProps) {
@@ -13,6 +69,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHandler, setEditingHandler] = useState<Handler | null>(null);
+  const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
   const [form] = Form.useForm();
 
   const fetchHandlers = useCallback(async () => {
@@ -31,16 +88,20 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
 
   const handleCreate = () => {
     setEditingHandler(null);
+    setSelectedModule(undefined);
     form.resetFields();
     setModalOpen(true);
   };
 
   const handleEdit = (handler: Handler) => {
     setEditingHandler(handler);
+    const { moduleParams, extraParams } = parseArgsToForm(handler.args, handler.module);
+    setSelectedModule(handler.module);
     form.setFieldsValue({
       name: handler.name,
       module: handler.module,
-      args: handler.args,
+      moduleParams,
+      extraParams: extraParams.length > 0 ? extraParams : undefined,
       whenCondition: handler.whenCondition,
       register: handler.register,
     });
@@ -55,12 +116,40 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+
+    const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
+    if (moduleDef?.validate) {
+      const errors = moduleDef.validate(values.moduleParams || {});
+      if (Object.keys(errors).length > 0) {
+        const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
+          name: ['moduleParams', field],
+          errors: [msg],
+        }));
+        form.setFields(fieldErrors);
+        return;
+      }
+    }
+
+    const args = buildArgsJson(values.moduleParams, values.extraParams);
+
     if (editingHandler) {
-      const data: UpdateHandlerRequest = { ...values };
+      const data: UpdateHandlerRequest = {
+        name: values.name,
+        module: values.module,
+        args: args || undefined,
+        whenCondition: values.whenCondition,
+        register: values.register,
+      };
       await updateHandler(editingHandler.id, data);
       message.success('已更新');
     } else {
-      const data: CreateHandlerRequest = { ...values };
+      const data: CreateHandlerRequest = {
+        name: values.name,
+        module: values.module,
+        args: args || undefined,
+        whenCondition: values.whenCondition,
+        register: values.register,
+      };
       await createHandler(roleId, data);
       message.success('已创建');
     }
@@ -140,13 +229,16 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
           <Form.Item
             name="module"
             label="模块"
-            rules={[{ required: true, message: '请输入 Ansible 模块名' }]}
+            rules={[{ required: true, message: '请选择 Ansible 模块' }]}
           >
-            <Input placeholder="例如: service, systemd" />
+            <ModuleSelect
+              onChange={(val) => {
+                setSelectedModule(val);
+                form.setFieldsValue({ moduleParams: undefined, extraParams: undefined });
+              }}
+            />
           </Form.Item>
-          <Form.Item name="args" label="参数 (JSON)">
-            <Input.TextArea rows={3} placeholder='{"name": "nginx", "state": "restarted"}' />
-          </Form.Item>
+          <ModuleParamsForm moduleName={selectedModule} />
           <Form.Item name="whenCondition" label="When 条件">
             <Input placeholder="例如: ansible_os_family == 'Debian'" />
           </Form.Item>
