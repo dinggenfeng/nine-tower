@@ -41,7 +41,7 @@ export default function ModuleSelect({ value, onChange }: ModuleSelectProps) {
               icon={<LinkOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(mod.docUrl, '_blank');
+                window.open(mod.docUrl, '_blank', 'noopener,noreferrer');
               }}
               title="查看文档"
             />
