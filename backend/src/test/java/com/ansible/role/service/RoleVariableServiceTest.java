@@ -137,6 +137,35 @@ class RoleVariableServiceTest {
   }
 
   @Test
+  void updateVariable_duplicateKey() {
+    UpdateRoleVariableRequest request = new UpdateRoleVariableRequest();
+    request.setKey("server_name");
+
+    when(roleVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleVariableRepository.existsByRoleIdAndKey(1L, "server_name")).thenReturn(true);
+
+    assertThatThrownBy(() -> roleVariableService.updateVariable(1L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Variable key already exists in this role");
+  }
+
+  @Test
+  void updateVariable_keyNotChanged() {
+    UpdateRoleVariableRequest request = new UpdateRoleVariableRequest();
+    request.setKey("http_port");
+
+    when(roleVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleVariableRepository.save(any(RoleVariable.class))).thenReturn(testVariable);
+
+    RoleVariableResponse response = roleVariableService.updateVariable(1L, request, 10L);
+
+    assertThat(response).isNotNull();
+    verify(roleVariableRepository).save(any(RoleVariable.class));
+  }
+
+  @Test
   void deleteVariable_success() {
     when(roleVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));

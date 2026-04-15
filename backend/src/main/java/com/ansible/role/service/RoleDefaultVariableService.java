@@ -69,7 +69,12 @@ public class RoleDefaultVariableService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), variable.getCreatedBy(), currentUserId);
 
-    if (StringUtils.hasText(request.getKey())) {
+    if (StringUtils.hasText(request.getKey())
+        && !request.getKey().equals(variable.getKey())) {
+      if (roleDefaultVariableRepository.existsByRoleIdAndKey(
+          variable.getRoleId(), request.getKey())) {
+        throw new IllegalArgumentException("Default variable key already exists in this role");
+      }
       variable.setKey(request.getKey());
     }
     if (request.getValue() != null) {

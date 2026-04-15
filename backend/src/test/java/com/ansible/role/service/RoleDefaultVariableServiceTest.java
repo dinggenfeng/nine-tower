@@ -142,6 +142,37 @@ class RoleDefaultVariableServiceTest {
   }
 
   @Test
+  void updateDefault_duplicateKey() {
+    UpdateRoleDefaultVariableRequest request = new UpdateRoleDefaultVariableRequest();
+    request.setKey("server_name");
+
+    when(roleDefaultVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleDefaultVariableRepository.existsByRoleIdAndKey(1L, "server_name")).thenReturn(true);
+
+    assertThatThrownBy(() -> roleDefaultVariableService.updateDefault(1L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Default variable key already exists in this role");
+  }
+
+  @Test
+  void updateDefault_keyNotChanged() {
+    UpdateRoleDefaultVariableRequest request = new UpdateRoleDefaultVariableRequest();
+    request.setKey("http_port");
+
+    when(roleDefaultVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(roleDefaultVariableRepository.save(any(RoleDefaultVariable.class)))
+        .thenReturn(testVariable);
+
+    RoleDefaultVariableResponse response =
+        roleDefaultVariableService.updateDefault(1L, request, 10L);
+
+    assertThat(response).isNotNull();
+    verify(roleDefaultVariableRepository).save(any(RoleDefaultVariable.class));
+  }
+
+  @Test
   void deleteDefault_success() {
     when(roleDefaultVariableRepository.findById(1L)).thenReturn(Optional.of(testVariable));
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
