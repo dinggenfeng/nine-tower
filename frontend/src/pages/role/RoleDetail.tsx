@@ -7,6 +7,7 @@ import { getRole } from '../../api/role';
 import RoleTasks from './RoleTasks';
 import RoleHandlers from './RoleHandlers';
 import RoleVars from './RoleVars';
+import RoleDefaults from './RoleDefaults';
 
 function ComingSoon() {
   return (
@@ -45,7 +46,7 @@ export default function RoleDetail() {
     { key: 'templates', label: 'Templates', children: <ComingSoon /> },
     { key: 'files', label: 'Files', children: <ComingSoon /> },
     { key: 'vars', label: 'Vars', children: <RoleVars roleId={Number(roleId)} /> },
-    { key: 'defaults', label: 'Defaults', children: <ComingSoon /> },
+    { key: 'defaults', label: 'Defaults', children: <RoleDefaults roleId={Number(roleId)} /> },
   ];
 
   return (
