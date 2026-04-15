@@ -118,4 +118,5 @@ Spring Boot 3.x + Java 21 (Maven 单模块)
 - Phase 2 ✅ 项目管理 + 成员管理
 - Phase 3 ✅ 主机组、主机、Role CRUD
 - Phase 4 ✅ Task、Handler CRUD
-- 后续：RoleVariable、RoleDefaultVariable、Template、File、Variable、Environment、Tag、Playbook
+- Phase 5 ✅ RoleVariable、RoleDefaultVariable CRUD
+- 后续：Template、File、Variable、Environment、Tag、Playbook
