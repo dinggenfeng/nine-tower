@@ -76,6 +76,7 @@ public class TemplateService {
   }
 
   @Transactional
+  @SuppressWarnings({"PMD.CognitiveComplexity", "PMD.CyclomaticComplexity"})
   public TemplateResponse updateTemplate(
       Long templateId, UpdateTemplateRequest request, Long currentUserId) {
     Template template =
