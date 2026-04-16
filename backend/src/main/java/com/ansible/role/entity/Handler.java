@@ -32,4 +32,10 @@ public class Handler extends BaseEntity {
 
   @Column(length = 100)
   private String register;
+
+  @Column(name = "become_flag")
+  private Boolean become;
+
+  @Column(name = "become_user", length = 100)
+  private String becomeUser;
 }

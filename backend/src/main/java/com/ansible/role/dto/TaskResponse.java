@@ -26,6 +26,8 @@ public class TaskResponse {
   private final String register;
   private final List<String> notify;
   private final Integer taskOrder;
+  private final Boolean become;
+  private final String becomeUser;
   private final Long createdBy;
   private final LocalDateTime createdAt;
 
@@ -43,6 +45,8 @@ public class TaskResponse {
       @JsonProperty("register") String register,
       @JsonProperty("notify") List<String> notify,
       @JsonProperty("taskOrder") Integer taskOrder,
+      @JsonProperty("become") Boolean become,
+      @JsonProperty("becomeUser") String becomeUser,
       @JsonProperty("createdBy") Long createdBy,
       @JsonProperty("createdAt") LocalDateTime createdAt) {
     this.id = id;
@@ -56,6 +60,8 @@ public class TaskResponse {
     this.register = register;
     this.notify = notify;
     this.taskOrder = taskOrder;
+    this.become = become;
+    this.becomeUser = becomeUser;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
   }
@@ -72,6 +78,8 @@ public class TaskResponse {
     this.register = task.getRegister();
     this.notify = parseNotify(task.getNotify());
     this.taskOrder = task.getTaskOrder();
+    this.become = task.getBecome();
+    this.becomeUser = task.getBecomeUser();
     this.createdBy = task.getCreatedBy();
     this.createdAt = task.getCreatedAt();
   }

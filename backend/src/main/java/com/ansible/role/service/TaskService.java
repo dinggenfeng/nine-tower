@@ -1,14 +1,17 @@
 package com.ansible.role.service;
 
 import com.ansible.role.dto.CreateTaskRequest;
+import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
 import com.ansible.role.entity.Role;
 import com.ansible.role.entity.Task;
+import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,7 @@ public class TaskService {
 
   private final TaskRepository taskRepository;
   private final RoleRepository roleRepository;
+  private final HandlerRepository handlerRepository;
   private final ProjectAccessChecker accessChecker;
 
   @Transactional
@@ -45,6 +49,8 @@ public class TaskService {
     task.setRegister(request.getRegister());
     task.setNotify(toJson(request.getNotify()));
     task.setTaskOrder(request.getTaskOrder());
+    task.setBecome(request.getBecome());
+    task.setBecomeUser(request.getBecomeUser());
     task.setCreatedBy(currentUserId);
     Task saved = taskRepository.save(task);
     return new TaskResponse(saved);
@@ -116,6 +122,12 @@ public class TaskService {
     if (request.getTaskOrder() != null) {
       task.setTaskOrder(request.getTaskOrder());
     }
+    if (request.getBecome() != null) {
+      task.setBecome(request.getBecome());
+    }
+    if (request.getBecomeUser() != null) {
+      task.setBecomeUser(request.getBecomeUser());
+    }
     Task saved = taskRepository.save(task);
     return new TaskResponse(saved);
   }
@@ -132,6 +144,38 @@ public class TaskService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), task.getCreatedBy(), currentUserId);
     taskRepository.delete(task);
+  }
+
+  @Transactional(readOnly = true)
+  public List<HandlerResponse> getNotifiedHandlers(Long taskId, Long currentUserId) {
+    Task task =
+        taskRepository
+            .findById(taskId)
+            .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+    Role role =
+        roleRepository
+            .findById(task.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+
+    List<String> notifyNames = parseNotify(task.getNotify());
+    if (notifyNames.isEmpty()) {
+      return List.of();
+    }
+    return handlerRepository.findAllByRoleIdAndNameIn(task.getRoleId(), notifyNames).stream()
+        .map(HandlerResponse::new)
+        .toList();
+  }
+
+  private static List<String> parseNotify(String notifyJson) {
+    if (notifyJson == null || notifyJson.isBlank()) {
+      return List.of();
+    }
+    try {
+      return MAPPER.readValue(notifyJson, new TypeReference<>() {});
+    } catch (JsonProcessingException e) {
+      return List.of();
+    }
   }
 
   private String toJson(List<String> list) {

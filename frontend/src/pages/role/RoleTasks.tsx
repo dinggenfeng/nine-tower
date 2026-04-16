@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { Task, CreateTaskRequest, UpdateTaskRequest } from '../../types/entity/Task';
 import type { Handler } from '../../types/entity/Task';
 import { createTask, getTasks, updateTask, deleteTask } from '../../api/task';
 import { getHandlers } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
-import ModuleParamsForm from '../../components/role/ModuleParamsForm';
+import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
 import { getModuleDefinition } from '../../constants/ansibleModules';
+import { taskToYaml } from '../../utils/taskToYaml';
 
 interface RoleTasksProps {
   roleId: number;
@@ -73,6 +74,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
+  const [previewYaml, setPreviewYaml] = useState<string>('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -116,6 +119,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       register: task.register,
       notify: task.notify,
       taskOrder: task.taskOrder,
+      become: task.become || false,
+      becomeUser: task.becomeUser,
     });
     setModalOpen(true);
   };
@@ -124,6 +129,36 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     await deleteTask(id);
     message.success('已删除');
     fetchData();
+  };
+
+  const handlePreviewTask = (task: Task) => {
+    setPreviewYaml(taskToYaml(task));
+    setPreviewOpen(true);
+  };
+
+  const handlePreviewForm = () => {
+    const values = form.getFieldsValue();
+    const args = buildArgsJson(values.moduleParams, values.extraParams);
+    setPreviewYaml(
+      taskToYaml({
+        name: values.name,
+        module: values.module,
+        args: args || undefined,
+        whenCondition: values.whenCondition,
+        loop: values.loop,
+        until: values.until,
+        register: values.register,
+        notify: values.notify,
+        become: values.become,
+        becomeUser: values.becomeUser,
+      }),
+    );
+    setPreviewOpen(true);
+  };
+
+  const handleCopyYaml = async () => {
+    await navigator.clipboard.writeText(previewYaml);
+    message.success('已复制');
   };
 
   const handleSubmit = async () => {
@@ -157,6 +192,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         register: values.register,
         notify: values.notify,
         taskOrder: values.taskOrder,
+        become: values.become || false,
+        becomeUser: values.becomeUser,
       };
       await updateTask(editingTask.id, data);
       message.success('已更新');
@@ -171,6 +208,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         register: values.register,
         notify: values.notify,
         taskOrder: values.taskOrder,
+        become: values.become || false,
+        becomeUser: values.becomeUser,
       };
       await createTask(roleId, data);
       message.success('已创建');
@@ -207,9 +246,15 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       render: (_: unknown, record: Task) => (
         <Space size="small">
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handlePreviewTask(record)}
+          />
           <Button
             type="text"
             size="small"
@@ -242,19 +287,38 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       <Modal
         title={editingTask ? '编辑 Task' : '创建 Task'}
         open={modalOpen}
-        onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={640}
+        width={800}
         destroyOnClose
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
+              预览 YAML
+            </Button>
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>取消</Button>
+              <Button type="primary" onClick={handleSubmit}>确定</Button>
+            </Space>
+          </div>
+        }
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入 Task 名称' }]}
-          >
-            <Input placeholder="例如: Install nginx" />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[{ required: true, message: '请输入 Task 名称' }]}
+            >
+              <Input placeholder="例如: Install nginx" />
+            </Form.Item>
+            <Form.Item
+              name="taskOrder"
+              label="顺序"
+              rules={[{ required: true, message: '请输入顺序' }]}
+            >
+              <InputNumber min={1} style={{ width: '100%' }} />
+            </Form.Item>
+          </div>
           <Form.Item
             name="module"
             label="模块"
@@ -267,34 +331,151 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
               }}
             />
           </Form.Item>
-          <ModuleParamsForm moduleName={selectedModule} />
-          <Form.Item name="whenCondition" label="When 条件">
-            <Input placeholder="例如: ansible_os_family == 'Debian'" />
-          </Form.Item>
-          <Form.Item name="loop" label="Loop">
-            <Input placeholder="例如: {{ packages }}" />
-          </Form.Item>
-          <Form.Item name="until" label="Until">
-            <Input placeholder="例如: result.rc == 0" />
-          </Form.Item>
-          <Form.Item name="register" label="Register">
-            <Input placeholder="例如: install_result" />
-          </Form.Item>
-          <Form.Item name="notify" label="Notify (Handler)">
-            <Select
-              mode="multiple"
-              placeholder="选择要通知的 Handler"
-              options={handlers.map((h) => ({ label: h.name, value: h.name }))}
-            />
-          </Form.Item>
-          <Form.Item
-            name="taskOrder"
-            label="顺序"
-            rules={[{ required: true, message: '请输入顺序' }]}
-          >
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <ModuleParamsGrid moduleName={selectedModule} />
+          </div>
+          <ExtraParamsInput />
+          <Collapse
+            ghost
+            bordered={false}
+            expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
+            items={[
+              {
+                key: 'advanced',
+                forceRender: true,
+                label: '高级选项',
+                children: (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                    <Form.Item
+                      name="whenCondition"
+                      label={
+                        <span>
+                          When 条件
+                          <Tooltip title="任务执行的前置条件表达式">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: ansible_os_family == 'Debian'" />
+                    </Form.Item>
+                    <Form.Item
+                      name="loop"
+                      label={
+                        <span>
+                          Loop
+                          <Tooltip title="对列表或字典中的每个元素重复执行任务">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: {{ packages }}" />
+                    </Form.Item>
+                    <Form.Item
+                      name="until"
+                      label={
+                        <span>
+                          Until
+                          <Tooltip title="重复执行任务直到条件满足（如 result.rc == 0）">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: result.rc == 0" />
+                    </Form.Item>
+                    <Form.Item
+                      name="register"
+                      label={
+                        <span>
+                          Register
+                          <Tooltip title="将任务输出保存到变量中，供后续任务使用">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: install_result" />
+                    </Form.Item>
+                    <Form.Item
+                      name="become"
+                      label={
+                        <span>
+                          提权 (become)
+                          <Tooltip title="是否使用提权（sudo）执行此任务">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      valuePropName="checked"
+                    >
+                      <Switch />
+                    </Form.Item>
+                    <Form.Item
+                      name="becomeUser"
+                      label={
+                        <span>
+                          提权用户 (become_user)
+                          <Tooltip title="提权后切换到的用户，默认 root">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="root" />
+                    </Form.Item>
+                    <Form.Item
+                      name="notify"
+                      label={
+                        <span>
+                          Notify (Handler)
+                          <Tooltip title="任务成功执行后通知指定的 Handler 运行">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      style={{ gridColumn: '1 / -1' }}
+                    >
+                      <Select
+                        mode="multiple"
+                        placeholder="选择要通知的 Handler"
+                        options={handlers.map((h) => ({ label: h.name, value: h.name }))}
+                        getPopupContainer={(node) => node.parentElement || document.body}
+                      />
+                    </Form.Item>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </Form>
+      </Modal>
+      <Modal
+        title="YAML 预览"
+        open={previewOpen}
+        onCancel={() => setPreviewOpen(false)}
+        footer={
+          <Button icon={<CopyOutlined />} onClick={handleCopyYaml}>
+            复制
+          </Button>
+        }
+        width={600}
+        zIndex={1100}
+      >
+        <pre
+          style={{
+            background: '#f5f5f5',
+            padding: 16,
+            borderRadius: 6,
+            fontSize: 13,
+            lineHeight: 1.6,
+            overflow: 'auto',
+            maxHeight: 400,
+          }}
+        >
+          {previewYaml}
+        </pre>
       </Modal>
     </div>
   );

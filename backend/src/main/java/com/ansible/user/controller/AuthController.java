@@ -35,6 +35,11 @@ public class AuthController {
     return Result.success(authService.login(request));
   }
 
+  @PostMapping("/logout")
+  public Result<Void> logout() {
+    return Result.success();
+  }
+
   @GetMapping("/me")
   public Result<UserResponse> me(@AuthenticationPrincipal UserDetails userDetails) {
     Long userId = Long.valueOf(userDetails.getUsername());

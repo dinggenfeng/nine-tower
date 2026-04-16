@@ -10,11 +10,14 @@ import com.ansible.project.repository.ProjectMemberRepository;
 import com.ansible.project.repository.ProjectRepository;
 import com.ansible.role.dto.CreateHandlerRequest;
 import com.ansible.role.dto.CreateRoleRequest;
+import com.ansible.role.dto.CreateTaskRequest;
 import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.RoleResponse;
+import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateHandlerRequest;
 import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
+import com.ansible.role.repository.TaskRepository;
 import com.ansible.user.dto.RegisterRequest;
 import com.ansible.user.dto.TokenResponse;
 import com.ansible.user.repository.UserRepository;
@@ -39,6 +42,7 @@ class HandlerControllerTest extends AbstractIntegrationTest {
   @Autowired private ProjectMemberRepository projectMemberRepository;
   @Autowired private RoleRepository roleRepository;
   @Autowired private HandlerRepository handlerRepository;
+  @Autowired private TaskRepository taskRepository;
 
   private String token;
   private Long projectId;
@@ -81,6 +85,7 @@ class HandlerControllerTest extends AbstractIntegrationTest {
 
   @AfterEach
   void tearDown() {
+    taskRepository.deleteAll();
     handlerRepository.deleteAll();
     roleRepository.deleteAll();
     projectMemberRepository.deleteAll();
@@ -126,6 +131,27 @@ class HandlerControllerTest extends AbstractIntegrationTest {
     HandlerResponse data = response.getBody().getData();
     assertThat(data.getName()).isEqualTo("Restart nginx");
     assertThat(data.getModule()).isEqualTo("service");
+  }
+
+  @Test
+  void createHandler_withBecome() {
+    CreateHandlerRequest req = new CreateHandlerRequest();
+    req.setName("Restart nginx");
+    req.setModule("service");
+    req.setBecome(true);
+    req.setBecomeUser("root");
+
+    ResponseEntity<Result<HandlerResponse>> response =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/handlers",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    HandlerResponse data = response.getBody().getData();
+    assertThat(data.getBecome()).isTrue();
+    assertThat(data.getBecomeUser()).isEqualTo("root");
   }
 
   @Test
@@ -175,6 +201,34 @@ class HandlerControllerTest extends AbstractIntegrationTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().getData().getName()).isEqualTo("Reload nginx");
+  }
+
+  @Test
+  void getNotifiedBy_success() {
+    Long handlerId = createHandler("Restart nginx", "service");
+
+    CreateTaskRequest taskReq = new CreateTaskRequest();
+    taskReq.setName("Install nginx");
+    taskReq.setModule("apt");
+    taskReq.setNotify(List.of("Restart nginx"));
+    taskReq.setTaskOrder(1);
+    restTemplate.exchange(
+        "/api/roles/" + roleId + "/tasks",
+        HttpMethod.POST,
+        new HttpEntity<>(taskReq, authHeaders()),
+        new ParameterizedTypeReference<Result<TaskResponse>>() {});
+
+    ResponseEntity<Result<List<TaskResponse>>> response =
+        restTemplate.exchange(
+            "/api/handlers/" + handlerId + "/notified-by",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    List<TaskResponse> tasks = response.getBody().getData();
+    assertThat(tasks).hasSize(1);
+    assertThat(tasks.get(0).getName()).isEqualTo("Install nginx");
   }
 
   @Test

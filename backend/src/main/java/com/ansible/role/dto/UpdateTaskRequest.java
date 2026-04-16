@@ -32,4 +32,9 @@ public class UpdateTaskRequest {
   private List<String> notify;
 
   private Integer taskOrder;
+
+  private Boolean become;
+
+  @Size(max = 100, message = "Become user must not exceed 100 characters")
+  private String becomeUser;
 }

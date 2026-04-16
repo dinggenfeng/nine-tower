@@ -8,11 +8,14 @@ import com.ansible.project.dto.CreateProjectRequest;
 import com.ansible.project.dto.ProjectResponse;
 import com.ansible.project.repository.ProjectMemberRepository;
 import com.ansible.project.repository.ProjectRepository;
+import com.ansible.role.dto.CreateHandlerRequest;
 import com.ansible.role.dto.CreateRoleRequest;
 import com.ansible.role.dto.CreateTaskRequest;
+import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.RoleResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
+import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.user.dto.RegisterRequest;
@@ -39,6 +42,7 @@ class TaskControllerTest extends AbstractIntegrationTest {
   @Autowired private ProjectMemberRepository projectMemberRepository;
   @Autowired private RoleRepository roleRepository;
   @Autowired private TaskRepository taskRepository;
+  @Autowired private HandlerRepository handlerRepository;
 
   private String token;
   private Long projectId;
@@ -82,6 +86,7 @@ class TaskControllerTest extends AbstractIntegrationTest {
   @AfterEach
   void tearDown() {
     taskRepository.deleteAll();
+    handlerRepository.deleteAll();
     roleRepository.deleteAll();
     projectMemberRepository.deleteAll();
     projectRepository.deleteAll();
@@ -130,6 +135,28 @@ class TaskControllerTest extends AbstractIntegrationTest {
     assertThat(data.getName()).isEqualTo("Install nginx");
     assertThat(data.getModule()).isEqualTo("apt");
     assertThat(data.getNotify()).containsExactly("Restart nginx");
+  }
+
+  @Test
+  void createTask_withBecome() {
+    CreateTaskRequest req = new CreateTaskRequest();
+    req.setName("Install nginx");
+    req.setModule("apt");
+    req.setTaskOrder(1);
+    req.setBecome(true);
+    req.setBecomeUser("root");
+
+    ResponseEntity<Result<TaskResponse>> response =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    TaskResponse data = response.getBody().getData();
+    assertThat(data.getBecome()).isTrue();
+    assertThat(data.getBecomeUser()).isEqualTo("root");
   }
 
   @Test
@@ -183,6 +210,32 @@ class TaskControllerTest extends AbstractIntegrationTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().getData().getName()).isEqualTo("Install apache");
+  }
+
+  @Test
+  void getNotifiedHandlers_success() {
+    CreateHandlerRequest handlerReq = new CreateHandlerRequest();
+    handlerReq.setName("Restart nginx");
+    handlerReq.setModule("service");
+    restTemplate.exchange(
+        "/api/roles/" + roleId + "/handlers",
+        HttpMethod.POST,
+        new HttpEntity<>(handlerReq, authHeaders()),
+        new ParameterizedTypeReference<Result<HandlerResponse>>() {});
+
+    Long taskId = createTask("Install nginx", "apt", 1);
+
+    ResponseEntity<Result<List<HandlerResponse>>> response =
+        restTemplate.exchange(
+            "/api/tasks/" + taskId + "/notifies",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    List<HandlerResponse> handlers = response.getBody().getData();
+    assertThat(handlers).hasSize(1);
+    assertThat(handlers.get(0).getName()).isEqualTo("Restart nginx");
   }
 
   @Test

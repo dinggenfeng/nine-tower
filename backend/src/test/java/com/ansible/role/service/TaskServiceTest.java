@@ -7,10 +7,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.ansible.role.dto.CreateTaskRequest;
+import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
+import com.ansible.role.entity.Handler;
 import com.ansible.role.entity.Role;
 import com.ansible.role.entity.Task;
+import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.security.ProjectAccessChecker;
@@ -30,6 +33,7 @@ class TaskServiceTest {
 
   @Mock private TaskRepository taskRepository;
   @Mock private RoleRepository roleRepository;
+  @Mock private HandlerRepository handlerRepository;
   @Mock private ProjectAccessChecker accessChecker;
   @InjectMocks private TaskService taskService;
 
@@ -75,6 +79,55 @@ class TaskServiceTest {
     assertThat(response.getModule()).isEqualTo("apt");
     assertThat(response.getNotify()).containsExactly("Restart nginx");
     verify(taskRepository).save(any(Task.class));
+  }
+
+  @Test
+  void createTask_withBecome() {
+    CreateTaskRequest request = new CreateTaskRequest();
+    request.setName("Install nginx");
+    request.setModule("apt");
+    request.setTaskOrder(1);
+    request.setBecome(true);
+    request.setBecomeUser("root");
+
+    Task savedTask = new Task();
+    ReflectionTestUtils.setField(savedTask, "id", 2L);
+    savedTask.setRoleId(1L);
+    savedTask.setName("Install nginx");
+    savedTask.setModule("apt");
+    savedTask.setTaskOrder(1);
+    savedTask.setBecome(true);
+    savedTask.setBecomeUser("root");
+    savedTask.setCreatedBy(10L);
+    ReflectionTestUtils.setField(savedTask, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(savedTask, "updatedAt", LocalDateTime.now());
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
+
+    TaskResponse response = taskService.createTask(1L, request, 10L);
+
+    assertThat(response.getBecome()).isTrue();
+    assertThat(response.getBecomeUser()).isEqualTo("root");
+  }
+
+  @Test
+  void updateTask_withBecome() {
+    UpdateTaskRequest request = new UpdateTaskRequest();
+    request.setBecome(true);
+    request.setBecomeUser("deploy");
+
+    testTask.setBecome(true);
+    testTask.setBecomeUser("deploy");
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.save(any(Task.class))).thenReturn(testTask);
+
+    TaskResponse response = taskService.updateTask(1L, request, 10L);
+
+    assertThat(response.getBecome()).isTrue();
+    assertThat(response.getBecomeUser()).isEqualTo("deploy");
   }
 
   @Test
@@ -136,5 +189,39 @@ class TaskServiceTest {
 
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
     verify(taskRepository).delete(testTask);
+  }
+
+  @Test
+  void getNotifiedHandlers_success() {
+    Handler handler = new Handler();
+    ReflectionTestUtils.setField(handler, "id", 1L);
+    handler.setRoleId(1L);
+    handler.setName("Restart nginx");
+    handler.setModule("service");
+    handler.setCreatedBy(10L);
+    ReflectionTestUtils.setField(handler, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(handler, "updatedAt", LocalDateTime.now());
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(handlerRepository.findAllByRoleIdAndNameIn(1L, List.of("Restart nginx")))
+        .thenReturn(List.of(handler));
+
+    List<HandlerResponse> handlers = taskService.getNotifiedHandlers(1L, 10L);
+
+    assertThat(handlers).hasSize(1);
+    assertThat(handlers.get(0).getName()).isEqualTo("Restart nginx");
+  }
+
+  @Test
+  void getNotifiedHandlers_emptyNotify() {
+    testTask.setNotify(null);
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+
+    List<HandlerResponse> handlers = taskService.getNotifiedHandlers(1L, 10L);
+
+    assertThat(handlers).isEmpty();
   }
 }

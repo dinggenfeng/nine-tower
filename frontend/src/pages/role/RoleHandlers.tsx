@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Input, Modal, Popconfirm, Space, Table, message } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, message, Collapse, Tooltip } from 'antd';
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { Handler, CreateHandlerRequest, UpdateHandlerRequest } from '../../types/entity/Task';
 import { createHandler, getHandlers, updateHandler, deleteHandler } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
-import ModuleParamsForm from '../../components/role/ModuleParamsForm';
+import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
 import { getModuleDefinition } from '../../constants/ansibleModules';
+import { taskToYaml } from '../../utils/taskToYaml';
 
 interface RoleHandlersProps {
   roleId: number;
@@ -70,6 +71,8 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHandler, setEditingHandler] = useState<Handler | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
+  const [previewYaml, setPreviewYaml] = useState<string>('');
+  const [previewOpen, setPreviewOpen] = useState(false);
   const [form] = Form.useForm();
 
   const fetchHandlers = useCallback(async () => {
@@ -104,6 +107,8 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
       extraParams: extraParams.length > 0 ? extraParams : undefined,
       whenCondition: handler.whenCondition,
       register: handler.register,
+      become: handler.become || false,
+      becomeUser: handler.becomeUser,
     });
     setModalOpen(true);
   };
@@ -112,6 +117,41 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     await deleteHandler(id);
     message.success('已删除');
     fetchHandlers();
+  };
+
+  const handlePreviewHandler = (handler: Handler) => {
+    setPreviewYaml(taskToYaml({
+      name: handler.name,
+      module: handler.module,
+      args: handler.args,
+      whenCondition: handler.whenCondition,
+      register: handler.register,
+      become: handler.become,
+      becomeUser: handler.becomeUser,
+    }));
+    setPreviewOpen(true);
+  };
+
+  const handlePreviewForm = () => {
+    const values = form.getFieldsValue();
+    const args = buildArgsJson(values.moduleParams, values.extraParams);
+    setPreviewYaml(
+      taskToYaml({
+        name: values.name,
+        module: values.module,
+        args: args || undefined,
+        whenCondition: values.whenCondition,
+        register: values.register,
+        become: values.become,
+        becomeUser: values.becomeUser,
+      }),
+    );
+    setPreviewOpen(true);
+  };
+
+  const handleCopyYaml = async () => {
+    await navigator.clipboard.writeText(previewYaml);
+    message.success('已复制');
   };
 
   const handleSubmit = async () => {
@@ -139,6 +179,8 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         args: args || undefined,
         whenCondition: values.whenCondition,
         register: values.register,
+        become: values.become || false,
+        becomeUser: values.becomeUser,
       };
       await updateHandler(editingHandler.id, data);
       message.success('已更新');
@@ -149,6 +191,8 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         args: args || undefined,
         whenCondition: values.whenCondition,
         register: values.register,
+        become: values.become || false,
+        becomeUser: values.becomeUser,
       };
       await createHandler(roleId, data);
       message.success('已创建');
@@ -178,9 +222,15 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     {
       title: '操作',
       key: 'action',
-      width: 120,
+      width: 150,
       render: (_: unknown, record: Handler) => (
         <Space size="small">
+          <Button
+            type="text"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handlePreviewHandler(record)}
+          />
           <Button
             type="text"
             size="small"
@@ -213,19 +263,31 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
       <Modal
         title={editingHandler ? '编辑 Handler' : '创建 Handler'}
         open={modalOpen}
-        onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={640}
+        width={800}
         destroyOnClose
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
+              预览 YAML
+            </Button>
+            <Space>
+              <Button onClick={() => setModalOpen(false)}>取消</Button>
+              <Button type="primary" onClick={handleSubmit}>确定</Button>
+            </Space>
+          </div>
+        }
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入 Handler 名称' }]}
-          >
-            <Input placeholder="例如: Restart nginx" />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <Form.Item
+              name="name"
+              label="名称"
+              rules={[{ required: true, message: '请输入 Handler 名称' }]}
+            >
+              <Input placeholder="例如: Restart nginx" />
+            </Form.Item>
+          </div>
           <Form.Item
             name="module"
             label="模块"
@@ -238,14 +300,106 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
               }}
             />
           </Form.Item>
-          <ModuleParamsForm moduleName={selectedModule} />
-          <Form.Item name="whenCondition" label="When 条件">
-            <Input placeholder="例如: ansible_os_family == 'Debian'" />
-          </Form.Item>
-          <Form.Item name="register" label="Register">
-            <Input placeholder="例如: restart_result" />
-          </Form.Item>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <ModuleParamsGrid moduleName={selectedModule} />
+          </div>
+          <ExtraParamsInput />
+          <Collapse
+            ghost
+            bordered={false}
+            expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
+            items={[
+              {
+                key: 'advanced',
+                forceRender: true,
+                label: '高级选项',
+                children: (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                    <Form.Item
+                      name="whenCondition"
+                      label={
+                        <span>
+                          When 条件
+                          <Tooltip title="Handler 执行的前置条件表达式">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: ansible_os_family == 'Debian'" />
+                    </Form.Item>
+                    <Form.Item
+                      name="register"
+                      label={
+                        <span>
+                          Register
+                          <Tooltip title="将 Handler 输出保存到变量中，供其他任务使用">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="例如: restart_result" />
+                    </Form.Item>
+                    <Form.Item
+                      name="become"
+                      label={
+                        <span>
+                          提权 (become)
+                          <Tooltip title="是否使用提权（sudo）执行此 Handler">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      valuePropName="checked"
+                    >
+                      <Switch />
+                    </Form.Item>
+                    <Form.Item
+                      name="becomeUser"
+                      label={
+                        <span>
+                          提权用户 (become_user)
+                          <Tooltip title="提权后切换到的用户，默认 root">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                    >
+                      <Input placeholder="root" />
+                    </Form.Item>
+                  </div>
+                ),
+              },
+            ]}
+          />
         </Form>
+      </Modal>
+      <Modal
+        title="YAML 预览"
+        open={previewOpen}
+        onCancel={() => setPreviewOpen(false)}
+        footer={
+          <Button icon={<CopyOutlined />} onClick={handleCopyYaml}>
+            复制
+          </Button>
+        }
+        width={600}
+        zIndex={1100}
+      >
+        <pre
+          style={{
+            background: '#f5f5f5',
+            padding: 16,
+            borderRadius: 6,
+            fontSize: 13,
+            lineHeight: 1.6,
+            overflow: 'auto',
+            maxHeight: 400,
+          }}
+        >
+          {previewYaml}
+        </pre>
       </Modal>
     </div>
   );

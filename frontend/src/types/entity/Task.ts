@@ -10,6 +10,8 @@ export interface Task {
   register: string;
   notify: string[];
   taskOrder: number;
+  become: boolean;
+  becomeUser: string;
   createdBy: number;
   createdAt: string;
 }
@@ -24,6 +26,8 @@ export interface CreateTaskRequest {
   register?: string;
   notify?: string[];
   taskOrder: number;
+  become?: boolean;
+  becomeUser?: string;
 }
 
 export interface UpdateTaskRequest {
@@ -36,6 +40,8 @@ export interface UpdateTaskRequest {
   register?: string;
   notify?: string[];
   taskOrder?: number;
+  become?: boolean;
+  becomeUser?: string;
 }
 
 export interface Handler {
@@ -46,6 +52,8 @@ export interface Handler {
   args: string;
   whenCondition: string;
   register: string;
+  become: boolean;
+  becomeUser: string;
   createdBy: number;
   createdAt: string;
 }
@@ -56,6 +64,8 @@ export interface CreateHandlerRequest {
   args?: string;
   whenCondition?: string;
   register?: string;
+  become?: boolean;
+  becomeUser?: string;
 }
 
 export interface UpdateHandlerRequest {
@@ -64,4 +74,6 @@ export interface UpdateHandlerRequest {
   args?: string;
   whenCondition?: string;
   register?: string;
+  become?: boolean;
+  becomeUser?: string;
 }

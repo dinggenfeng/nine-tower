@@ -44,4 +44,10 @@ public class Task extends BaseEntity {
 
   @Column(nullable = false)
   private Integer taskOrder;
+
+  @Column(name = "become_flag")
+  private Boolean become;
+
+  @Column(name = "become_user", length = 100)
+  private String becomeUser;
 }

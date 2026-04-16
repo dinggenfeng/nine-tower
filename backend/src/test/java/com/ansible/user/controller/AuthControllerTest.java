@@ -119,6 +119,32 @@ class AuthControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void logout_returns_success() {
+    RegisterRequest reg = new RegisterRequest();
+    reg.setUsername("eve");
+    reg.setPassword("password123");
+    reg.setEmail("eve@example.com");
+    ResponseEntity<Result<TokenResponse>> regResponse =
+        restTemplate.exchange(
+            "/api/auth/register",
+            HttpMethod.POST,
+            new HttpEntity<>(reg),
+            new ParameterizedTypeReference<>() {});
+    String token = regResponse.getBody().getData().getToken();
+
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+    ResponseEntity<Result<Void>> response =
+        restTemplate.exchange(
+            "/api/auth/logout",
+            HttpMethod.POST,
+            new HttpEntity<>(headers),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+  }
+
+  @Test
   void me_returns_current_user() {
     RegisterRequest reg = new RegisterRequest();
     reg.setUsername("dave");

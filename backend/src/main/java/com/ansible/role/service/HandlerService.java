@@ -2,11 +2,13 @@ package com.ansible.role.service;
 
 import com.ansible.role.dto.CreateHandlerRequest;
 import com.ansible.role.dto.HandlerResponse;
+import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateHandlerRequest;
 import com.ansible.role.entity.Handler;
 import com.ansible.role.entity.Role;
 import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
+import com.ansible.role.repository.TaskRepository;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ public class HandlerService {
 
   private final HandlerRepository handlerRepository;
   private final RoleRepository roleRepository;
+  private final TaskRepository taskRepository;
   private final ProjectAccessChecker accessChecker;
 
   @Transactional
@@ -38,6 +41,8 @@ public class HandlerService {
     handler.setArgs(request.getArgs());
     handler.setWhenCondition(request.getWhenCondition());
     handler.setRegister(request.getRegister());
+    handler.setBecome(request.getBecome());
+    handler.setBecomeUser(request.getBecomeUser());
     handler.setCreatedBy(currentUserId);
     Handler saved = handlerRepository.save(handler);
     return new HandlerResponse(saved);
@@ -97,8 +102,40 @@ public class HandlerService {
     if (request.getRegister() != null) {
       handler.setRegister(request.getRegister());
     }
+    if (request.getBecome() != null) {
+      handler.setBecome(request.getBecome());
+    }
+    if (request.getBecomeUser() != null) {
+      handler.setBecomeUser(request.getBecomeUser());
+    }
     Handler saved = handlerRepository.save(handler);
     return new HandlerResponse(saved);
+  }
+
+  @Transactional(readOnly = true)
+  public List<TaskResponse> getNotifyingTasks(Long handlerId, Long currentUserId) {
+    Handler handler =
+        handlerRepository
+            .findById(handlerId)
+            .orElseThrow(() -> new IllegalArgumentException("Handler not found"));
+    Role role =
+        roleRepository
+            .findById(handler.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+
+    String handlerName = handler.getName();
+    return taskRepository.findAllByRoleIdOrderByTaskOrderAsc(handler.getRoleId()).stream()
+        .filter(task -> taskNotifiesHandler(task.getNotify(), handlerName))
+        .map(TaskResponse::new)
+        .toList();
+  }
+
+  private boolean taskNotifiesHandler(String notifyJson, String handlerName) {
+    if (notifyJson == null || notifyJson.isBlank()) {
+      return false;
+    }
+    return notifyJson.contains("\"" + handlerName + "\"");
   }
 
   @Transactional

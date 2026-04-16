@@ -3,6 +3,7 @@ package com.ansible.role.controller;
 import com.ansible.common.Result;
 import com.ansible.role.dto.CreateHandlerRequest;
 import com.ansible.role.dto.HandlerResponse;
+import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateHandlerRequest;
 import com.ansible.role.service.HandlerService;
 import jakarta.validation.Valid;
@@ -56,6 +57,13 @@ public class HandlerController {
       @AuthenticationPrincipal UserDetails userDetails) {
     Long currentUserId = Long.valueOf(userDetails.getUsername());
     return Result.success(handlerService.updateHandler(id, request, currentUserId));
+  }
+
+  @GetMapping("/handlers/{id}/notified-by")
+  public Result<List<TaskResponse>> getNotifyingTasks(
+      @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(handlerService.getNotifyingTasks(id, currentUserId));
   }
 
   @DeleteMapping("/handlers/{id}")

@@ -2,6 +2,7 @@ package com.ansible.role.controller;
 
 import com.ansible.common.Result;
 import com.ansible.role.dto.CreateTaskRequest;
+import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
 import com.ansible.role.service.TaskService;
@@ -56,6 +57,13 @@ public class TaskController {
       @AuthenticationPrincipal UserDetails userDetails) {
     Long currentUserId = Long.valueOf(userDetails.getUsername());
     return Result.success(taskService.updateTask(id, request, currentUserId));
+  }
+
+  @GetMapping("/tasks/{id}/notifies")
+  public Result<List<HandlerResponse>> getNotifiedHandlers(
+      @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(taskService.getNotifiedHandlers(id, currentUserId));
   }
 
   @DeleteMapping("/tasks/{id}")

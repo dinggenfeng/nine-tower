@@ -16,10 +16,13 @@ public class HandlerResponse {
   private final String args;
   private final String whenCondition;
   private final String register;
+  private final Boolean become;
+  private final String becomeUser;
   private final Long createdBy;
   private final LocalDateTime createdAt;
 
   @JsonCreator
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public HandlerResponse(
       @JsonProperty("id") Long id,
       @JsonProperty("roleId") Long roleId,
@@ -28,6 +31,8 @@ public class HandlerResponse {
       @JsonProperty("args") String args,
       @JsonProperty("whenCondition") String whenCondition,
       @JsonProperty("register") String register,
+      @JsonProperty("become") Boolean become,
+      @JsonProperty("becomeUser") String becomeUser,
       @JsonProperty("createdBy") Long createdBy,
       @JsonProperty("createdAt") LocalDateTime createdAt) {
     this.id = id;
@@ -37,6 +42,8 @@ public class HandlerResponse {
     this.args = args;
     this.whenCondition = whenCondition;
     this.register = register;
+    this.become = become;
+    this.becomeUser = becomeUser;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
   }
@@ -49,6 +56,8 @@ public class HandlerResponse {
     this.args = handler.getArgs();
     this.whenCondition = handler.getWhenCondition();
     this.register = handler.getRegister();
+    this.become = handler.getBecome();
+    this.becomeUser = handler.getBecomeUser();
     this.createdBy = handler.getCreatedBy();
     this.createdAt = handler.getCreatedAt();
   }

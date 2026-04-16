@@ -21,10 +21,10 @@ const navGroups = [
     items: [
       { key: 'roles', icon: <CodeOutlined />, label: 'Roles' },
       { key: 'host-groups', icon: <DatabaseOutlined />, label: '主机组' },
-      { key: 'variables', icon: <AppstoreOutlined />, label: '变量' },
-      { key: 'environments', icon: <CloudOutlined />, label: '环境' },
-      { key: 'tags', icon: <TagsOutlined />, label: '标签' },
-      { key: 'playbooks', icon: <PlayCircleOutlined />, label: '剧本' },
+      { key: 'variables', icon: <AppstoreOutlined />, label: '变量', disabled: true },
+      { key: 'environments', icon: <CloudOutlined />, label: '环境', disabled: true },
+      { key: 'tags', icon: <TagsOutlined />, label: '标签', disabled: true },
+      { key: 'playbooks', icon: <PlayCircleOutlined />, label: '剧本', disabled: true },
     ],
   },
   {
@@ -68,8 +68,8 @@ export default function ProjectLayout() {
               {group.items.map((item) => (
                 <div
                   key={item.key}
-                  className={`${styles.navItem} ${currentKey === item.key ? styles.navItemActive : ''}`}
-                  onClick={() => navigate(`/projects/${id}/${item.key}`)}
+                  className={`${styles.navItem} ${currentKey === item.key ? styles.navItemActive : ''} ${item.disabled ? styles.navItemDisabled : ''}`}
+                  onClick={() => !item.disabled && navigate(`/projects/${id}/${item.key}`)}
                 >
                   {item.icon}
                   <span>{item.label}</span>
