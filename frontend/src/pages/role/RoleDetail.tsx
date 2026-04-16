@@ -6,6 +6,7 @@ import type { Role } from '../../types/entity/Role';
 import { getRole } from '../../api/role';
 import RoleTasks from './RoleTasks';
 import RoleHandlers from './RoleHandlers';
+import RoleTemplates from './RoleTemplates';
 import RoleVars from './RoleVars';
 import RoleDefaults from './RoleDefaults';
 
@@ -43,7 +44,7 @@ export default function RoleDetail() {
   const tabItems = [
     { key: 'tasks', label: 'Tasks', children: <RoleTasks roleId={Number(roleId)} /> },
     { key: 'handlers', label: 'Handlers', children: <RoleHandlers roleId={Number(roleId)} /> },
-    { key: 'templates', label: 'Templates', children: <ComingSoon /> },
+    { key: 'templates', label: 'Templates', children: <RoleTemplates roleId={Number(roleId)} /> },
     { key: 'files', label: 'Files', children: <ComingSoon /> },
     { key: 'vars', label: 'Vars', children: <RoleVars roleId={Number(roleId)} /> },
     { key: 'defaults', label: 'Defaults', children: <RoleDefaults roleId={Number(roleId)} /> },
