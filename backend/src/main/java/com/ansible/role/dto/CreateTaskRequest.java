@@ -44,4 +44,6 @@ public class CreateTaskRequest {
   private String becomeUser;
 
   private Boolean ignoreErrors;
+
+  private java.util.List<com.ansible.role.dto.BlockChildRequest> blockChildren;
 }
