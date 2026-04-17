@@ -7,4 +7,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
   List<Task> findAllByRoleIdOrderByTaskOrderAsc(Long roleId);
+
+  List<Task> findAllByParentTaskIdOrderByTaskOrderAsc(Long parentTaskId);
+
+  List<Task> findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(Long roleId);
 }
