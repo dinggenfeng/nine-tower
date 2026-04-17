@@ -100,35 +100,6 @@ public class TaskResponse {
     this.children = null;
   }
 
-  @SuppressWarnings("PMD.ExcessiveParameterList")
-  public TaskResponse(
-      Long id, Long roleId, String name, String module, String args,
-      String whenCondition, String loop, String until, String register,
-      List<String> notify, Integer taskOrder,
-      Boolean become, String becomeUser, Boolean ignoreErrors,
-      Long createdBy, LocalDateTime createdAt,
-      Long parentTaskId, String blockSection, List<TaskResponse> children) {
-    this.id = id;
-    this.roleId = roleId;
-    this.name = name;
-    this.module = module;
-    this.args = args;
-    this.whenCondition = whenCondition;
-    this.loop = loop;
-    this.until = until;
-    this.register = register;
-    this.notify = notify;
-    this.taskOrder = taskOrder;
-    this.become = become;
-    this.becomeUser = becomeUser;
-    this.ignoreErrors = ignoreErrors;
-    this.createdBy = createdBy;
-    this.createdAt = createdAt;
-    this.parentTaskId = parentTaskId;
-    this.blockSection = blockSection;
-    this.children = children;
-  }
-
   private static List<String> parseNotify(String notifyJson) {
     if (notifyJson == null || notifyJson.isBlank()) {
       return List.of();
