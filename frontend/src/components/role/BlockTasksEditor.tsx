@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Collapse, Form, Input, Switch, Tabs, Space, Popconfirm } from 'antd';
-import { PlusOutlined, DeleteOutlined, UpOutlined, DownOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { Button, Card, Collapse, Form, Input, Select, Switch, Tabs, Space, Popconfirm, Tooltip } from 'antd';
+import { PlusOutlined, DeleteOutlined, UpOutlined, DownOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { BlockChildRequest, BlockSection } from '../../types/entity/Task';
+import { getModuleDefinition } from '../../constants/ansibleModules';
 import ModuleSelect from './ModuleSelect';
 
 interface BlockChildFormData {
   key: string;
   name: string;
   module: string;
+  moduleParams: Record<string, unknown>;
   extraParams: { key: string; value: string }[];
   whenCondition: string;
   loop: string;
@@ -22,6 +24,66 @@ function generateKey(): string {
   return Math.random().toString(36).slice(2);
 }
 
+/** Controlled module-specific params (works outside Ant Design Form context) */
+function ControlledModuleParams({
+  moduleName,
+  moduleParams,
+  onChange,
+}: {
+  moduleName: string;
+  moduleParams: Record<string, unknown>;
+  onChange: (params: Record<string, unknown>) => void;
+}) {
+  const moduleDef = getModuleDefinition(moduleName);
+  if (!moduleDef) return null;
+
+  return (
+    <>
+      {moduleDef.params.map((param) => (
+        <Form.Item
+          key={param.name}
+          label={
+            <span>
+              {param.label}
+              {param.tooltip && (
+                <Tooltip title={param.tooltip}>
+                  <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                </Tooltip>
+              )}
+            </span>
+          }
+          required={param.required}
+          style={{ marginBottom: 12 }}
+        >
+          {param.type === 'input' && (
+            <Input
+              placeholder={param.placeholder}
+              value={String(moduleParams[param.name] ?? '')}
+              onChange={(e) => onChange({ ...moduleParams, [param.name]: e.target.value })}
+            />
+          )}
+          {param.type === 'select' && (
+            <Select
+              allowClear
+              placeholder={param.placeholder || '请选择'}
+              options={param.options}
+              value={(moduleParams[param.name] as string) ?? undefined}
+              onChange={(val) => onChange({ ...moduleParams, [param.name]: val })}
+            />
+          )}
+          {param.type === 'switch' && (
+            <Switch
+              checked={Boolean(moduleParams[param.name] ?? param.defaultValue ?? false)}
+              onChange={(val) => onChange({ ...moduleParams, [param.name]: val })}
+            />
+          )}
+        </Form.Item>
+      ))}
+    </>
+  );
+}
+
+/** Controlled extra params editor */
 function ExtraParamsEditor({
   extraParams,
   onChange,
@@ -116,16 +178,36 @@ function ChildTaskCard({
         <Form.Item label="模块" required style={{ marginBottom: 12 }}>
           <ModuleSelect
             value={data.module}
-            onChange={(val) => onChange({ ...data, module: val || '', extraParams: [] })}
+            onChange={(val) => {
+              const newModule = val || '';
+              // Re-parse existing args into new module's known/unknown params
+              const currentArgs = buildArgsJson(data.moduleParams, data.extraParams);
+              const parsed = parseArgsToForm(currentArgs, newModule);
+              onChange({
+                ...data,
+                module: newModule,
+                moduleParams: parsed.moduleParams,
+                extraParams: parsed.extraParams,
+              });
+            }}
             filterModule="block"
           />
         </Form.Item>
       </div>
       {data.module && (
-        <ExtraParamsEditor
-          extraParams={data.extraParams}
-          onChange={(ep) => onChange({ ...data, extraParams: ep })}
-        />
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <ControlledModuleParams
+              moduleName={data.module}
+              moduleParams={data.moduleParams}
+              onChange={(mp) => onChange({ ...data, moduleParams: mp })}
+            />
+          </div>
+          <ExtraParamsEditor
+            extraParams={data.extraParams}
+            onChange={(ep) => onChange({ ...data, extraParams: ep })}
+          />
+        </>
       )}
       <Collapse
         ghost
@@ -170,19 +252,23 @@ export default function BlockTasksEditor({
 }) {
   const [childForms, setChildForms] = useState<BlockChildFormData[]>(() =>
     blockChildren.length > 0
-      ? blockChildren.map((c) => ({
-          key: generateKey(),
-          name: c.name,
-          module: c.module,
-          extraParams: parseArgsToExtraParams(c.args),
-          whenCondition: c.whenCondition || '',
-          loop: c.loop || '',
-          register: c.register || '',
-          become: c.become || false,
-          becomeUser: c.becomeUser || '',
-          ignoreErrors: c.ignoreErrors || false,
-          _section: c.section,
-        }))
+      ? blockChildren.map((c) => {
+          const parsed = parseArgsToForm(c.args, c.module);
+          return {
+            key: generateKey(),
+            name: c.name,
+            module: c.module,
+            moduleParams: parsed.moduleParams,
+            extraParams: parsed.extraParams,
+            whenCondition: c.whenCondition || '',
+            loop: c.loop || '',
+            register: c.register || '',
+            become: c.become || false,
+            becomeUser: c.becomeUser || '',
+            ignoreErrors: c.ignoreErrors || false,
+            _section: c.section,
+          };
+        })
       : []
   );
 
@@ -193,7 +279,7 @@ export default function BlockTasksEditor({
         section: f._section,
         name: f.name,
         module: f.module,
-        args: buildArgsJson(f.extraParams),
+        args: buildArgsJson(f.moduleParams, f.extraParams),
         whenCondition: f.whenCondition || undefined,
         loop: f.loop || undefined,
         register: f.register || undefined,
@@ -219,6 +305,7 @@ export default function BlockTasksEditor({
         key: generateKey(),
         name: '',
         module: '',
+        moduleParams: {},
         extraParams: [],
         whenCondition: '',
         loop: '',
@@ -342,9 +429,17 @@ export default function BlockTasksEditor({
 }
 
 function buildArgsJson(
+  moduleParams: Record<string, unknown> | undefined,
   extraParams: { key: string; value: string }[] | undefined,
 ): string {
   const result: Record<string, unknown> = {};
+  if (moduleParams) {
+    for (const [k, v] of Object.entries(moduleParams)) {
+      if (v !== undefined && v !== '' && v !== null) {
+        result[k] = v;
+      }
+    }
+  }
   if (extraParams) {
     for (const item of extraParams) {
       if (item.key) {
@@ -355,15 +450,31 @@ function buildArgsJson(
   return Object.keys(result).length > 0 ? JSON.stringify(result) : '';
 }
 
-function parseArgsToExtraParams(args: string | undefined): { key: string; value: string }[] {
-  if (!args) return [];
+/** Parse args JSON into moduleParams (known) + extraParams (unknown) */
+function parseArgsToForm(
+  argsJson: string | undefined,
+  moduleName: string | undefined,
+): { moduleParams: Record<string, unknown>; extraParams: { key: string; value: string }[] } {
+  const moduleParams: Record<string, unknown> = {};
+  const extraParams: { key: string; value: string }[] = [];
+  if (!argsJson) return { moduleParams, extraParams };
+
+  let parsed: Record<string, unknown>;
   try {
-    const parsed = JSON.parse(args);
-    return Object.entries(parsed).map(([key, value]) => ({
-      key,
-      value: String(value),
-    }));
+    parsed = JSON.parse(argsJson);
   } catch {
-    return [];
+    return { moduleParams, extraParams };
   }
+
+  const moduleDef = moduleName ? getModuleDefinition(moduleName) : undefined;
+  const knownParams = new Set(moduleDef?.params.map((p) => p.name) ?? []);
+
+  for (const [k, v] of Object.entries(parsed)) {
+    if (knownParams.has(k)) {
+      moduleParams[k] = v;
+    } else {
+      extraParams.push({ key: k, value: String(v) });
+    }
+  }
+  return { moduleParams, extraParams };
 }
