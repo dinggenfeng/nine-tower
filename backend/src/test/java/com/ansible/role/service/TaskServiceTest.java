@@ -191,7 +191,7 @@ class TaskServiceTest {
   @Test
   void getTasksByRole_success() {
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-    when(taskRepository.findAllByRoleIdOrderByTaskOrderAsc(1L)).thenReturn(List.of(testTask));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L)).thenReturn(List.of(testTask));
 
     List<TaskResponse> tasks = taskService.getTasksByRole(1L, 10L);
 
