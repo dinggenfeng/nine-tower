@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { blockToYaml, taskToYaml } from '../taskToYaml';
+import { blockToYaml } from '../taskToYaml';
 
 describe('blockToYaml', () => {
   it('renders block with children', () => {

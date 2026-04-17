@@ -1,14 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
-import type { Task, CreateTaskRequest, UpdateTaskRequest } from '../../types/entity/Task';
+import type { Task, CreateTaskRequest, UpdateTaskRequest, BlockChildRequest, BlockSection } from '../../types/entity/Task';
 import type { Handler } from '../../types/entity/Task';
 import { createTask, getTasks, updateTask, deleteTask } from '../../api/task';
 import { getHandlers } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
 import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
 import { getModuleDefinition } from '../../constants/ansibleModules';
-import { taskToYaml } from '../../utils/taskToYaml';
+import { taskToYaml, blockToYaml } from '../../utils/taskToYaml';
+import type { TaskYamlInput } from '../../utils/taskToYaml';
+import BlockTasksEditor from '../../components/role/BlockTasksEditor';
 
 interface RoleTasksProps {
   roleId: number;
@@ -76,6 +78,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
   const [previewYaml, setPreviewYaml] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [blockChildren, setBlockChildren] = useState<BlockChildRequest[]>([]);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -99,6 +102,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const handleCreate = () => {
     setEditingTask(null);
     setSelectedModule(undefined);
+    setBlockChildren([]);
     form.resetFields();
     form.setFieldValue('taskOrder', tasks.length + 1);
     setModalOpen(true);
@@ -124,6 +128,25 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       ignoreErrors: task.ignoreErrors || false,
     });
     setModalOpen(true);
+    if (task.module === 'block' && task.children && task.children.length > 0) {
+      setBlockChildren(task.children.map((c) => ({
+        section: (c.blockSection || 'BLOCK') as BlockSection,
+        name: c.name,
+        module: c.module,
+        args: c.args,
+        whenCondition: c.whenCondition || '',
+        loop: c.loop || '',
+        until: c.until || '',
+        register: c.register || '',
+        notify: c.notify || [],
+        taskOrder: c.taskOrder || 0,
+        become: c.become || false,
+        becomeUser: c.becomeUser || '',
+        ignoreErrors: c.ignoreErrors || false,
+      })));
+    } else {
+      setBlockChildren([]);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -133,7 +156,11 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   };
 
   const handlePreviewTask = (task: Task) => {
-    setPreviewYaml(taskToYaml(task));
+    if (task.module === 'block' && task.children && task.children.length > 0) {
+      setPreviewYaml(blockToYaml(task as TaskYamlInput & { children: TaskYamlInput[] }));
+    } else {
+      setPreviewYaml(taskToYaml(task as unknown as TaskYamlInput));
+    }
     setPreviewOpen(true);
   };
 
@@ -142,29 +169,62 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       message.info('暂无 Task');
       return;
     }
-    const yaml = tasks.map((t) => taskToYaml(t)).join('\n\n');
+    const yaml = tasks.map((t) => {
+      if (t.module === 'block' && t.children && t.children.length > 0) {
+        return blockToYaml(t as TaskYamlInput & { children: TaskYamlInput[] });
+      }
+      return taskToYaml(t as unknown as TaskYamlInput);
+    }).join('\n\n');
     setPreviewYaml(yaml);
     setPreviewOpen(true);
   };
 
   const handlePreviewForm = () => {
     const values = form.getFieldsValue();
-    const args = buildArgsJson(values.moduleParams, values.extraParams);
-    setPreviewYaml(
-      taskToYaml({
+    if (values.module === 'block') {
+      // Build a task object with children for blockToYaml
+      const taskWithChildren: TaskYamlInput & { children: TaskYamlInput[] } = {
         name: values.name,
         module: values.module,
-        args: args || undefined,
         whenCondition: values.whenCondition,
-        loop: values.loop,
-        until: values.until,
-        register: values.register,
-        notify: values.notify,
         become: values.become,
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors,
-      }),
-    );
+        children: blockChildren.map((c) => ({
+          name: c.name,
+          module: c.module,
+          args: c.args,
+          whenCondition: c.whenCondition,
+          loop: c.loop,
+          until: c.until,
+          register: c.register,
+          become: c.become,
+          becomeUser: c.becomeUser,
+          ignoreErrors: c.ignoreErrors,
+          blockSection: c.section,
+          parentTaskId: null,
+          children: [],
+        })),
+      };
+      setPreviewYaml(blockToYaml(taskWithChildren));
+    } else {
+      const args = buildArgsJson(values.moduleParams, values.extraParams);
+      setPreviewYaml(
+        taskToYaml({
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          loop: values.loop,
+          until: values.until,
+          register: values.register,
+          notify: values.notify,
+          become: values.become,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors,
+        }),
+      );
+    }
     setPreviewOpen(true);
   };
 
@@ -194,7 +254,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     const args = buildArgsJson(values.moduleParams, values.extraParams);
 
     if (editingTask) {
-      const data: UpdateTaskRequest = {
+      let data: UpdateTaskRequest = {
         name: values.name,
         module: values.module,
         args: args || undefined,
@@ -208,10 +268,23 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors || false,
       };
+      if (values.module === 'block' && blockChildren.length > 0) {
+        // For block, we include blockChildren and strip out the irrelevant fields
+        data = {
+          ...data,
+          blockChildren,
+        };
+        // Remove fields that don't apply to block module level
+        delete data.args;
+        delete data.loop;
+        delete data.until;
+        delete data.register;
+        delete data.notify;
+      }
       await updateTask(editingTask.id, data);
       message.success('已更新');
     } else {
-      const data: CreateTaskRequest = {
+      let data: CreateTaskRequest = {
         name: values.name,
         module: values.module,
         args: args || undefined,
@@ -225,6 +298,19 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors || false,
       };
+      if (values.module === 'block' && blockChildren.length > 0) {
+        // For block, we include blockChildren and strip out the irrelevant fields
+        data = {
+          ...data,
+          blockChildren,
+        };
+        // Remove fields that don't apply to block module level
+        delete data.args;
+        delete data.loop;
+        delete data.until;
+        delete data.register;
+        delete data.notify;
+      }
       await createTask(roleId, data);
       message.success('已创建');
     }
@@ -348,138 +434,222 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
               }}
             />
           </Form.Item>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-            <ModuleParamsGrid moduleName={selectedModule} />
-          </div>
-          <ExtraParamsInput />
-          <Collapse
-            ghost
-            bordered={false}
-            expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
-            items={[
-              {
-                key: 'advanced',
-                forceRender: true,
-                label: '高级选项',
-                children: (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
-                    <Form.Item
-                      name="whenCondition"
-                      label={
-                        <span>
-                          When 条件
-                          <Tooltip title="任务执行的前置条件表达式">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                    >
-                      <Input placeholder="例如: ansible_os_family == 'Debian'" />
-                    </Form.Item>
-                    <Form.Item
-                      name="loop"
-                      label={
-                        <span>
-                          Loop
-                          <Tooltip title="对列表或字典中的每个元素重复执行任务">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                    >
-                      <Input placeholder="例如: {{ packages }}" />
-                    </Form.Item>
-                    <Form.Item
-                      name="until"
-                      label={
-                        <span>
-                          Until
-                          <Tooltip title="重复执行任务直到条件满足（如 result.rc == 0）">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                    >
-                      <Input placeholder="例如: result.rc == 0" />
-                    </Form.Item>
-                    <Form.Item
-                      name="register"
-                      label={
-                        <span>
-                          Register
-                          <Tooltip title="将任务输出保存到变量中，供后续任务使用">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                    >
-                      <Input placeholder="例如: install_result" />
-                    </Form.Item>
-                    <Form.Item
-                      name="become"
-                      label={
-                        <span>
-                          提权 (become)
-                          <Tooltip title="是否使用提权（sudo）执行此任务">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                      valuePropName="checked"
-                    >
-                      <Switch />
-                    </Form.Item>
-                    <Form.Item
-                      name="becomeUser"
-                      label={
-                        <span>
-                          提权用户 (become_user)
-                          <Tooltip title="提权后切换到的用户，默认 root">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                    >
-                      <Input placeholder="root" />
-                    </Form.Item>
-                    <Form.Item
-                      name="ignoreErrors"
-                      label={
-                        <span>
-                          忽略错误 (ignore_errors)
-                          <Tooltip title="任务失败时是否继续执行后续任务">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                      valuePropName="checked"
-                    >
-                      <Switch />
-                    </Form.Item>
-                    <Form.Item
-                      name="notify"
-                      label={
-                        <span>
-                          Notify (Handler)
-                          <Tooltip title="任务成功执行后通知指定的 Handler 运行">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
-                          </Tooltip>
-                        </span>
-                      }
-                      style={{ gridColumn: '1 / -1' }}
-                    >
-                      <Select
-                        mode="multiple"
-                        placeholder="选择要通知的 Handler"
-                        options={handlers.map((h) => ({ label: h.name, value: h.name }))}
-                        getPopupContainer={(node) => node.parentElement || document.body}
-                      />
-                    </Form.Item>
-                  </div>
-                ),
-              },
-            ]}
-          />
+          {selectedModule === 'block' ? (
+            <>
+              <BlockTasksEditor
+                blockChildren={blockChildren}
+                onChange={(children) => setBlockChildren(children)}
+              />
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                <ModuleParamsGrid moduleName={selectedModule} />
+              </div>
+              <ExtraParamsInput />
+            </>
+          )}
+          {selectedModule === 'block' ? (
+            <Collapse
+              ghost
+              bordered={false}
+              expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
+              items={[
+                {
+                  key: 'advanced',
+                  forceRender: true,
+                  label: '高级选项',
+                  children: (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                      <Form.Item
+                        name="whenCondition"
+                        label={
+                          <span>
+                            When 条件
+                            <Tooltip title="任务执行的前置条件表达式">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="例如: ansible_os_family == 'Debian'" />
+                      </Form.Item>
+                      <Form.Item
+                        name="become"
+                        label={
+                          <span>
+                            提权 (become)
+                            <Tooltip title="是否使用提权（sudo）执行此任务">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        valuePropName="checked"
+                      >
+                        <Switch />
+                      </Form.Item>
+                      <Form.Item
+                        name="becomeUser"
+                        label={
+                          <span>
+                            提权用户 (become_user)
+                            <Tooltip title="提权后切换到的用户，默认 root">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="root" />
+                      </Form.Item>
+                      <Form.Item
+                        name="ignoreErrors"
+                        label={
+                          <span>
+                            忽略错误 (ignore_errors)
+                            <Tooltip title="任务失败时是否继续执行后续任务">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        valuePropName="checked"
+                      >
+                        <Switch />
+                      </Form.Item>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          ) : (
+            <Collapse
+              ghost
+              bordered={false}
+              expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
+              items={[
+                {
+                  key: 'advanced',
+                  forceRender: true,
+                  label: '高级选项',
+                  children: (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                      <Form.Item
+                        name="whenCondition"
+                        label={
+                          <span>
+                            When 条件
+                            <Tooltip title="任务执行的前置条件表达式">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="例如: ansible_os_family == 'Debian'" />
+                      </Form.Item>
+                      <Form.Item
+                        name="loop"
+                        label={
+                          <span>
+                            Loop
+                            <Tooltip title="对列表或字典中的每个元素重复执行任务">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="例如: {{ packages }}" />
+                      </Form.Item>
+                      <Form.Item
+                        name="until"
+                        label={
+                          <span>
+                            Until
+                            <Tooltip title="重复执行任务直到条件满足（如 result.rc == 0）">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="例如: result.rc == 0" />
+                      </Form.Item>
+                      <Form.Item
+                        name="register"
+                        label={
+                          <span>
+                            Register
+                            <Tooltip title="将任务输出保存到变量中，供后续任务使用">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="例如: install_result" />
+                      </Form.Item>
+                      <Form.Item
+                        name="become"
+                        label={
+                          <span>
+                            提权 (become)
+                            <Tooltip title="是否使用提权（sudo）执行此任务">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        valuePropName="checked"
+                      >
+                        <Switch />
+                      </Form.Item>
+                      <Form.Item
+                        name="becomeUser"
+                        label={
+                          <span>
+                            提权用户 (become_user)
+                            <Tooltip title="提权后切换到的用户，默认 root">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                      >
+                        <Input placeholder="root" />
+                      </Form.Item>
+                      <Form.Item
+                        name="ignoreErrors"
+                        label={
+                          <span>
+                            忽略错误 (ignore_errors)
+                            <Tooltip title="任务失败时是否继续执行后续任务">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        valuePropName="checked"
+                      >
+                        <Switch />
+                      </Form.Item>
+                      <Form.Item
+                        name="notify"
+                        label={
+                          <span>
+                            Notify (Handler)
+                            <Tooltip title="任务成功执行后通知指定的 Handler 运行">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        style={{ gridColumn: '1 / -1' }}
+                      >
+                        <Select
+                          mode="multiple"
+                          placeholder="选择要通知的 Handler"
+                          options={handlers.map((h) => ({ label: h.name, value: h.name }))}
+                          getPopupContainer={(node) => node.parentElement || document.body}
+                        />
+                      </Form.Item>
+                    </div>
+                  ),
+                },
+              ]}
+            />
+          )}
         </Form>
       </Modal>
       <Modal
