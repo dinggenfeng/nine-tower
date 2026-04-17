@@ -38,4 +38,7 @@ public class Handler extends BaseEntity {
 
   @Column(name = "become_user", length = 100)
   private String becomeUser;
+
+  @Column(name = "ignore_errors")
+  private Boolean ignoreErrors;
 }

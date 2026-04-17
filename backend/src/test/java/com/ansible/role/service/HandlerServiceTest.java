@@ -124,6 +124,47 @@ class HandlerServiceTest {
   }
 
   @Test
+  void createHandler_withIgnoreErrors() {
+    CreateHandlerRequest request = new CreateHandlerRequest();
+    request.setName("Restart nginx");
+    request.setModule("service");
+    request.setIgnoreErrors(true);
+
+    Handler savedHandler = new Handler();
+    ReflectionTestUtils.setField(savedHandler, "id", 3L);
+    savedHandler.setRoleId(1L);
+    savedHandler.setName("Restart nginx");
+    savedHandler.setModule("service");
+    savedHandler.setIgnoreErrors(true);
+    savedHandler.setCreatedBy(10L);
+    ReflectionTestUtils.setField(savedHandler, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(savedHandler, "updatedAt", LocalDateTime.now());
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(handlerRepository.save(any(Handler.class))).thenReturn(savedHandler);
+
+    HandlerResponse response = handlerService.createHandler(1L, request, 10L);
+
+    assertThat(response.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
+  void updateHandler_withIgnoreErrors() {
+    UpdateHandlerRequest request = new UpdateHandlerRequest();
+    request.setIgnoreErrors(true);
+
+    testHandler.setIgnoreErrors(true);
+
+    when(handlerRepository.findById(1L)).thenReturn(Optional.of(testHandler));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(handlerRepository.save(any(Handler.class))).thenReturn(testHandler);
+
+    HandlerResponse response = handlerService.updateHandler(1L, request, 10L);
+
+    assertThat(response.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
   void createHandler_roleNotFound() {
     CreateHandlerRequest request = new CreateHandlerRequest();
     request.setName("Restart nginx");

@@ -51,6 +51,7 @@ public class TaskService {
     task.setTaskOrder(request.getTaskOrder());
     task.setBecome(request.getBecome());
     task.setBecomeUser(request.getBecomeUser());
+    task.setIgnoreErrors(request.getIgnoreErrors());
     task.setCreatedBy(currentUserId);
     Task saved = taskRepository.save(task);
     return new TaskResponse(saved);
@@ -127,6 +128,9 @@ public class TaskService {
     }
     if (request.getBecomeUser() != null) {
       task.setBecomeUser(request.getBecomeUser());
+    }
+    if (request.getIgnoreErrors() != null) {
+      task.setIgnoreErrors(request.getIgnoreErrors());
     }
     Task saved = taskRepository.save(task);
     return new TaskResponse(saved);

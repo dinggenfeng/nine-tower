@@ -43,6 +43,7 @@ public class HandlerService {
     handler.setRegister(request.getRegister());
     handler.setBecome(request.getBecome());
     handler.setBecomeUser(request.getBecomeUser());
+    handler.setIgnoreErrors(request.getIgnoreErrors());
     handler.setCreatedBy(currentUserId);
     Handler saved = handlerRepository.save(handler);
     return new HandlerResponse(saved);
@@ -75,6 +76,7 @@ public class HandlerService {
   }
 
   @Transactional
+  @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
   public HandlerResponse updateHandler(
       Long handlerId, UpdateHandlerRequest request, Long currentUserId) {
     Handler handler =
@@ -107,6 +109,9 @@ public class HandlerService {
     }
     if (request.getBecomeUser() != null) {
       handler.setBecomeUser(request.getBecomeUser());
+    }
+    if (request.getIgnoreErrors() != null) {
+      handler.setIgnoreErrors(request.getIgnoreErrors());
     }
     Handler saved = handlerRepository.save(handler);
     return new HandlerResponse(saved);

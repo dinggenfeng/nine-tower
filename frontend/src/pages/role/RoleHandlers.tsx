@@ -109,6 +109,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
       register: handler.register,
       become: handler.become || false,
       becomeUser: handler.becomeUser,
+      ignoreErrors: handler.ignoreErrors || false,
     });
     setModalOpen(true);
   };
@@ -128,6 +129,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
       register: handler.register,
       become: handler.become,
       becomeUser: handler.becomeUser,
+      ignoreErrors: handler.ignoreErrors,
     }));
     setPreviewOpen(true);
   };
@@ -144,6 +146,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         register: values.register,
         become: values.become,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors,
       }),
     );
     setPreviewOpen(true);
@@ -181,6 +184,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         register: values.register,
         become: values.become || false,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors || false,
       };
       await updateHandler(editingHandler.id, data);
       message.success('已更新');
@@ -193,6 +197,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         register: values.register,
         become: values.become || false,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors || false,
       };
       await createHandler(roleId, data);
       message.success('已创建');
@@ -367,6 +372,20 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
                       }
                     >
                       <Input placeholder="root" />
+                    </Form.Item>
+                    <Form.Item
+                      name="ignoreErrors"
+                      label={
+                        <span>
+                          忽略错误 (ignore_errors)
+                          <Tooltip title="任务失败时是否继续执行后续任务">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      valuePropName="checked"
+                    >
+                      <Switch />
                     </Form.Item>
                   </div>
                 ),

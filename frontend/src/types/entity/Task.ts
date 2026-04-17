@@ -12,6 +12,7 @@ export interface Task {
   taskOrder: number;
   become: boolean;
   becomeUser: string;
+  ignoreErrors: boolean;
   createdBy: number;
   createdAt: string;
 }
@@ -28,6 +29,7 @@ export interface CreateTaskRequest {
   taskOrder: number;
   become?: boolean;
   becomeUser?: string;
+  ignoreErrors?: boolean;
 }
 
 export interface UpdateTaskRequest {
@@ -42,6 +44,7 @@ export interface UpdateTaskRequest {
   taskOrder?: number;
   become?: boolean;
   becomeUser?: string;
+  ignoreErrors?: boolean;
 }
 
 export interface Handler {
@@ -54,6 +57,7 @@ export interface Handler {
   register: string;
   become: boolean;
   becomeUser: string;
+  ignoreErrors: boolean;
   createdBy: number;
   createdAt: string;
 }
@@ -66,6 +70,7 @@ export interface CreateHandlerRequest {
   register?: string;
   become?: boolean;
   becomeUser?: string;
+  ignoreErrors?: boolean;
 }
 
 export interface UpdateHandlerRequest {
@@ -76,4 +81,5 @@ export interface UpdateHandlerRequest {
   register?: string;
   become?: boolean;
   becomeUser?: string;
+  ignoreErrors?: boolean;
 }

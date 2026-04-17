@@ -28,6 +28,7 @@ public class TaskResponse {
   private final Integer taskOrder;
   private final Boolean become;
   private final String becomeUser;
+  private final Boolean ignoreErrors;
   private final Long createdBy;
   private final LocalDateTime createdAt;
 
@@ -47,6 +48,7 @@ public class TaskResponse {
       @JsonProperty("taskOrder") Integer taskOrder,
       @JsonProperty("become") Boolean become,
       @JsonProperty("becomeUser") String becomeUser,
+      @JsonProperty("ignoreErrors") Boolean ignoreErrors,
       @JsonProperty("createdBy") Long createdBy,
       @JsonProperty("createdAt") LocalDateTime createdAt) {
     this.id = id;
@@ -62,6 +64,7 @@ public class TaskResponse {
     this.taskOrder = taskOrder;
     this.become = become;
     this.becomeUser = becomeUser;
+    this.ignoreErrors = ignoreErrors;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
   }
@@ -80,6 +83,7 @@ public class TaskResponse {
     this.taskOrder = task.getTaskOrder();
     this.become = task.getBecome();
     this.becomeUser = task.getBecomeUser();
+    this.ignoreErrors = task.getIgnoreErrors();
     this.createdBy = task.getCreatedBy();
     this.createdAt = task.getCreatedAt();
   }

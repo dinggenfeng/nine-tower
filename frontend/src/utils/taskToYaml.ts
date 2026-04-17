@@ -13,6 +13,7 @@ export interface TaskYamlInput {
   notify?: string[];
   become?: boolean;
   becomeUser?: string;
+  ignoreErrors?: boolean;
 }
 
 function yamlScalar(value: unknown): string {
@@ -92,6 +93,10 @@ export function taskToYaml(task: TaskYamlInput): string {
 
   if (task.becomeUser) {
     lines.push(`  become_user: ${task.becomeUser}`);
+  }
+
+  if (task.ignoreErrors) {
+    lines.push('  ignore_errors: true');
   }
 
   if (task.register) {

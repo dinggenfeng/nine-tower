@@ -18,6 +18,7 @@ public class HandlerResponse {
   private final String register;
   private final Boolean become;
   private final String becomeUser;
+  private final Boolean ignoreErrors;
   private final Long createdBy;
   private final LocalDateTime createdAt;
 
@@ -33,6 +34,7 @@ public class HandlerResponse {
       @JsonProperty("register") String register,
       @JsonProperty("become") Boolean become,
       @JsonProperty("becomeUser") String becomeUser,
+      @JsonProperty("ignoreErrors") Boolean ignoreErrors,
       @JsonProperty("createdBy") Long createdBy,
       @JsonProperty("createdAt") LocalDateTime createdAt) {
     this.id = id;
@@ -44,6 +46,7 @@ public class HandlerResponse {
     this.register = register;
     this.become = become;
     this.becomeUser = becomeUser;
+    this.ignoreErrors = ignoreErrors;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
   }
@@ -58,6 +61,7 @@ public class HandlerResponse {
     this.register = handler.getRegister();
     this.become = handler.getBecome();
     this.becomeUser = handler.getBecomeUser();
+    this.ignoreErrors = handler.getIgnoreErrors();
     this.createdBy = handler.getCreatedBy();
     this.createdAt = handler.getCreatedAt();
   }

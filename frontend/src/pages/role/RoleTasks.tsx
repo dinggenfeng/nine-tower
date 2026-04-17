@@ -121,6 +121,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       taskOrder: task.taskOrder,
       become: task.become || false,
       becomeUser: task.becomeUser,
+      ignoreErrors: task.ignoreErrors || false,
     });
     setModalOpen(true);
   };
@@ -151,6 +152,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         notify: values.notify,
         become: values.become,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors,
       }),
     );
     setPreviewOpen(true);
@@ -194,6 +196,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         taskOrder: values.taskOrder,
         become: values.become || false,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors || false,
       };
       await updateTask(editingTask.id, data);
       message.success('已更新');
@@ -210,6 +213,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         taskOrder: values.taskOrder,
         become: values.become || false,
         becomeUser: values.becomeUser,
+        ignoreErrors: values.ignoreErrors || false,
       };
       await createTask(roleId, data);
       message.success('已创建');
@@ -424,6 +428,20 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                       }
                     >
                       <Input placeholder="root" />
+                    </Form.Item>
+                    <Form.Item
+                      name="ignoreErrors"
+                      label={
+                        <span>
+                          忽略错误 (ignore_errors)
+                          <Tooltip title="任务失败时是否继续执行后续任务">
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                          </Tooltip>
+                        </span>
+                      }
+                      valuePropName="checked"
+                    >
+                      <Switch />
                     </Form.Item>
                     <Form.Item
                       name="notify"

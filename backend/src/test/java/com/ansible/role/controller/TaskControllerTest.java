@@ -160,6 +160,26 @@ class TaskControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void createTask_withIgnoreErrors() {
+    CreateTaskRequest req = new CreateTaskRequest();
+    req.setName("Install nginx");
+    req.setModule("apt");
+    req.setTaskOrder(1);
+    req.setIgnoreErrors(true);
+
+    ResponseEntity<Result<TaskResponse>> response =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    TaskResponse data = response.getBody().getData();
+    assertThat(data.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
   void getTasks_returns_ordered_list() {
     createTask("Second task", "shell", 2);
     createTask("First task", "apt", 1);

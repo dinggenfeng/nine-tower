@@ -131,6 +131,49 @@ class TaskServiceTest {
   }
 
   @Test
+  void createTask_withIgnoreErrors() {
+    CreateTaskRequest request = new CreateTaskRequest();
+    request.setName("Install nginx");
+    request.setModule("apt");
+    request.setTaskOrder(1);
+    request.setIgnoreErrors(true);
+
+    Task savedTask = new Task();
+    ReflectionTestUtils.setField(savedTask, "id", 3L);
+    savedTask.setRoleId(1L);
+    savedTask.setName("Install nginx");
+    savedTask.setModule("apt");
+    savedTask.setTaskOrder(1);
+    savedTask.setIgnoreErrors(true);
+    savedTask.setCreatedBy(10L);
+    ReflectionTestUtils.setField(savedTask, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(savedTask, "updatedAt", LocalDateTime.now());
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
+
+    TaskResponse response = taskService.createTask(1L, request, 10L);
+
+    assertThat(response.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
+  void updateTask_withIgnoreErrors() {
+    UpdateTaskRequest request = new UpdateTaskRequest();
+    request.setIgnoreErrors(true);
+
+    testTask.setIgnoreErrors(true);
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.save(any(Task.class))).thenReturn(testTask);
+
+    TaskResponse response = taskService.updateTask(1L, request, 10L);
+
+    assertThat(response.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
   void createTask_roleNotFound() {
     CreateTaskRequest request = new CreateTaskRequest();
     request.setName("Install nginx");

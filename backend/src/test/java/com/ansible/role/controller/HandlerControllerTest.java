@@ -155,6 +155,25 @@ class HandlerControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void createHandler_withIgnoreErrors() {
+    CreateHandlerRequest req = new CreateHandlerRequest();
+    req.setName("Restart nginx");
+    req.setModule("service");
+    req.setIgnoreErrors(true);
+
+    ResponseEntity<Result<HandlerResponse>> response =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/handlers",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    HandlerResponse data = response.getBody().getData();
+    assertThat(data.getIgnoreErrors()).isTrue();
+  }
+
+  @Test
   void getHandlers_returns_list() {
     createHandler("Restart nginx", "service");
     createHandler("Reload nginx", "service");
