@@ -31,6 +31,9 @@ public class TaskResponse {
   private final Boolean ignoreErrors;
   private final Long createdBy;
   private final LocalDateTime createdAt;
+  private final Long parentTaskId;
+  private final String blockSection;
+  private final List<TaskResponse> children;
 
   @JsonCreator
   @SuppressWarnings("PMD.ExcessiveParameterList")
@@ -50,7 +53,10 @@ public class TaskResponse {
       @JsonProperty("becomeUser") String becomeUser,
       @JsonProperty("ignoreErrors") Boolean ignoreErrors,
       @JsonProperty("createdBy") Long createdBy,
-      @JsonProperty("createdAt") LocalDateTime createdAt) {
+      @JsonProperty("createdAt") LocalDateTime createdAt,
+      @JsonProperty("parentTaskId") Long parentTaskId,
+      @JsonProperty("blockSection") String blockSection,
+      @JsonProperty("children") List<TaskResponse> children) {
     this.id = id;
     this.roleId = roleId;
     this.name = name;
@@ -67,6 +73,9 @@ public class TaskResponse {
     this.ignoreErrors = ignoreErrors;
     this.createdBy = createdBy;
     this.createdAt = createdAt;
+    this.parentTaskId = parentTaskId;
+    this.blockSection = blockSection;
+    this.children = children;
   }
 
   public TaskResponse(Task task) {
@@ -86,6 +95,38 @@ public class TaskResponse {
     this.ignoreErrors = task.getIgnoreErrors();
     this.createdBy = task.getCreatedBy();
     this.createdAt = task.getCreatedAt();
+    this.parentTaskId = task.getParentTaskId();
+    this.blockSection = task.getBlockSection();
+    this.children = null;
+  }
+
+  @SuppressWarnings("PMD.ExcessiveParameterList")
+  public TaskResponse(
+      Long id, Long roleId, String name, String module, String args,
+      String whenCondition, String loop, String until, String register,
+      List<String> notify, Integer taskOrder,
+      Boolean become, String becomeUser, Boolean ignoreErrors,
+      Long createdBy, LocalDateTime createdAt,
+      Long parentTaskId, String blockSection, List<TaskResponse> children) {
+    this.id = id;
+    this.roleId = roleId;
+    this.name = name;
+    this.module = module;
+    this.args = args;
+    this.whenCondition = whenCondition;
+    this.loop = loop;
+    this.until = until;
+    this.register = register;
+    this.notify = notify;
+    this.taskOrder = taskOrder;
+    this.become = become;
+    this.becomeUser = becomeUser;
+    this.ignoreErrors = ignoreErrors;
+    this.createdBy = createdBy;
+    this.createdAt = createdAt;
+    this.parentTaskId = parentTaskId;
+    this.blockSection = blockSection;
+    this.children = children;
   }
 
   private static List<String> parseNotify(String notifyJson) {
