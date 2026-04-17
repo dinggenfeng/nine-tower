@@ -1,9 +1,13 @@
 package com.ansible.role.service;
 
+import com.ansible.role.dto.BlockChildRequest;
 import com.ansible.role.dto.CreateTaskRequest;
 import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.stream.Collectors;
 import com.ansible.role.entity.Role;
 import com.ansible.role.entity.Task;
 import com.ansible.role.repository.HandlerRepository;
@@ -54,6 +58,28 @@ public class TaskService {
     task.setIgnoreErrors(request.getIgnoreErrors());
     task.setCreatedBy(currentUserId);
     Task saved = taskRepository.save(task);
+    if (request.getBlockChildren() != null && !request.getBlockChildren().isEmpty()) {
+      for (BlockChildRequest child : request.getBlockChildren()) {
+        Task childTask = new Task();
+        childTask.setRoleId(roleId);
+        childTask.setParentTaskId(saved.getId());
+        childTask.setBlockSection(child.getSection());
+        childTask.setName(child.getName());
+        childTask.setModule(child.getModule());
+        childTask.setArgs(child.getArgs());
+        childTask.setWhenCondition(child.getWhenCondition());
+        childTask.setLoop(child.getLoop());
+        childTask.setUntil(child.getUntil());
+        childTask.setRegister(child.getRegister());
+        childTask.setNotify(child.getNotify());
+        childTask.setTaskOrder(child.getTaskOrder());
+        childTask.setBecome(child.getBecome());
+        childTask.setBecomeUser(child.getBecomeUser());
+        childTask.setIgnoreErrors(child.getIgnoreErrors());
+        childTask.setCreatedBy(currentUserId);
+        taskRepository.save(childTask);
+      }
+    }
     return new TaskResponse(saved);
   }
 
@@ -64,8 +90,14 @@ public class TaskService {
             .findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
-    return taskRepository.findAllByRoleIdOrderByTaskOrderAsc(roleId).stream()
-        .map(TaskResponse::new)
+    List<Task> topLevel = taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
+    return topLevel.stream()
+        .map(task -> {
+          if ("block".equals(task.getModule())) {
+            return buildBlockResponse(task);
+          }
+          return new TaskResponse(task);
+        })
         .toList();
   }
 
@@ -133,6 +165,33 @@ public class TaskService {
       task.setIgnoreErrors(request.getIgnoreErrors());
     }
     Task saved = taskRepository.save(task);
+    if (request.getBlockChildren() != null) {
+      // Delete all existing children
+      List<Task> existingChildren = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(taskId);
+      taskRepository.deleteAll(existingChildren);
+      taskRepository.flush();
+      // Create new children
+      for (BlockChildRequest child : request.getBlockChildren()) {
+        Task childTask = new Task();
+        childTask.setRoleId(task.getRoleId());
+        childTask.setParentTaskId(taskId);
+        childTask.setBlockSection(child.getSection());
+        childTask.setName(child.getName());
+        childTask.setModule(child.getModule());
+        childTask.setArgs(child.getArgs());
+        childTask.setWhenCondition(child.getWhenCondition());
+        childTask.setLoop(child.getLoop());
+        childTask.setUntil(child.getUntil());
+        childTask.setRegister(child.getRegister());
+        childTask.setNotify(child.getNotify());
+        childTask.setTaskOrder(child.getTaskOrder());
+        childTask.setBecome(child.getBecome());
+        childTask.setBecomeUser(child.getBecomeUser());
+        childTask.setIgnoreErrors(child.getIgnoreErrors());
+        childTask.setCreatedBy(task.getCreatedBy());
+        taskRepository.save(childTask);
+      }
+    }
     return new TaskResponse(saved);
   }
 
@@ -147,6 +206,10 @@ public class TaskService {
             .findById(task.getRoleId())
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), task.getCreatedBy(), currentUserId);
+    if ("block".equals(task.getModule())) {
+      List<Task> children = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(taskId);
+      taskRepository.deleteAll(children);
+    }
     taskRepository.delete(task);
   }
 
@@ -191,5 +254,33 @@ public class TaskService {
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid notify list", e);
     }
+  }
+
+  private TaskResponse buildBlockResponse(Task blockTask) {
+    List<Task> children = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(blockTask.getId());
+    List<TaskResponse> childResponses = children.stream()
+        .map(TaskResponse::new)
+        .toList();
+    return new TaskResponse(
+        blockTask.getId(),
+        blockTask.getRoleId(),
+        blockTask.getName(),
+        blockTask.getModule(),
+        blockTask.getArgs(),
+        blockTask.getWhenCondition(),
+        blockTask.getLoop(),
+        blockTask.getUntil(),
+        blockTask.getRegister(),
+        parseNotify(blockTask.getNotify()),
+        blockTask.getTaskOrder(),
+        blockTask.getBecome(),
+        blockTask.getBecomeUser(),
+        blockTask.getIgnoreErrors(),
+        blockTask.getCreatedBy(),
+        blockTask.getCreatedAt(),
+        blockTask.getParentTaskId(),
+        blockTask.getBlockSection(),
+        childResponses
+    );
   }
 }
