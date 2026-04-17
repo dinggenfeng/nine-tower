@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.role.dto.BlockChildRequest;
 import com.ansible.role.dto.CreateTaskRequest;
 import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
@@ -266,5 +267,122 @@ class TaskServiceTest {
     List<HandlerResponse> handlers = taskService.getNotifiedHandlers(1L, 10L);
 
     assertThat(handlers).isEmpty();
+  }
+
+  @Test
+  void createBlockTask_withChildren_savesBlockAndChildren() {
+    // Setup: create role first
+    Role role = new Role();
+    ReflectionTestUtils.setField(role, "id", 2L);
+    role.setProjectId(10L);
+    role.setName("test-role");
+    role.setCreatedBy(10L);
+
+    BlockChildRequest child1 = new BlockChildRequest();
+    child1.setSection("BLOCK");
+    child1.setName("Child task 1");
+    child1.setModule("command");
+    child1.setArgs("{\"_raw_params\": \"echo hello\"}");
+    child1.setTaskOrder(1);
+
+    BlockChildRequest child2 = new BlockChildRequest();
+    child2.setSection("RESCUE");
+    child2.setName("Rescue task");
+    child2.setModule("debug");
+    child2.setArgs("{\"msg\": \"failed\"}");
+    child2.setTaskOrder(1);
+
+    CreateTaskRequest request = new CreateTaskRequest();
+    request.setName("My Block");
+    request.setModule("block");
+    request.setTaskOrder(1);
+    request.setBlockChildren(List.of(child1, child2));
+
+    when(roleRepository.findById(2L)).thenReturn(Optional.of(role));
+    when(taskRepository.save(any(Task.class))).thenReturn(testTask);
+
+    TaskResponse response = taskService.createTask(2L, request, 10L);
+
+    assertThat(response.getId()).isNotNull();
+    // createTask returns new TaskResponse(saved) which has children=null
+    assertThat(response.getChildren()).isNull();
+    // But children should be saved - verify via repository
+    verify(taskRepository, org.mockito.Mockito.times(3)).save(any(Task.class));
+  }
+
+  @Test
+  void getTasksByRole_withBlockTask_returnsBlockWithChildren() {
+    // Create a block task with children
+    Task blockTask = new Task();
+    ReflectionTestUtils.setField(blockTask, "id", 10L);
+    blockTask.setRoleId(1L);
+    blockTask.setName("Block Task");
+    blockTask.setModule("block");
+    blockTask.setTaskOrder(1);
+    blockTask.setCreatedBy(10L);
+    ReflectionTestUtils.setField(blockTask, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(blockTask, "updatedAt", LocalDateTime.now());
+
+    Task childTask = new Task();
+    ReflectionTestUtils.setField(childTask, "id", 11L);
+    childTask.setRoleId(1L);
+    childTask.setParentTaskId(10L);
+    childTask.setBlockSection("BLOCK");
+    childTask.setName("Inner task");
+    childTask.setModule("shell");
+    childTask.setTaskOrder(1);
+    childTask.setCreatedBy(10L);
+    ReflectionTestUtils.setField(childTask, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(childTask, "updatedAt", LocalDateTime.now());
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(blockTask));
+    when(taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(10L))
+        .thenReturn(List.of(childTask));
+
+    List<TaskResponse> result = taskService.getTasksByRole(1L, 10L);
+
+    assertThat(result).hasSize(1);
+    TaskResponse block = result.get(0);
+    assertThat(block.getModule()).isEqualTo("block");
+    assertThat(block.getChildren()).isNotNull();
+    assertThat(block.getChildren()).hasSize(1);
+    assertThat(block.getChildren().get(0).getName()).isEqualTo("Inner task");
+  }
+
+  @Test
+  void deleteTask_blockTask_deletesChildren() {
+    Task blockTask = new Task();
+    ReflectionTestUtils.setField(blockTask, "id", 20L);
+    blockTask.setRoleId(1L);
+    blockTask.setName("Block to delete");
+    blockTask.setModule("block");
+    blockTask.setTaskOrder(1);
+    blockTask.setCreatedBy(10L);
+    ReflectionTestUtils.setField(blockTask, "createdAt", LocalDateTime.now());
+    ReflectionTestUtils.setField(blockTask, "updatedAt", LocalDateTime.now());
+
+    Task childTask = new Task();
+    ReflectionTestUtils.setField(childTask, "id", 21L);
+    childTask.setRoleId(1L);
+    childTask.setParentTaskId(20L);
+    childTask.setBlockSection("BLOCK");
+    childTask.setName("To be deleted");
+    childTask.setModule("command");
+    childTask.setTaskOrder(1);
+    childTask.setCreatedBy(10L);
+
+    when(taskRepository.findById(20L)).thenReturn(Optional.of(blockTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(20L))
+        .thenReturn(List.of(childTask));
+
+    taskService.deleteTask(20L, 10L);
+
+    // Verify children were deleted first, then the block
+    var inOrder = org.mockito.Mockito.inOrder(taskRepository);
+    inOrder.verify(taskRepository).deleteAll(List.of(childTask));
+    inOrder.verify(taskRepository).delete(blockTask);
   }
 }
