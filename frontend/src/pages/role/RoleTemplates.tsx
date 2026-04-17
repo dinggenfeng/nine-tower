@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   Button,
+  Card,
   Form,
   Input,
   Modal,
@@ -9,7 +10,13 @@ import {
   Table,
   message,
 } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FileTextOutlined,
+  ArrowLeftOutlined,
+} from '@ant-design/icons';
 import type {
   Template,
   CreateTemplateRequest,
@@ -32,6 +39,9 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [contentTemplate, setContentTemplate] = useState<Template | null>(null);
+  const [contentValue, setContentValue] = useState('');
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -48,47 +58,50 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fetchData();
   }, [fetchData]);
 
+  // --- 基本信息 Modal ---
   const handleCreate = () => {
     setEditingTemplate(null);
     form.resetFields();
     setModalOpen(true);
   };
 
-  const handleEdit = async (record: Template) => {
-    const detail = await getTemplate(record.id);
-    setEditingTemplate(detail);
+  const handleEdit = (record: Template) => {
+    setEditingTemplate(record);
     form.setFieldsValue({
-      name: detail.name,
-      parentDir: detail.parentDir,
-      targetPath: detail.targetPath,
-      content: detail.content,
+      name: record.name,
+      parentDir: record.parentDir,
+      targetPath: record.targetPath,
     });
     setModalOpen(true);
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingTemplate) {
-      const data: UpdateTemplateRequest = {
-        name: values.name,
-        parentDir: values.parentDir,
-        targetPath: values.targetPath,
-        content: values.content,
-      };
-      await updateTemplate(editingTemplate.id, data);
-      message.success('模板已更新');
-    } else {
-      const data: CreateTemplateRequest = {
-        name: values.name,
-        parentDir: values.parentDir,
-        targetPath: values.targetPath,
-        content: values.content,
-      };
-      await createTemplate(roleId, data);
-      message.success('模板已创建');
+    try {
+      const values = await form.validateFields();
+      if (editingTemplate) {
+        const data: UpdateTemplateRequest = {
+          name: values.name,
+          parentDir: values.parentDir,
+          targetPath: values.targetPath,
+        };
+        await updateTemplate(editingTemplate.id, data);
+        message.success('模板已更新');
+      } else {
+        const data: CreateTemplateRequest = {
+          name: values.name,
+          parentDir: values.parentDir,
+          targetPath: values.targetPath,
+        };
+        await createTemplate(roleId, data);
+        message.success('模板已创建');
+      }
+      setModalOpen(false);
+      fetchData();
+    } catch (err) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        message.error((err as { message: string }).message);
+      }
     }
-    setModalOpen(false);
-    fetchData();
   };
 
   const handleDelete = async (id: number) => {
@@ -97,6 +110,73 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fetchData();
   };
 
+  // --- 内容编辑 ---
+  const handleEditContent = async (record: Template) => {
+    const detail = await getTemplate(record.id);
+    setContentTemplate(detail);
+    setContentValue(detail.content || '');
+  };
+
+  const handleSaveContent = async () => {
+    if (!contentTemplate) return;
+    setSaving(true);
+    try {
+      await updateTemplate(contentTemplate.id, { content: contentValue });
+      message.success('模板内容已保存');
+      setContentTemplate(null);
+      fetchData();
+    } catch (err) {
+      if (err && typeof err === 'object' && 'message' in err) {
+        message.error((err as { message: string }).message);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // --- 内容编辑视图 ---
+  if (contentTemplate) {
+    return (
+      <div>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Button
+            type="text"
+            icon={<ArrowLeftOutlined />}
+            onClick={() => setContentTemplate(null)}
+            style={{ color: '#64748b', padding: '4px 8px' }}
+          >
+            返回模板列表
+          </Button>
+          <Button type="primary" onClick={handleSaveContent} loading={saving}>
+            保存
+          </Button>
+        </div>
+        <Card
+          title={
+            <Space>
+              <FileTextOutlined />
+              <span>{contentTemplate.parentDir ? `${contentTemplate.parentDir}/` : ''}{contentTemplate.name}</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <span style={{ color: '#64748b' }}>
+            目标路径: {contentTemplate.targetPath || '未设置'}
+          </span>
+        </Card>
+        <Input.TextArea
+          value={contentValue}
+          onChange={(e) => setContentValue(e.target.value)}
+          rows={20}
+          placeholder="Jinja2 模板内容"
+          style={{ fontFamily: 'monospace', fontSize: 13 }}
+        />
+      </div>
+    );
+  }
+
+  // --- 列表视图 ---
   const columns = [
     { title: '文件名', dataIndex: 'name', key: 'name' },
     {
@@ -111,6 +191,13 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
       key: 'action',
       render: (_: unknown, record: Template) => (
         <Space>
+          <Button
+            type="link"
+            icon={<FileTextOutlined />}
+            onClick={() => handleEditContent(record)}
+          >
+            编辑内容
+          </Button>
           <Button
             type="link"
             icon={<EditOutlined />}
@@ -147,7 +234,6 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
-        width={720}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -162,13 +248,6 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           </Form.Item>
           <Form.Item name="targetPath" label="目标路径">
             <Input placeholder="例如: /etc/nginx/nginx.conf" />
-          </Form.Item>
-          <Form.Item name="content" label="模板内容">
-            <Input.TextArea
-              rows={12}
-              placeholder="Jinja2 模板内容"
-              style={{ fontFamily: 'monospace' }}
-            />
           </Form.Item>
         </Form>
       </Modal>
