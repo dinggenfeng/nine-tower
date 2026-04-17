@@ -137,6 +137,16 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     setPreviewOpen(true);
   };
 
+  const handlePreviewAll = () => {
+    if (tasks.length === 0) {
+      message.info('暂无 Task');
+      return;
+    }
+    const yaml = tasks.map((t) => taskToYaml(t)).join('\n\n');
+    setPreviewYaml(yaml);
+    setPreviewOpen(true);
+  };
+
   const handlePreviewForm = () => {
     const values = form.getFieldsValue();
     const args = buildArgsJson(values.moduleParams, values.extraParams);
@@ -275,7 +285,10 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, textAlign: 'right' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <Button icon={<EyeOutlined />} onClick={handlePreviewAll}>
+          预览全部 YAML
+        </Button>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           添加 Task
         </Button>

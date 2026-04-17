@@ -120,6 +120,25 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     fetchHandlers();
   };
 
+  const handlePreviewAll = () => {
+    if (handlers.length === 0) {
+      message.info('暂无 Handler');
+      return;
+    }
+    const yaml = handlers.map((h) => taskToYaml({
+      name: h.name,
+      module: h.module,
+      args: h.args,
+      whenCondition: h.whenCondition,
+      register: h.register,
+      become: h.become,
+      becomeUser: h.becomeUser,
+      ignoreErrors: h.ignoreErrors,
+    })).join('\n\n');
+    setPreviewYaml(yaml);
+    setPreviewOpen(true);
+  };
+
   const handlePreviewHandler = (handler: Handler) => {
     setPreviewYaml(taskToYaml({
       name: handler.name,
@@ -252,7 +271,10 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, textAlign: 'right' }}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <Button icon={<EyeOutlined />} onClick={handlePreviewAll}>
+          预览全部 YAML
+        </Button>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           添加 Handler
         </Button>
