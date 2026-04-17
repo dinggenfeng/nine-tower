@@ -53,4 +53,10 @@ public class Task extends BaseEntity {
 
   @Column(name = "ignore_errors")
   private Boolean ignoreErrors;
+
+  @Column(name = "parent_task_id")
+  private Long parentTaskId;
+
+  @Column(name = "block_section", length = 20)
+  private String blockSection; // "BLOCK" | "RESCUE" | "ALWAYS"
 }
