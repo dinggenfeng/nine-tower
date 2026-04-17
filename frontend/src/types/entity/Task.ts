@@ -1,3 +1,5 @@
+export type BlockSection = 'BLOCK' | 'RESCUE' | 'ALWAYS';
+
 export interface Task {
   id: number;
   roleId: number;
@@ -15,6 +17,9 @@ export interface Task {
   ignoreErrors: boolean;
   createdBy: number;
   createdAt: string;
+  parentTaskId: number | null;
+  blockSection: BlockSection | null;
+  children: Task[];
 }
 
 export interface CreateTaskRequest {
@@ -30,6 +35,7 @@ export interface CreateTaskRequest {
   become?: boolean;
   becomeUser?: string;
   ignoreErrors?: boolean;
+  blockChildren?: BlockChildRequest[];
 }
 
 export interface UpdateTaskRequest {
@@ -45,6 +51,7 @@ export interface UpdateTaskRequest {
   become?: boolean;
   becomeUser?: string;
   ignoreErrors?: boolean;
+  blockChildren?: BlockChildRequest[];
 }
 
 export interface Handler {
@@ -79,6 +86,22 @@ export interface UpdateHandlerRequest {
   args?: string;
   whenCondition?: string;
   register?: string;
+  become?: boolean;
+  becomeUser?: string;
+  ignoreErrors?: boolean;
+}
+
+export interface BlockChildRequest {
+  section: BlockSection;
+  name: string;
+  module: string;
+  args?: string;
+  whenCondition?: string;
+  loop?: string;
+  until?: string;
+  register?: string;
+  notify?: string[];
+  taskOrder: number;
   become?: boolean;
   becomeUser?: string;
   ignoreErrors?: boolean;
