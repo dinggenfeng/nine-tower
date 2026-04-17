@@ -14,6 +14,9 @@ export interface TaskYamlInput {
   become?: boolean;
   becomeUser?: string;
   ignoreErrors?: boolean;
+  blockSection?: string;
+  parentTaskId?: number | null;
+  children?: TaskYamlInput[];
 }
 
 function yamlScalar(value: unknown): string {
@@ -59,6 +62,57 @@ function renderModuleArgs(argsJson: string): string {
     ([key, value]) => `    ${key}: ${yamlScalar(value)}`,
   );
   return '\n' + lines.join('\n');
+}
+
+export function blockToYaml(task: TaskYamlInput): string {
+  const lines: string[] = [];
+
+  lines.push(`- name: ${yamlScalar(task.name || 'Unnamed task')}`);
+  lines.push(`  block:`);
+
+  const blockChildren = (task.children || []).filter(
+    (c) => !c.blockSection || c.blockSection === 'BLOCK',
+  );
+  for (const child of blockChildren) {
+    const childYaml = taskToYaml(child);
+    const indented = childYaml.split('\n').map((l) => '    ' + l).join('\n');
+    lines.push(indented);
+  }
+
+  const rescueChildren = (task.children || []).filter((c) => c.blockSection === 'RESCUE');
+  if (rescueChildren.length > 0) {
+    lines.push(`  rescue:`);
+    for (const child of rescueChildren) {
+      const childYaml = taskToYaml(child);
+      const indented = childYaml.split('\n').map((l) => '    ' + l).join('\n');
+      lines.push(indented);
+    }
+  }
+
+  const alwaysChildren = (task.children || []).filter((c) => c.blockSection === 'ALWAYS');
+  if (alwaysChildren.length > 0) {
+    lines.push(`  always:`);
+    for (const child of alwaysChildren) {
+      const childYaml = taskToYaml(child);
+      const indented = childYaml.split('\n').map((l) => '    ' + l).join('\n');
+      lines.push(indented);
+    }
+  }
+
+  if (task.whenCondition) {
+    lines.push(`  when: ${yamlScalar(task.whenCondition)}`);
+  }
+  if (task.become) {
+    lines.push('  become: true');
+  }
+  if (task.becomeUser) {
+    lines.push(`  become_user: ${yamlScalar(task.becomeUser)}`);
+  }
+  if (task.ignoreErrors) {
+    lines.push('  ignore_errors: true');
+  }
+
+  return lines.join('\n');
 }
 
 export function taskToYaml(task: TaskYamlInput): string {

@@ -7,9 +7,10 @@ const { Text } = Typography;
 interface ModuleSelectProps {
   value?: string;
   onChange?: (value: string) => void;
+  filterModule?: string; // if provided, exclude this module name from the list
 }
 
-export default function ModuleSelect({ value, onChange }: ModuleSelectProps) {
+export default function ModuleSelect({ value, onChange, filterModule }: ModuleSelectProps) {
   return (
     <Select
       showSearch
@@ -20,7 +21,7 @@ export default function ModuleSelect({ value, onChange }: ModuleSelectProps) {
       optionFilterProp="label"
       optionLabelProp="label"
     >
-      {ANSIBLE_MODULES.map((mod) => (
+      {ANSIBLE_MODULES.filter((mod) => mod.name !== filterModule).map((mod) => (
         <Select.Option key={mod.name} value={mod.name} label={mod.label}>
           <div
             style={{
