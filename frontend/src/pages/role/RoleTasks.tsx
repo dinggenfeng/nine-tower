@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
+import { Button, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, BlockChildRequest, BlockSection } from '../../types/entity/Task';
 import type { Handler } from '../../types/entity/Task';
@@ -79,6 +79,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [previewYaml, setPreviewYaml] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [blockChildren, setBlockChildren] = useState<BlockChildRequest[]>([]);
+  const [loopMode, setLoopMode] = useState<'expression' | 'list'>('expression');
+  const [loopItems, setLoopItems] = useState<string[]>([]);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -103,6 +105,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     setEditingTask(null);
     setSelectedModule(undefined);
     setBlockChildren([]);
+    setLoopMode('expression');
+    setLoopItems([]);
     form.resetFields();
     form.setFieldValue('taskOrder', tasks.length + 1);
     setModalOpen(true);
@@ -127,6 +131,25 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       becomeUser: task.becomeUser,
       ignoreErrors: task.ignoreErrors || false,
     });
+    // Detect loop mode from stored value
+    if (task.loop) {
+      try {
+        const parsed = JSON.parse(task.loop);
+        if (Array.isArray(parsed)) {
+          setLoopMode('list');
+          setLoopItems(parsed.map(String));
+        } else {
+          setLoopMode('expression');
+          setLoopItems([]);
+        }
+      } catch {
+        setLoopMode('expression');
+        setLoopItems([]);
+      }
+    } else {
+      setLoopMode('expression');
+      setLoopItems([]);
+    }
     setModalOpen(true);
     if (task.module === 'block' && task.children && task.children.length > 0) {
       setBlockChildren(task.children.map((c) => ({
@@ -215,7 +238,9 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
           module: values.module,
           args: args || undefined,
           whenCondition: values.whenCondition,
-          loop: values.loop,
+          loop: loopMode === 'list'
+            ? (loopItems.length > 0 ? JSON.stringify(loopItems) : undefined)
+            : values.loop,
           until: values.until,
           register: values.register,
           notify: values.notify,
@@ -252,6 +277,9 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     }
 
     const args = buildArgsJson(values.moduleParams, values.extraParams);
+    const loopValue = loopMode === 'list'
+      ? (loopItems.length > 0 ? JSON.stringify(loopItems) : undefined)
+      : values.loop;
 
     if (editingTask) {
       let data: UpdateTaskRequest = {
@@ -259,7 +287,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         module: values.module,
         args: args || undefined,
         whenCondition: values.whenCondition,
-        loop: values.loop,
+        loop: loopValue,
         until: values.until,
         register: values.register,
         notify: values.notify,
@@ -289,7 +317,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         module: values.module,
         args: args || undefined,
         whenCondition: values.whenCondition,
-        loop: values.loop,
+        loop: loopValue,
         until: values.until,
         register: values.register,
         notify: values.notify,
@@ -546,7 +574,6 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                         <Input placeholder="例如: ansible_os_family == 'Debian'" />
                       </Form.Item>
                       <Form.Item
-                        name="loop"
                         label={
                           <span>
                             Loop
@@ -556,7 +583,44 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           </span>
                         }
                       >
-                        <Input placeholder="例如: {{ packages }}" />
+                        <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                          <Segmented
+                            size="small"
+                            options={[
+                              { label: '表达式', value: 'expression' },
+                              { label: '列表', value: 'list' },
+                            ]}
+                            value={loopMode}
+                            onChange={(val) => {
+                              const mode = val as 'expression' | 'list';
+                              setLoopMode(mode);
+                              if (mode === 'expression') {
+                                form.setFieldValue('loop', '');
+                                setLoopItems([]);
+                              } else {
+                                form.setFieldValue('loop', '[]');
+                              }
+                            }}
+                          />
+                          {loopMode === 'expression' ? (
+                            <Form.Item name="loop" noStyle>
+                              <Input placeholder="例如: {{ packages }}" />
+                            </Form.Item>
+                          ) : (
+                            <Select
+                              mode="tags"
+                              placeholder="输入列表项后按回车添加"
+                              value={loopItems}
+                              onChange={(items) => {
+                                setLoopItems(items);
+                                form.setFieldValue('loop', items.length > 0 ? JSON.stringify(items) : '');
+                              }}
+                              open={loopItems.length > 0 ? false : undefined}
+                              tokenSeparators={[',']}
+                              style={{ width: '100%' }}
+                            />
+                          )}
+                        </Space>
                       </Form.Item>
                       <Form.Item
                         name="until"

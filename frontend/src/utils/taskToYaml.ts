@@ -47,6 +47,19 @@ function yamlScalar(value: unknown): string {
   return str;
 }
 
+function renderLoop(loopValue: string): string {
+  try {
+    const parsed = JSON.parse(loopValue);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const items = parsed.map((item: unknown) => `    - ${yamlScalar(item)}`);
+      return `  loop:\n${items.join('\n')}`;
+    }
+  } catch {
+    // not JSON — treat as Jinja2 expression
+  }
+  return `  loop: ${yamlScalar(loopValue)}`;
+}
+
 function renderModuleArgs(argsJson: string): string {
   let parsed: Record<string, unknown>;
   try {
@@ -134,7 +147,7 @@ export function taskToYaml(task: TaskYamlInput): string {
   }
 
   if (task.loop) {
-    lines.push(`  loop: ${yamlScalar(task.loop)}`);
+    lines.push(renderLoop(task.loop));
   }
 
   if (task.until) {

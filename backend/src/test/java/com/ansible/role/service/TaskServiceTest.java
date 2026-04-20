@@ -72,6 +72,8 @@ class TaskServiceTest {
     request.setTaskOrder(1);
 
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of());
     when(taskRepository.save(any(Task.class))).thenReturn(testTask);
 
     TaskResponse response = taskService.createTask(1L, request, 10L);
@@ -104,6 +106,8 @@ class TaskServiceTest {
     ReflectionTestUtils.setField(savedTask, "updatedAt", LocalDateTime.now());
 
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of());
     when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
     TaskResponse response = taskService.createTask(1L, request, 10L);
@@ -151,6 +155,8 @@ class TaskServiceTest {
     ReflectionTestUtils.setField(savedTask, "updatedAt", LocalDateTime.now());
 
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of());
     when(taskRepository.save(any(Task.class))).thenReturn(savedTask);
 
     TaskResponse response = taskService.createTask(1L, request, 10L);
@@ -228,11 +234,90 @@ class TaskServiceTest {
   void deleteTask_success() {
     when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of());
 
     taskService.deleteTask(1L, 10L);
 
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
     verify(taskRepository).delete(testTask);
+  }
+
+  @Test
+  void deleteTask_compactsOrder() {
+    Task task2 = new Task();
+    ReflectionTestUtils.setField(task2, "id", 2L);
+    task2.setRoleId(1L);
+    task2.setName("Keep me");
+    task2.setModule("shell");
+    task2.setTaskOrder(3);
+    task2.setCreatedBy(10L);
+
+    Task task3 = new Task();
+    ReflectionTestUtils.setField(task3, "id", 3L);
+    task3.setRoleId(1L);
+    task3.setName("Keep me too");
+    task3.setModule("shell");
+    task3.setTaskOrder(5);
+    task3.setCreatedBy(10L);
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(task2, task3));
+
+    taskService.deleteTask(1L, 10L);
+
+    assertThat(task2.getTaskOrder()).isEqualTo(1);
+    assertThat(task3.getTaskOrder()).isEqualTo(2);
+    verify(taskRepository).save(task2);
+    verify(taskRepository).save(task3);
+  }
+
+  @Test
+  void createTask_shiftsExistingOrder() {
+    Task existing1 = new Task();
+    ReflectionTestUtils.setField(existing1, "id", 2L);
+    existing1.setRoleId(1L);
+    existing1.setName("Task A");
+    existing1.setModule("shell");
+    existing1.setTaskOrder(1);
+    existing1.setCreatedBy(10L);
+
+    Task existing2 = new Task();
+    ReflectionTestUtils.setField(existing2, "id", 3L);
+    existing2.setRoleId(1L);
+    existing2.setName("Task B");
+    existing2.setModule("shell");
+    existing2.setTaskOrder(2);
+    existing2.setCreatedBy(10L);
+
+    Task existing3 = new Task();
+    ReflectionTestUtils.setField(existing3, "id", 4L);
+    existing3.setRoleId(1L);
+    existing3.setName("Task C");
+    existing3.setModule("shell");
+    existing3.setTaskOrder(3);
+    existing3.setCreatedBy(10L);
+
+    CreateTaskRequest request = new CreateTaskRequest();
+    request.setName("Inserted task");
+    request.setModule("apt");
+    request.setTaskOrder(2);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(existing1, existing2, existing3));
+    when(taskRepository.save(any(Task.class))).thenReturn(testTask);
+
+    taskService.createTask(1L, request, 10L);
+
+    // existing1 (order 1) should stay at 1, existing2 (order 2) and existing3 (order 3) should shift up
+    assertThat(existing1.getTaskOrder()).isEqualTo(1);
+    assertThat(existing2.getTaskOrder()).isEqualTo(3);
+    assertThat(existing3.getTaskOrder()).isEqualTo(4);
+    verify(taskRepository).save(existing2);
+    verify(taskRepository).save(existing3);
   }
 
   @Test
@@ -299,6 +384,8 @@ class TaskServiceTest {
     request.setBlockChildren(List.of(child1, child2));
 
     when(roleRepository.findById(2L)).thenReturn(Optional.of(role));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(2L))
+        .thenReturn(List.of());
     when(taskRepository.save(any(Task.class))).thenReturn(testTask);
 
     TaskResponse response = taskService.createTask(2L, request, 10L);
@@ -377,6 +464,8 @@ class TaskServiceTest {
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
     when(taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(20L))
         .thenReturn(List.of(childTask));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of());
 
     taskService.deleteTask(20L, 10L);
 
@@ -384,5 +473,6 @@ class TaskServiceTest {
     var inOrder = org.mockito.Mockito.inOrder(taskRepository);
     inOrder.verify(taskRepository).deleteAll(List.of(childTask));
     inOrder.verify(taskRepository).delete(blockTask);
+    inOrder.verify(taskRepository).flush();
   }
 }

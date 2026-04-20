@@ -1,5 +1,28 @@
 import { describe, it, expect } from 'vitest';
-import { blockToYaml } from '../taskToYaml';
+import { taskToYaml, blockToYaml } from '../taskToYaml';
+
+describe('taskToYaml', () => {
+  it('renders loop as expression (Jinja2)', () => {
+    const yaml = taskToYaml({ name: 'Install pkgs', module: 'apt', loop: "{{ packages }}" });
+    expect(yaml).toContain('  loop: "{{ packages }}"');
+  });
+
+  it('renders loop as YAML list when stored as JSON array', () => {
+    const yaml = taskToYaml({
+      name: 'Create dirs',
+      module: 'file',
+      args: '{"path": "{{ remote_install_dir }}/{{ item }}", "state": "directory"}',
+      loop: '["plan-service","index-online-service","portal-service","gateway","process-service"]',
+    });
+    expect(yaml).toContain('  loop:');
+    expect(yaml).toContain('    - plan-service');
+    expect(yaml).toContain('    - index-online-service');
+    expect(yaml).toContain('    - portal-service');
+    expect(yaml).toContain('    - gateway');
+    expect(yaml).toContain('    - process-service');
+    expect(yaml).not.toContain('"[');
+  });
+});
 
 describe('blockToYaml', () => {
   it('renders block with children', () => {

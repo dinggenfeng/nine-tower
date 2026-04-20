@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Button, Card, Collapse, Form, Input, Select, Switch, Tabs, Space, Popconfirm, Tooltip } from 'antd';
+import { Button, Card, Collapse, Form, Input, Segmented, Select, Switch, Tabs, Space, Popconfirm, Tooltip } from 'antd';
 import { PlusOutlined, DeleteOutlined, UpOutlined, DownOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
 import type { BlockChildRequest, BlockSection } from '../../types/entity/Task';
 import { getModuleDefinition } from '../../constants/ansibleModules';
@@ -13,6 +13,8 @@ interface BlockChildFormData {
   extraParams: { key: string; value: string }[];
   whenCondition: string;
   loop: string;
+  loopMode: 'expression' | 'list';
+  loopItems: string[];
   register: string;
   become: boolean;
   becomeUser: string;
@@ -221,7 +223,47 @@ function ChildTaskCard({
                 <Input value={data.whenCondition} onChange={(e) => onChange({ ...data, whenCondition: e.target.value })} placeholder="条件表达式" />
               </Form.Item>
               <Form.Item label="Loop" style={{ marginBottom: 8 }}>
-                <Input value={data.loop} onChange={(e) => onChange({ ...data, loop: e.target.value })} placeholder="{{ items }}" />
+                <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                  <Segmented
+                    size="small"
+                    options={[
+                      { label: '表达式', value: 'expression' },
+                      { label: '列表', value: 'list' },
+                    ]}
+                    value={data.loopMode}
+                    onChange={(val) => {
+                      const mode = val as 'expression' | 'list';
+                      if (mode === 'expression') {
+                        onChange({ ...data, loopMode: mode, loop: '', loopItems: [] });
+                      } else {
+                        onChange({ ...data, loopMode: mode, loop: '[]' });
+                      }
+                    }}
+                  />
+                  {data.loopMode === 'expression' ? (
+                    <Input
+                      value={data.loop}
+                      onChange={(e) => onChange({ ...data, loop: e.target.value })}
+                      placeholder="{{ items }}"
+                    />
+                  ) : (
+                    <Select
+                      mode="tags"
+                      placeholder="输入列表项后按回车添加"
+                      value={data.loopItems}
+                      onChange={(items) => {
+                        onChange({
+                          ...data,
+                          loopItems: items,
+                          loop: items.length > 0 ? JSON.stringify(items) : '',
+                        });
+                      }}
+                      open={data.loopItems.length > 0 ? false : undefined}
+                      tokenSeparators={[',']}
+                      style={{ width: '100%' }}
+                    />
+                  )}
+                </Space>
               </Form.Item>
               <Form.Item label="Register" style={{ marginBottom: 8 }}>
                 <Input value={data.register} onChange={(e) => onChange({ ...data, register: e.target.value })} placeholder="变量名" />
@@ -254,6 +296,19 @@ export default function BlockTasksEditor({
     blockChildren.length > 0
       ? blockChildren.map((c) => {
           const parsed = parseArgsToForm(c.args, c.module);
+          let loopMode: 'expression' | 'list' = 'expression';
+          let loopItems: string[] = [];
+          if (c.loop) {
+            try {
+              const arr = JSON.parse(c.loop);
+              if (Array.isArray(arr)) {
+                loopMode = 'list';
+                loopItems = arr.map(String);
+              }
+            } catch {
+              // not JSON array — keep expression mode
+            }
+          }
           return {
             key: generateKey(),
             name: c.name,
@@ -262,6 +317,8 @@ export default function BlockTasksEditor({
             extraParams: parsed.extraParams,
             whenCondition: c.whenCondition || '',
             loop: c.loop || '',
+            loopMode,
+            loopItems,
             register: c.register || '',
             become: c.become || false,
             becomeUser: c.becomeUser || '',
@@ -309,6 +366,8 @@ export default function BlockTasksEditor({
         extraParams: [],
         whenCondition: '',
         loop: '',
+        loopMode: 'expression' as const,
+        loopItems: [],
         register: '',
         become: false,
         becomeUser: '',
