@@ -26,5 +26,8 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.datasource.password", postgres::getPassword);
     registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
     registry.add("app.encryption.key", () -> "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=");
+    registry.add(
+        "app.jwt.secret",
+        () -> "integration-test-jwt-secret-key-must-be-at-least-256-bits-long");
   }
 }

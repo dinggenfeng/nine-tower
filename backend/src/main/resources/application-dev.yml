@@ -1,0 +1,5 @@
+app:
+  jwt:
+    secret: dev-only-jwt-secret-key-must-be-at-least-256-bits-long-for-hmac
+  encryption:
+    key: YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=

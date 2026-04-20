@@ -14,10 +14,10 @@ spring:
 
 app:
   jwt:
-    secret: ${JWT_SECRET:ansible-playbook-system-jwt-secret-key-must-be-at-least-256bits}
+    secret: ${JWT_SECRET}
     expiration-ms: 28800000
   encryption:
-    key: ${ENCRYPTION_KEY:YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=}
+    key: ${ENCRYPTION_KEY}
 
 server:
   port: 8080
