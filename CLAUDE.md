@@ -14,7 +14,7 @@ Ansible Playbook 可视化开发系统 — 用于开发和管理 Ansible Playboo
 
 ```bash
 cd backend
-mvn spring-boot:run                    # 启动后端（端口 8080）
+mvn spring-boot:run -Dspring-boot.run.profiles=dev  # 本地启动（dev profile 提供 JWT/加密密钥默认值）
 mvn test                               # 运行单元测试
 mvn verify                             # 运行集成测试（Testcontainers + PostgreSQL）
 mvn test -Dtest=UserServiceTest         # 运行单个测试类
@@ -24,6 +24,8 @@ mvn checkstyle:check                   # 代码格式检查
 mvn pmd:check                         # 代码规范检查
 mvn spotbugs:check                    # Bug/安全扫描
 ```
+
+生产启动必须通过环境变量提供 `JWT_SECRET` 和 `ENCRYPTION_KEY`（不再有硬编码兜底，缺失会 fail-fast）。
 
 ### 前端（frontend/）
 
