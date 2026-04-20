@@ -5,9 +5,6 @@ import com.ansible.role.dto.CreateTaskRequest;
 import com.ansible.role.dto.HandlerResponse;
 import com.ansible.role.dto.TaskResponse;
 import com.ansible.role.dto.UpdateTaskRequest;
-import java.util.ArrayList;
-import java.util.Map;
-import java.util.stream.Collectors;
 import com.ansible.role.entity.Role;
 import com.ansible.role.entity.Task;
 import com.ansible.role.repository.HandlerRepository;
@@ -18,6 +15,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("PMD.TooManyMethods")
 public class TaskService {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -63,26 +64,7 @@ public class TaskService {
     shiftTaskOrder(roleId, null, request.getTaskOrder());
     Task saved = taskRepository.save(task);
     if (request.getBlockChildren() != null && !request.getBlockChildren().isEmpty()) {
-      for (BlockChildRequest child : request.getBlockChildren()) {
-        Task childTask = new Task();
-        childTask.setRoleId(roleId);
-        childTask.setParentTaskId(saved.getId());
-        childTask.setBlockSection(child.getSection());
-        childTask.setName(child.getName());
-        childTask.setModule(child.getModule());
-        childTask.setArgs(child.getArgs());
-        childTask.setWhenCondition(child.getWhenCondition());
-        childTask.setLoop(child.getLoop());
-        childTask.setUntil(child.getUntil());
-        childTask.setRegister(child.getRegister());
-        childTask.setNotify(child.getNotify());
-        childTask.setTaskOrder(child.getTaskOrder());
-        childTask.setBecome(child.getBecome());
-        childTask.setBecomeUser(child.getBecomeUser());
-        childTask.setIgnoreErrors(child.getIgnoreErrors());
-        childTask.setCreatedBy(currentUserId);
-        taskRepository.save(childTask);
-      }
+      saveBlockChildren(saved.getId(), roleId, currentUserId, request.getBlockChildren());
     }
     return new TaskResponse(saved);
   }
@@ -120,7 +102,11 @@ public class TaskService {
   }
 
   @Transactional
-  @SuppressWarnings({"PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
+  @SuppressWarnings({
+    "PMD.CyclomaticComplexity",
+    "PMD.NPathComplexity",
+    "PMD.CognitiveComplexity"
+  })
   public TaskResponse updateTask(Long taskId, UpdateTaskRequest request, Long currentUserId) {
     Task task =
         taskRepository
@@ -173,31 +159,10 @@ public class TaskService {
     }
     Task saved = taskRepository.save(task);
     if (request.getBlockChildren() != null) {
-      // Delete all existing children
       List<Task> existingChildren = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(taskId);
       taskRepository.deleteAll(existingChildren);
       taskRepository.flush();
-      // Create new children
-      for (BlockChildRequest child : request.getBlockChildren()) {
-        Task childTask = new Task();
-        childTask.setRoleId(task.getRoleId());
-        childTask.setParentTaskId(taskId);
-        childTask.setBlockSection(child.getSection());
-        childTask.setName(child.getName());
-        childTask.setModule(child.getModule());
-        childTask.setArgs(child.getArgs());
-        childTask.setWhenCondition(child.getWhenCondition());
-        childTask.setLoop(child.getLoop());
-        childTask.setUntil(child.getUntil());
-        childTask.setRegister(child.getRegister());
-        childTask.setNotify(child.getNotify());
-        childTask.setTaskOrder(child.getTaskOrder());
-        childTask.setBecome(child.getBecome());
-        childTask.setBecomeUser(child.getBecomeUser());
-        childTask.setIgnoreErrors(child.getIgnoreErrors());
-        childTask.setCreatedBy(task.getCreatedBy());
-        taskRepository.save(childTask);
-      }
+      saveBlockChildren(taskId, task.getRoleId(), task.getCreatedBy(), request.getBlockChildren());
     }
     return new TaskResponse(saved);
   }
@@ -264,7 +229,7 @@ public class TaskService {
     for (int i = 0; i < ordered.size(); i++) {
       Task t = ordered.get(i);
       int newOrder = i + 1;
-      if (!Integer.valueOf(newOrder).equals(t.getTaskOrder())) {
+      if (!Objects.equals(newOrder, t.getTaskOrder())) {
         t.setTaskOrder(newOrder);
         taskRepository.save(t);
       }
@@ -311,6 +276,31 @@ public class TaskService {
       return MAPPER.writeValueAsString(list);
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid notify list", e);
+    }
+  }
+
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
+  private void saveBlockChildren(
+      Long parentTaskId, Long roleId, Long createdBy, List<BlockChildRequest> children) {
+    for (BlockChildRequest child : children) {
+      Task childTask = new Task();
+      childTask.setRoleId(roleId);
+      childTask.setParentTaskId(parentTaskId);
+      childTask.setBlockSection(child.getSection());
+      childTask.setName(child.getName());
+      childTask.setModule(child.getModule());
+      childTask.setArgs(child.getArgs());
+      childTask.setWhenCondition(child.getWhenCondition());
+      childTask.setLoop(child.getLoop());
+      childTask.setUntil(child.getUntil());
+      childTask.setRegister(child.getRegister());
+      childTask.setNotify(child.getNotify());
+      childTask.setTaskOrder(child.getTaskOrder());
+      childTask.setBecome(child.getBecome());
+      childTask.setBecomeUser(child.getBecomeUser());
+      childTask.setIgnoreErrors(child.getIgnoreErrors());
+      childTask.setCreatedBy(createdBy);
+      taskRepository.save(childTask);
     }
   }
 
