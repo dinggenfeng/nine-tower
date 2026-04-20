@@ -2,6 +2,7 @@ package com.ansible.role.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -11,7 +12,10 @@ import lombok.Setter;
 public class BlockChildRequest {
 
   @NotBlank(message = "Section is required")
-  private String section; // BLOCK / RESCUE / ALWAYS
+  @Pattern(
+      regexp = "^(BLOCK|RESCUE|ALWAYS)$",
+      message = "Section must be one of BLOCK, RESCUE, ALWAYS")
+  private String section;
 
   @NotBlank(message = "Child task name is required")
   @Size(max = 200)

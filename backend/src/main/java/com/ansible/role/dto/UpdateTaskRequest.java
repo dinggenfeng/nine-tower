@@ -1,5 +1,6 @@
 package com.ansible.role.dto;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.Getter;
@@ -40,5 +41,5 @@ public class UpdateTaskRequest {
 
   private Boolean ignoreErrors;
 
-  private java.util.List<com.ansible.role.dto.BlockChildRequest> blockChildren;
+  @Valid private List<BlockChildRequest> blockChildren;
 }
