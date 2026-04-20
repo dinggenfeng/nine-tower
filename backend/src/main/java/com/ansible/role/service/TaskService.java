@@ -57,6 +57,10 @@ public class TaskService {
     task.setBecomeUser(request.getBecomeUser());
     task.setIgnoreErrors(request.getIgnoreErrors());
     task.setCreatedBy(currentUserId);
+    if (request.getBlockChildren() != null && !request.getBlockChildren().isEmpty()) {
+      validateBlockChildren(request.getModule(), request.getBlockChildren());
+    }
+    shiftTaskOrder(roleId, null, request.getTaskOrder());
     Task saved = taskRepository.save(task);
     if (request.getBlockChildren() != null && !request.getBlockChildren().isEmpty()) {
       for (BlockChildRequest child : request.getBlockChildren()) {
@@ -164,6 +168,9 @@ public class TaskService {
     if (request.getIgnoreErrors() != null) {
       task.setIgnoreErrors(request.getIgnoreErrors());
     }
+    if (request.getBlockChildren() != null && !request.getBlockChildren().isEmpty()) {
+      validateBlockChildren(task.getModule(), request.getBlockChildren());
+    }
     Task saved = taskRepository.save(task);
     if (request.getBlockChildren() != null) {
       // Delete all existing children
@@ -206,11 +213,62 @@ public class TaskService {
             .findById(task.getRoleId())
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), task.getCreatedBy(), currentUserId);
+
+    Long parentTaskId = task.getParentTaskId();
+    Long roleId = task.getRoleId();
+
     if ("block".equals(task.getModule())) {
       List<Task> children = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(taskId);
       taskRepository.deleteAll(children);
     }
     taskRepository.delete(task);
+    taskRepository.flush();
+
+    compactTaskOrder(roleId, parentTaskId);
+  }
+
+  private void shiftTaskOrder(Long roleId, Long parentTaskId, int fromOrder) {
+    List<Task> tasks;
+    if (parentTaskId != null) {
+      tasks = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(parentTaskId);
+    } else {
+      tasks =
+          taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
+    }
+    for (Task t : tasks) {
+      if (t.getTaskOrder() >= fromOrder) {
+        t.setTaskOrder(t.getTaskOrder() + 1);
+        taskRepository.save(t);
+      }
+    }
+  }
+
+  private void compactTaskOrder(Long roleId, Long parentTaskId) {
+    if (parentTaskId != null) {
+      // Block children: taskOrder is scoped to (parentTaskId, blockSection), so
+      // renumber each section independently.
+      Map<String, List<Task>> bySection =
+          taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(parentTaskId).stream()
+              .collect(
+                  Collectors.groupingBy(
+                      t -> t.getBlockSection() == null ? "" : t.getBlockSection()));
+      for (List<Task> section : bySection.values()) {
+        renumber(section);
+      }
+    } else {
+      renumber(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId));
+    }
+  }
+
+  private void renumber(List<Task> ordered) {
+    for (int i = 0; i < ordered.size(); i++) {
+      Task t = ordered.get(i);
+      int newOrder = i + 1;
+      if (!Integer.valueOf(newOrder).equals(t.getTaskOrder())) {
+        t.setTaskOrder(newOrder);
+        taskRepository.save(t);
+      }
+    }
   }
 
   @Transactional(readOnly = true)
@@ -253,6 +311,18 @@ public class TaskService {
       return MAPPER.writeValueAsString(list);
     } catch (JsonProcessingException e) {
       throw new IllegalArgumentException("Invalid notify list", e);
+    }
+  }
+
+  private void validateBlockChildren(String parentModule, List<BlockChildRequest> children) {
+    if (!"block".equals(parentModule)) {
+      throw new IllegalArgumentException(
+          "blockChildren can only be provided when module is 'block'");
+    }
+    for (BlockChildRequest child : children) {
+      if ("block".equals(child.getModule())) {
+        throw new IllegalArgumentException("Nested block tasks are not supported");
+      }
     }
   }
 
