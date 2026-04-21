@@ -3,7 +3,6 @@ package com.ansible.role.entity;
 import com.ansible.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -29,7 +28,6 @@ public class RoleFile extends BaseEntity {
   @Column(nullable = false, length = 200)
   private String name;
 
-  @Lob
   @Column(columnDefinition = "bytea")
   private byte[] content;
 
