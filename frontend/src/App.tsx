@@ -9,6 +9,7 @@ import MemberManagement from "./pages/project/MemberManagement";
 import HostGroupManager from "./pages/host/HostGroupManager";
 import RoleList from "./pages/role/RoleList";
 import RoleDetail from "./pages/role/RoleDetail";
+import TagManager from "./pages/tag/TagManager";
 import { useAuthStore } from "./stores/authStore";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -40,6 +41,7 @@ export default function App() {
           <Route path="host-groups" element={<HostGroupManager />} />
           <Route path="roles" element={<RoleList />} />
           <Route path="roles/:roleId" element={<RoleDetail />} />
+          <Route path="tags" element={<TagManager />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
