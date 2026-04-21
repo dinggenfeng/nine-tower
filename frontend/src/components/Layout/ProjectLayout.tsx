@@ -21,7 +21,7 @@ const navGroups = [
     items: [
       { key: 'roles', icon: <CodeOutlined />, label: 'Roles' },
       { key: 'host-groups', icon: <DatabaseOutlined />, label: '主机组' },
-      { key: 'variables', icon: <AppstoreOutlined />, label: '变量', disabled: true },
+      { key: 'variables', icon: <AppstoreOutlined />, label: '变量' },
       { key: 'environments', icon: <CloudOutlined />, label: '环境' },
       { key: 'tags', icon: <TagsOutlined />, label: '标签' },
       { key: 'playbooks', icon: <PlayCircleOutlined />, label: '剧本', disabled: true },
