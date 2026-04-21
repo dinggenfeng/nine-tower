@@ -12,6 +12,8 @@ import RoleDetail from "./pages/role/RoleDetail";
 import TagManager from "./pages/tag/TagManager";
 import EnvironmentManager from "./pages/environment/EnvironmentManager";
 import VariableManager from "./pages/variable/VariableManager";
+import PlaybookList from "./pages/playbook/PlaybookList";
+import PlaybookBuilder from "./pages/playbook/PlaybookBuilder";
 import { useAuthStore } from "./stores/authStore";
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="tags" element={<TagManager />} />
           <Route path="environments" element={<EnvironmentManager />} />
           <Route path="variables" element={<VariableManager />} />
+          <Route path="playbooks" element={<PlaybookList />} />
+          <Route path="playbooks/:pbId" element={<PlaybookBuilder />} />
         </Route>
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
