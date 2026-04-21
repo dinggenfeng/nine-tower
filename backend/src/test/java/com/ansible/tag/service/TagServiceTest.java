@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.dto.CreateTagRequest;
 import com.ansible.tag.dto.TagResponse;
 import com.ansible.tag.dto.UpdateTagRequest;
@@ -24,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class TagServiceTest {
 
   @Mock private TagRepository tagRepository;
+  @Mock private ProjectAccessChecker accessChecker;
 
   @InjectMocks private TagService tagService;
 
@@ -66,7 +68,7 @@ class TagServiceTest {
     when(tagRepository.findByProjectIdOrderByIdAsc(1L))
         .thenReturn(List.of(createTag(1L, 1L, "web"), createTag(2L, 1L, "db")));
 
-    List<TagResponse> list = tagService.listTags(1L);
+    List<TagResponse> list = tagService.listTags(1L, 100L);
 
     assertThat(list).hasSize(2);
   }

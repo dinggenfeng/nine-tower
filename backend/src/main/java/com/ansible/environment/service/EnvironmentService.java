@@ -1,5 +1,6 @@
 package com.ansible.environment.service;
 
+import com.ansible.security.ProjectAccessChecker;
 import com.ansible.environment.dto.CreateEnvironmentRequest;
 import com.ansible.environment.dto.EnvConfigRequest;
 import com.ansible.environment.dto.EnvConfigResponse;
@@ -20,10 +21,12 @@ public class EnvironmentService {
 
   private final EnvironmentRepository environmentRepository;
   private final EnvConfigRepository envConfigRepository;
+  private final ProjectAccessChecker accessChecker;
 
   @Transactional
   public EnvironmentResponse createEnvironment(
       Long projectId, CreateEnvironmentRequest request, Long userId) {
+    accessChecker.checkMembership(projectId, userId);
     if (environmentRepository.existsByProjectIdAndName(projectId, request.getName())) {
       throw new IllegalArgumentException(
           "Environment with name '" + request.getName() + "' already exists");
@@ -38,7 +41,8 @@ public class EnvironmentService {
   }
 
   @Transactional(readOnly = true)
-  public List<EnvironmentResponse> listEnvironments(Long projectId) {
+  public List<EnvironmentResponse> listEnvironments(Long projectId, Long userId) {
+    accessChecker.checkMembership(projectId, userId);
     return environmentRepository.findByProjectIdOrderByIdAsc(projectId).stream()
         .map(
             env ->
@@ -49,11 +53,12 @@ public class EnvironmentService {
   }
 
   @Transactional(readOnly = true)
-  public EnvironmentResponse getEnvironment(Long envId) {
+  public EnvironmentResponse getEnvironment(Long envId, Long userId) {
     Environment env =
         environmentRepository
             .findById(envId)
             .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkMembership(env.getProjectId(), userId);
     return new EnvironmentResponse(
         env, envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(envId));
   }
@@ -65,6 +70,7 @@ public class EnvironmentService {
         environmentRepository
             .findById(envId)
             .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkOwnerOrAdmin(env.getProjectId(), env.getCreatedBy(), userId);
     if (environmentRepository.existsByProjectIdAndNameAndIdNot(
         env.getProjectId(), request.getName(), envId)) {
       throw new IllegalArgumentException(
@@ -83,15 +89,18 @@ public class EnvironmentService {
         environmentRepository
             .findById(envId)
             .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkOwnerOrAdmin(env.getProjectId(), env.getCreatedBy(), userId);
     envConfigRepository.deleteByEnvironmentId(envId);
     environmentRepository.delete(env);
   }
 
   @Transactional
   public EnvConfigResponse addConfig(Long envId, EnvConfigRequest request, Long userId) {
-    environmentRepository
-        .findById(envId)
-        .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    Environment env =
+        environmentRepository
+            .findById(envId)
+            .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkMembership(env.getProjectId(), userId);
     if (envConfigRepository.existsByEnvironmentIdAndConfigKey(envId, request.getConfigKey())) {
       throw new IllegalArgumentException(
           "Config key '" + request.getConfigKey() + "' already exists");
@@ -106,11 +115,16 @@ public class EnvironmentService {
   }
 
   @Transactional
-  public void removeConfig(Long configId) {
+  public void removeConfig(Long configId, Long userId) {
     EnvConfig config =
         envConfigRepository
             .findById(configId)
             .orElseThrow(() -> new IllegalArgumentException("Config not found"));
+    Environment env =
+        environmentRepository
+            .findById(config.getEnvironmentId())
+            .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkOwnerOrAdmin(env.getProjectId(), config.getCreatedBy(), userId);
     envConfigRepository.delete(config);
   }
 }

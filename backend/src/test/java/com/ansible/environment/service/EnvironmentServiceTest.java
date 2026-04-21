@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.security.ProjectAccessChecker;
 import com.ansible.environment.dto.CreateEnvironmentRequest;
 import com.ansible.environment.dto.EnvConfigRequest;
 import com.ansible.environment.dto.EnvConfigResponse;
@@ -32,6 +33,7 @@ class EnvironmentServiceTest {
 
   @Mock private EnvironmentRepository environmentRepository;
   @Mock private EnvConfigRepository envConfigRepository;
+  @Mock private ProjectAccessChecker accessChecker;
   @InjectMocks private EnvironmentService environmentService;
 
   private Environment testEnv;
@@ -88,7 +90,7 @@ class EnvironmentServiceTest {
     when(envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(anyLong()))
         .thenReturn(List.of());
 
-    List<EnvironmentResponse> list = environmentService.listEnvironments(10L);
+    List<EnvironmentResponse> list = environmentService.listEnvironments(10L, 100L);
 
     assertThat(list).hasSize(2);
     assertThat(list.get(0).getName()).isEqualTo("dev");
@@ -100,7 +102,7 @@ class EnvironmentServiceTest {
     when(environmentRepository.findById(1L)).thenReturn(Optional.of(testEnv));
     when(envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(1L)).thenReturn(List.of());
 
-    EnvironmentResponse response = environmentService.getEnvironment(1L);
+    EnvironmentResponse response = environmentService.getEnvironment(1L, 100L);
 
     assertThat(response.getName()).isEqualTo("dev");
     assertThat(response.getDescription()).isEqualTo("Development environment");
@@ -110,7 +112,7 @@ class EnvironmentServiceTest {
   void getEnvironment_notFound_throws() {
     when(environmentRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> environmentService.getEnvironment(99L))
+    assertThatThrownBy(() -> environmentService.getEnvironment(99L, 100L))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Environment not found");
   }
@@ -235,8 +237,9 @@ class EnvironmentServiceTest {
     config.setConfigValue("localhost");
 
     when(envConfigRepository.findById(10L)).thenReturn(Optional.of(config));
+    when(environmentRepository.findById(1L)).thenReturn(Optional.of(testEnv));
 
-    environmentService.removeConfig(10L);
+    environmentService.removeConfig(10L, 100L);
 
     verify(envConfigRepository).delete(config);
   }
@@ -245,7 +248,7 @@ class EnvironmentServiceTest {
   void removeConfig_notFound_throws() {
     when(envConfigRepository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> environmentService.removeConfig(99L))
+    assertThatThrownBy(() -> environmentService.removeConfig(99L, 100L))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Config not found");
   }

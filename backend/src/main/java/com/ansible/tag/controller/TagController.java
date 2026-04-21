@@ -36,8 +36,10 @@ public class TagController {
   }
 
   @GetMapping("/projects/{projectId}/tags")
-  public Result<List<TagResponse>> listTags(@PathVariable Long projectId) {
-    return Result.success(tagService.listTags(projectId));
+  public Result<List<TagResponse>> listTags(
+      @PathVariable Long projectId, @AuthenticationPrincipal UserDetails userDetails) {
+    Long userId = Long.valueOf(userDetails.getUsername());
+    return Result.success(tagService.listTags(projectId, userId));
   }
 
   @PutMapping("/tags/{tagId}")

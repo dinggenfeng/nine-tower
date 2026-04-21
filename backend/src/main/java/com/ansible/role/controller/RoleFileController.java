@@ -45,13 +45,15 @@ public class RoleFileController {
   @GetMapping("/roles/{roleId}/files")
   public Result<List<FileResponse>> listFiles(
       @PathVariable Long roleId, @AuthenticationPrincipal UserDetails userDetails) {
-    return Result.success(roleFileService.listFilesAsTree(roleId));
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(roleFileService.listFilesAsTree(roleId, currentUserId));
   }
 
   @GetMapping("/files/{fileId}")
   public Result<FileResponse> getFile(
       @PathVariable Long fileId, @AuthenticationPrincipal UserDetails userDetails) {
-    return Result.success(roleFileService.getFile(fileId));
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(roleFileService.getFile(fileId, currentUserId));
   }
 
   @PutMapping("/files/{fileId}")
@@ -74,8 +76,9 @@ public class RoleFileController {
   @GetMapping("/files/{fileId}/download")
   public ResponseEntity<byte[]> downloadFile(
       @PathVariable Long fileId, @AuthenticationPrincipal UserDetails userDetails) {
-    byte[] content = roleFileService.getFileContent(fileId);
-    String filename = roleFileService.getFileName(fileId);
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    byte[] content = roleFileService.getFileContent(fileId, currentUserId);
+    String filename = roleFileService.getFileName(fileId, currentUserId);
     return ResponseEntity.ok()
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
         .contentType(MediaType.APPLICATION_OCTET_STREAM)

@@ -1,5 +1,6 @@
 package com.ansible.role.service;
 
+import com.ansible.security.ProjectAccessChecker;
 import com.ansible.role.dto.CreateFileRequest;
 import com.ansible.role.dto.FileResponse;
 import com.ansible.role.dto.UpdateFileRequest;
@@ -20,10 +21,15 @@ public class RoleFileService {
   private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   private final RoleFileRepository roleFileRepository;
+  private final com.ansible.role.repository.RoleRepository roleRepository;
+  private final ProjectAccessChecker accessChecker;
 
   @Transactional
   public FileResponse createFile(
       Long roleId, CreateFileRequest request, byte[] content, Long userId) {
+    Long projectId = roleRepository.findById(roleId)
+        .orElseThrow(() -> new IllegalArgumentException("Role not found")).getProjectId();
+    accessChecker.checkMembership(projectId, userId);
     boolean isDir = Boolean.TRUE.equals(request.getIsDirectory());
     if (roleFileRepository.existsByRoleIdAndParentDirAndName(
         roleId, request.getParentDir(), request.getName())) {
@@ -44,7 +50,10 @@ public class RoleFileService {
   }
 
   @Transactional(readOnly = true)
-  public List<FileResponse> listFilesAsTree(Long roleId) {
+  public List<FileResponse> listFilesAsTree(Long roleId, Long userId) {
+    Long projectId = roleRepository.findById(roleId)
+        .orElseThrow(() -> new IllegalArgumentException("Role not found")).getProjectId();
+    accessChecker.checkMembership(projectId, userId);
     List<RoleFile> allFiles = roleFileRepository.findByRoleIdOrderByParentDirAscNameAsc(roleId);
     Map<String, List<RoleFile>> byParent =
         allFiles.stream().collect(Collectors.groupingBy(RoleFile::getParentDir));
@@ -69,16 +78,19 @@ public class RoleFileService {
   }
 
   @Transactional(readOnly = true)
-  public FileResponse getFile(Long fileId) {
+  public FileResponse getFile(Long fileId, Long userId) {
     RoleFile file =
         roleFileRepository
             .findById(fileId)
             .orElseThrow(() -> new IllegalArgumentException("File not found"));
+    Long projectId = roleRepository.findById(file.getRoleId())
+        .orElseThrow(() -> new IllegalArgumentException("Role not found")).getProjectId();
+    accessChecker.checkMembership(projectId, userId);
     return new FileResponse(file, null);
   }
 
   @Transactional(readOnly = true)
-  public byte[] getFileContent(Long fileId) {
+  public byte[] getFileContent(Long fileId, Long userId) {
     RoleFile file =
         roleFileRepository
             .findById(fileId)
@@ -90,7 +102,7 @@ public class RoleFileService {
   }
 
   @Transactional(readOnly = true)
-  public String getFileName(Long fileId) {
+  public String getFileName(Long fileId, Long userId) {
     RoleFile file =
         roleFileRepository
             .findById(fileId)
@@ -104,6 +116,9 @@ public class RoleFileService {
         roleFileRepository
             .findById(fileId)
             .orElseThrow(() -> new IllegalArgumentException("File not found"));
+    Long projectId = roleRepository.findById(file.getRoleId())
+        .orElseThrow(() -> new IllegalArgumentException("Role not found")).getProjectId();
+    accessChecker.checkOwnerOrAdmin(projectId, file.getCreatedBy(), userId);
     if (!file.getName().equals(request.getName())
         && roleFileRepository.existsByRoleIdAndParentDirAndNameAndIdNot(
             file.getRoleId(), file.getParentDir(), request.getName(), fileId)) {
@@ -123,6 +138,9 @@ public class RoleFileService {
         roleFileRepository
             .findById(fileId)
             .orElseThrow(() -> new IllegalArgumentException("File not found"));
+    Long projectId = roleRepository.findById(file.getRoleId())
+        .orElseThrow(() -> new IllegalArgumentException("Role not found")).getProjectId();
+    accessChecker.checkOwnerOrAdmin(projectId, file.getCreatedBy(), userId);
     if (Boolean.TRUE.equals(file.getIsDirectory())) {
       String childPrefix =
           file.getParentDir().isEmpty()

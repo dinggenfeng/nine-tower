@@ -9,8 +9,11 @@ import static org.mockito.Mockito.when;
 import com.ansible.role.dto.CreateFileRequest;
 import com.ansible.role.dto.FileResponse;
 import com.ansible.role.dto.UpdateFileRequest;
+import com.ansible.role.entity.Role;
 import com.ansible.role.entity.RoleFile;
 import com.ansible.role.repository.RoleFileRepository;
+import com.ansible.role.repository.RoleRepository;
+import com.ansible.security.ProjectAccessChecker;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
@@ -25,6 +28,8 @@ import org.springframework.test.util.ReflectionTestUtils;
 class RoleFileServiceTest {
 
   @Mock private RoleFileRepository roleFileRepository;
+  @Mock private RoleRepository roleRepository;
+  @Mock private ProjectAccessChecker accessChecker;
 
   @InjectMocks private RoleFileService roleFileService;
 
@@ -41,8 +46,15 @@ class RoleFileServiceTest {
     return f;
   }
 
+  private void stubRole(Long roleId) {
+    Role role = new Role();
+    role.setProjectId(1L);
+    when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+  }
+
   @Test
   void createFile_success() {
+    stubRole(1L);
     when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "config.yml"))
         .thenReturn(false);
     when(roleFileRepository.save(any(RoleFile.class)))
@@ -67,6 +79,7 @@ class RoleFileServiceTest {
 
   @Test
   void createFile_duplicateName_throws() {
+    stubRole(1L);
     when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "config.yml"))
         .thenReturn(true);
 
@@ -84,6 +97,7 @@ class RoleFileServiceTest {
 
   @Test
   void createDirectory_success() {
+    stubRole(1L);
     when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "conf.d"))
         .thenReturn(false);
     when(roleFileRepository.save(any(RoleFile.class)))
@@ -106,6 +120,7 @@ class RoleFileServiceTest {
 
   @Test
   void listFiles_treeStructure() {
+    stubRole(1L);
     when(roleFileRepository.findByRoleIdOrderByParentDirAscNameAsc(1L))
         .thenReturn(
             List.of(
@@ -113,7 +128,7 @@ class RoleFileServiceTest {
                 createFile(2L, 1L, "conf.d", "app.conf", false),
                 createFile(3L, 1L, "", "readme.txt", false)));
 
-    List<FileResponse> tree = roleFileService.listFilesAsTree(1L);
+    List<FileResponse> tree = roleFileService.listFilesAsTree(1L, 100L);
 
     assertThat(tree).hasSize(2);
     assertThat(tree.get(0).getName()).isEqualTo("conf.d");
@@ -123,11 +138,12 @@ class RoleFileServiceTest {
 
   @Test
   void getFile_success() {
+    stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "config.yml", false);
     file.setContent("hello world".getBytes(StandardCharsets.UTF_8));
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
 
-    FileResponse response = roleFileService.getFile(1L);
+    FileResponse response = roleFileService.getFile(1L, 100L);
 
     assertThat(response.getName()).isEqualTo("config.yml");
     assertThat(response.getTextContent()).isEqualTo("hello world");
@@ -135,6 +151,7 @@ class RoleFileServiceTest {
 
   @Test
   void updateFileName_success() {
+    stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "old.yml", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
     when(roleFileRepository.existsByRoleIdAndParentDirAndNameAndIdNot(1L, "", "new.yml", 1L))
@@ -151,6 +168,7 @@ class RoleFileServiceTest {
 
   @Test
   void updateFileContent_success() {
+    stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "config.yml", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
     when(roleFileRepository.save(any(RoleFile.class))).thenReturn(file);
@@ -165,6 +183,7 @@ class RoleFileServiceTest {
 
   @Test
   void deleteFile_success() {
+    stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "config.yml", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
 
@@ -175,6 +194,7 @@ class RoleFileServiceTest {
 
   @Test
   void deleteDirectory_cascadesChildren() {
+    stubRole(1L);
     RoleFile dir = createFile(1L, 1L, "", "conf.d", true);
     RoleFile child = createFile(2L, 1L, "conf.d", "app.conf", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(dir));

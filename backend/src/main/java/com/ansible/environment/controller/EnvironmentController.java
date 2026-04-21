@@ -38,13 +38,17 @@ public class EnvironmentController {
   }
 
   @GetMapping("/projects/{projectId}/environments")
-  public Result<List<EnvironmentResponse>> listEnvironments(@PathVariable Long projectId) {
-    return Result.success(environmentService.listEnvironments(projectId));
+  public Result<List<EnvironmentResponse>> listEnvironments(
+      @PathVariable Long projectId, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(environmentService.listEnvironments(projectId, currentUserId));
   }
 
   @GetMapping("/environments/{envId}")
-  public Result<EnvironmentResponse> getEnvironment(@PathVariable Long envId) {
-    return Result.success(environmentService.getEnvironment(envId));
+  public Result<EnvironmentResponse> getEnvironment(
+      @PathVariable Long envId, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(environmentService.getEnvironment(envId, currentUserId));
   }
 
   @PutMapping("/environments/{envId}")
@@ -74,8 +78,10 @@ public class EnvironmentController {
   }
 
   @DeleteMapping("/env-configs/{configId}")
-  public Result<Void> removeConfig(@PathVariable Long configId) {
-    environmentService.removeConfig(configId);
+  public Result<Void> removeConfig(
+      @PathVariable Long configId, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    environmentService.removeConfig(configId, currentUserId);
     return Result.success();
   }
 }

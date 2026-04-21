@@ -1,25 +1,25 @@
 package com.ansible.tag.service;
 
+import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.dto.CreateTagRequest;
 import com.ansible.tag.dto.TagResponse;
 import com.ansible.tag.dto.UpdateTagRequest;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
 import java.util.List;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@Transactional
+@RequiredArgsConstructor
 public class TagService {
 
   private final TagRepository tagRepository;
-
-  public TagService(TagRepository tagRepository) {
-    this.tagRepository = tagRepository;
-  }
+  private final ProjectAccessChecker accessChecker;
 
   public TagResponse createTag(Long projectId, CreateTagRequest request, Long userId) {
+    accessChecker.checkMembership(projectId, userId);
     if (tagRepository.existsByProjectIdAndName(projectId, request.name())) {
       throw new IllegalArgumentException(
           "Tag with name '" + request.name() + "' already exists in this project");
@@ -32,7 +32,8 @@ public class TagService {
   }
 
   @Transactional(readOnly = true)
-  public List<TagResponse> listTags(Long projectId) {
+  public List<TagResponse> listTags(Long projectId, Long userId) {
+    accessChecker.checkMembership(projectId, userId);
     return tagRepository.findByProjectIdOrderByIdAsc(projectId).stream()
         .map(TagResponse::new)
         .toList();
@@ -43,6 +44,7 @@ public class TagService {
         tagRepository
             .findById(tagId)
             .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+    accessChecker.checkOwnerOrAdmin(tag.getProjectId(), tag.getCreatedBy(), userId);
     if (tagRepository.existsByProjectIdAndNameAndIdNot(
         tag.getProjectId(), request.name(), tagId)) {
       throw new IllegalArgumentException(
@@ -57,6 +59,7 @@ public class TagService {
         tagRepository
             .findById(tagId)
             .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
+    accessChecker.checkOwnerOrAdmin(tag.getProjectId(), tag.getCreatedBy(), userId);
     tagRepository.delete(tag);
   }
 }
