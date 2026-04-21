@@ -5,7 +5,7 @@
     </Match>
     <Match>
         <Bug pattern="EI_EXPOSE_REP"/>
-        <Package name="~com\.ansible\..*\.dto"/>
+        <Package name="~com\.ansible\..*\.(dto|entity)"/>
     </Match>
     <Match>
         <Class name="com.ansible.common.EncryptionService"/>
