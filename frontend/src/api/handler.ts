@@ -1,5 +1,5 @@
 import request from './request';
-import type { Handler, CreateHandlerRequest, UpdateHandlerRequest } from '../types/entity/Task';
+import type { Handler, CreateHandlerRequest, UpdateHandlerRequest, Task } from '../types/entity/Task';
 
 export async function createHandler(
   roleId: number,
@@ -29,4 +29,9 @@ export async function updateHandler(
 
 export async function deleteHandler(id: number): Promise<void> {
   await request.delete(`/handlers/${id}`);
+}
+
+export async function getNotifyingTasks(handlerId: number): Promise<Task[]> {
+  const res = await request.get<Task[]>(`/handlers/${handlerId}/notified-by`);
+  return res.data;
 }

@@ -240,6 +240,7 @@ public class TaskService {
   }
 
   @Transactional
+  @SuppressWarnings("PMD.AvoidInstantiatingObjectsInLoops")
   public void updateTaskTags(Long taskId, List<Long> tagIds, Long currentUserId) {
     Task task =
         taskRepository
