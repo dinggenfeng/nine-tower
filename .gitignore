@@ -17,6 +17,10 @@ frontend/.env.local
 # Superpowers plugin (local runtime cache)
 .superpowers/
 
+# Claude Code local state
+.claude/settings.local.json
+.claude/worktrees/
+
 # Misc
 *.log
 frontend/.worktrees
