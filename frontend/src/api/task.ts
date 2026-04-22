@@ -42,3 +42,10 @@ export async function getTaskTags(taskId: number): Promise<number[]> {
   const res = await request.get<number[]>(`/tasks/${taskId}/tags`);
   return res.data;
 }
+
+export async function reorderTasks(
+  roleId: number,
+  taskIds: number[],
+): Promise<void> {
+  await request.put(`/roles/${roleId}/tasks/order`, taskIds);
+}

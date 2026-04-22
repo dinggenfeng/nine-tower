@@ -525,4 +525,67 @@ class TaskServiceTest {
 
     assertThat(tagIds).isEmpty();
   }
+
+  @Test
+  void reorderTasks_success() {
+    Task t1 = new Task();
+    ReflectionTestUtils.setField(t1, "id", 1L);
+    t1.setRoleId(1L);
+    t1.setTaskOrder(1);
+    Task t2 = new Task();
+    ReflectionTestUtils.setField(t2, "id", 2L);
+    t2.setRoleId(1L);
+    t2.setTaskOrder(2);
+    Task t3 = new Task();
+    ReflectionTestUtils.setField(t3, "id", 3L);
+    t3.setRoleId(1L);
+    t3.setTaskOrder(3);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(t1, t2, t3));
+
+    taskService.reorderTasks(1L, List.of(3L, 1L, 2L), 10L);
+
+    assertThat(t3.getTaskOrder()).isEqualTo(1);
+    assertThat(t1.getTaskOrder()).isEqualTo(2);
+    assertThat(t2.getTaskOrder()).isEqualTo(3);
+    verify(taskRepository).saveAll(List.of(t1, t2, t3));
+  }
+
+  @Test
+  void reorderTasks_countMismatch_throws() {
+    Task t1 = new Task();
+    ReflectionTestUtils.setField(t1, "id", 1L);
+    t1.setRoleId(1L);
+    Task t2 = new Task();
+    ReflectionTestUtils.setField(t2, "id", 2L);
+    t2.setRoleId(1L);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(t1, t2));
+
+    assertThatThrownBy(() -> taskService.reorderTasks(1L, List.of(1L), 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("mismatch");
+  }
+
+  @Test
+  void reorderTasks_invalidTaskId_throws() {
+    Task t1 = new Task();
+    ReflectionTestUtils.setField(t1, "id", 1L);
+    t1.setRoleId(1L);
+    Task t2 = new Task();
+    ReflectionTestUtils.setField(t2, "id", 2L);
+    t2.setRoleId(1L);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(1L))
+        .thenReturn(List.of(t1, t2));
+
+    assertThatThrownBy(() -> taskService.reorderTasks(1L, List.of(1L, 999L), 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("does not belong to role");
+  }
 }

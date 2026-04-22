@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
+import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, BlockChildRequest, BlockSection } from '../../types/entity/Task';
 import type { Handler } from '../../types/entity/Task';
-import { createTask, getTasks, updateTask, deleteTask, updateTaskTags, getTaskTags } from '../../api/task';
+import { createTask, getTasks, updateTask, deleteTask, updateTaskTags, getTaskTags, reorderTasks } from '../../api/task';
 import { getHandlers } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
 import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
@@ -186,6 +186,19 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     await deleteTask(id);
     message.success('已删除');
     fetchData();
+  };
+
+  const handleMoveTask = async (currentIndex: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex < 0 || newIndex >= tasks.length) return;
+    const newTasks = [...tasks];
+    [newTasks[currentIndex], newTasks[newIndex]] = [newTasks[newIndex], newTasks[currentIndex]];
+    setTasks(newTasks);
+    try {
+      await reorderTasks(roleId, newTasks.map((t) => t.id));
+    } catch {
+      fetchData();
+    }
   };
 
   const handlePreviewTask = (task: Task) => {
@@ -394,9 +407,23 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     {
       title: '操作',
       key: 'action',
-      width: 150,
-      render: (_: unknown, record: Task) => (
+      width: 200,
+      render: (_: unknown, record: Task, index: number) => (
         <Space size="small">
+          <Button
+            type="text"
+            size="small"
+            icon={<ArrowUpOutlined />}
+            disabled={index === 0}
+            onClick={() => handleMoveTask(index, 'up')}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<ArrowDownOutlined />}
+            disabled={index === tasks.length - 1}
+            onClick={() => handleMoveTask(index, 'down')}
+          />
           <Button
             type="text"
             size="small"

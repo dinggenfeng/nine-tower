@@ -27,7 +27,7 @@ import org.springframework.util.StringUtils;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("PMD.TooManyMethods")
+@SuppressWarnings({"PMD.TooManyMethods", "PMD.CouplingBetweenObjects"})
 public class TaskService {
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -193,6 +193,35 @@ public class TaskService {
     taskRepository.flush();
 
     compactTaskOrder(roleId, parentTaskId);
+  }
+
+  @Transactional
+  public void reorderTasks(Long roleId, List<Long> taskIds, Long currentUserId) {
+    Role role =
+        roleRepository
+            .findById(roleId)
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+    List<Task> existing =
+        taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
+    if (taskIds.size() != existing.size()) {
+      throw new IllegalArgumentException(
+          "Task count mismatch: expected "
+              + existing.size()
+              + ", got "
+              + taskIds.size());
+    }
+    Map<Long, Task> taskMap =
+        existing.stream().collect(Collectors.toMap(Task::getId, t -> t));
+    for (Long id : taskIds) {
+      if (!taskMap.containsKey(id)) {
+        throw new IllegalArgumentException("Task " + id + " does not belong to role " + roleId);
+      }
+    }
+    for (int i = 0; i < taskIds.size(); i++) {
+      taskMap.get(taskIds.get(i)).setTaskOrder(i + 1);
+    }
+    taskRepository.saveAll(existing);
   }
 
   private void shiftTaskOrder(Long roleId, Long parentTaskId, int fromOrder) {

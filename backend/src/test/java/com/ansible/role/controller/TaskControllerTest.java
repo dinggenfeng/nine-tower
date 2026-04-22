@@ -343,4 +343,46 @@ class TaskControllerTest extends AbstractIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().getData()).containsExactly(tag1.getId());
   }
+
+  @Test
+  void reorderTasks_success() {
+    Long t1 = createTask("Task 1", "apt", 1);
+    Long t2 = createTask("Task 2", "copy", 2);
+    Long t3 = createTask("Task 3", "service", 3);
+
+    ResponseEntity<Result<Void>> reorderResp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks/order",
+            HttpMethod.PUT,
+            new HttpEntity<>(List.of(t3, t1, t2), authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    assertThat(reorderResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+
+    ResponseEntity<Result<List<TaskResponse>>> listResp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    assertThat(listResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    List<TaskResponse> tasks = listResp.getBody().getData();
+    assertThat(tasks).hasSize(3);
+    assertThat(tasks.get(0).getName()).isEqualTo("Task 3");
+    assertThat(tasks.get(1).getName()).isEqualTo("Task 1");
+    assertThat(tasks.get(2).getName()).isEqualTo("Task 2");
+  }
+
+  @Test
+  void reorderTasks_countMismatch_returns400() {
+    createTask("Task 1", "apt", 1);
+    createTask("Task 2", "copy", 2);
+
+    ResponseEntity<Result<Void>> resp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks/order",
+            HttpMethod.PUT,
+            new HttpEntity<>(List.of(999L), authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
 }

@@ -90,4 +90,14 @@ public class TaskController {
     taskService.deleteTask(id, currentUserId);
     return Result.success();
   }
+
+  @PutMapping("/roles/{roleId}/tasks/order")
+  public Result<Void> reorderTasks(
+      @PathVariable Long roleId,
+      @RequestBody List<Long> taskIds,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    taskService.reorderTasks(roleId, taskIds, currentUserId);
+    return Result.success();
+  }
 }
