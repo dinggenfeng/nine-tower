@@ -19,6 +19,8 @@ import {
   PlusOutlined,
   TableOutlined,
   ApartmentOutlined,
+  CheckCircleOutlined,
+  WarningOutlined,
 } from '@ant-design/icons';
 import { useParams } from 'react-router-dom';
 import type {
@@ -26,6 +28,7 @@ import type {
   VariableScope,
   CreateVariableRequest,
 } from '../../types/entity/Variable';
+import type { ReactNode } from 'react';
 import {
   listVariables,
   createVariable,
@@ -51,7 +54,7 @@ type ViewMode = 'table' | 'tree';
 
 interface TreeVariableNode {
   key: string;
-  title: string;
+  title: ReactNode;
   selectable?: boolean;
   children?: TreeVariableNode[];
 }
@@ -133,6 +136,69 @@ export default function VariableManager() {
       const roleDefaultsMap = new Map<number, RoleDefaultVariable[]>();
       roleDefaultResults.forEach((r) => roleDefaultsMap.set(r.roleId, r.defaults));
 
+      // Duplicate key detection across scopes
+      const priorityRank: Record<string, number> = {
+        ENVIRONMENT: 5,
+        HOSTGROUP: 4,
+        PROJECT: 3,
+        ROLE_VARS: 2,
+        ROLE_DEFAULTS: 1,
+      };
+      const keyScopes = new Map<string, { scope: string; priority: number }[]>();
+      const trackKey = (key: string, scope: string) => {
+        const entries = keyScopes.get(key) || [];
+        entries.push({ scope, priority: priorityRank[scope] || 0 });
+        keyScopes.set(key, entries);
+      };
+      projectVars.forEach((v) => trackKey(v.key, 'PROJECT'));
+      hostgroupVars.forEach((v) => trackKey(v.key, 'HOSTGROUP'));
+      envVars.forEach((v) => trackKey(v.key, 'ENVIRONMENT'));
+      roleVarResults.forEach((r) => r.vars.forEach((v) => trackKey(v.key, 'ROLE_VARS')));
+      roleDefaultResults.forEach((r) => r.defaults.forEach((v) => trackKey(v.key, 'ROLE_DEFAULTS')));
+
+      const duplicateKeys = new Set(
+        [...keyScopes.entries()]
+          .filter(([, scopes]) => scopes.length > 1)
+          .map(([key]) => key),
+      );
+      const winningScope = new Map(
+        [...keyScopes.entries()].map(([key, scopes]) => [
+          key,
+          scopes.sort((a, b) => b.priority - a.priority)[0].scope,
+        ]),
+      );
+
+      const scopeNameMap: Record<string, string> = {
+        ENVIRONMENT: '环境级',
+        HOSTGROUP: '主机组级',
+        PROJECT: '项目级',
+        ROLE_VARS: 'Role 级',
+        ROLE_DEFAULTS: 'Role 默认',
+      };
+
+      const buildTitle = (key: string, value: string, currentScope: string): React.ReactNode => {
+        if (!duplicateKeys.has(key)) return `${key} = ${value}`;
+        const winner = winningScope.get(key);
+        if (winner === currentScope) {
+          return (
+            <span>
+              {key} = {value}{' '}
+              <Typography.Text type="success" style={{ fontSize: 12 }}>
+                <CheckCircleOutlined /> 生效中
+              </Typography.Text>
+            </span>
+          );
+        }
+        return (
+          <span>
+            {key} = {value}{' '}
+            <Typography.Text type="warning" style={{ fontSize: 12 }}>
+              <WarningOutlined /> 被{scopeNameMap[winner!]}覆盖
+            </Typography.Text>
+          </span>
+        );
+      };
+
       // Group hostgroup vars by scopeId
       const hostGroupVarsMap = new Map<number, Variable[]>();
       hostgroupVars.forEach((v) => {
@@ -164,7 +230,7 @@ export default function VariableManager() {
           title: `${envName}/ (${vars.length})`,
           children: vars.map((v) => ({
             key: `env-var-${v.id}`,
-            title: `${v.key} = ${v.value}`,
+            title: buildTitle(v.key, v.value, 'ENVIRONMENT'),
           })),
         });
       });
@@ -186,7 +252,7 @@ export default function VariableManager() {
           title: `${hgName}/ (${vars.length})`,
           children: vars.map((v) => ({
             key: `hg-var-${v.id}`,
-            title: `${v.key} = ${v.value}`,
+            title: buildTitle(v.key, v.value, 'HOSTGROUP'),
           })),
         });
       });
@@ -202,7 +268,7 @@ export default function VariableManager() {
       // Project scope
       const projectChildren: TreeVariableNode[] = projectVars.map((v) => ({
         key: `project-var-${v.id}`,
-        title: `${v.key} = ${v.value}`,
+        title: buildTitle(v.key, v.value, 'PROJECT'),
       }));
       nodes.push({
         key: 'scope-PROJECT',
@@ -223,7 +289,7 @@ export default function VariableManager() {
             title: `${role.name}/ (${vars.length})`,
             children: vars.map((v) => ({
               key: `role-var-${v.id}`,
-              title: `${v.key} = ${v.value}`,
+              title: buildTitle(v.key, v.value, 'ROLE_VARS'),
             })),
           });
         }
@@ -251,7 +317,7 @@ export default function VariableManager() {
             title: `${role.name}/ (${defaults.length})`,
             children: defaults.map((d) => ({
               key: `role-default-${d.id}`,
-              title: `${d.key} = ${d.value}`,
+              title: buildTitle(d.key, d.value, 'ROLE_DEFAULTS'),
             })),
           });
         }
@@ -406,6 +472,13 @@ export default function VariableManager() {
             <Typography.Text type="secondary">
               {' '}
               — 适用于特定主机组
+            </Typography.Text>
+          </li>
+          <li>
+            <Typography.Text strong>项目级变量</Typography.Text>
+            <Typography.Text type="secondary">
+              {' '}
+              — 适用于整个项目的全局变量
             </Typography.Text>
           </li>
           <li>

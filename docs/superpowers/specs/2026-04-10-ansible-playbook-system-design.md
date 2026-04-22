@@ -122,6 +122,7 @@
 | `PlaybookHostGroup` | Playbook-主机组关联 | `playbookId`, `hostGroupId` |
 | `PlaybookRole` | Playbook-Role 关联 | `playbookId`, `roleId`, `order` |
 | `PlaybookTag` | Playbook-Tag 关联 | `playbookId`, `tagId` |
+| `PlaybookEnvironment` | Playbook-Environment 关联 | `playbookId`, `environmentId` |
 
 ### 5.2 变量层级（优先级从高到低）
 
@@ -309,8 +310,12 @@
 | POST | `/api/playbooks/{id}/roles` | 添加 Role |
 | DELETE | `/api/playbooks/{id}/roles/{roleId}` | 移除 Role |
 | PUT | `/api/playbooks/{id}/roles/order` | 调整 Role 顺序 |
-| POST | `/api/playbooks/{id}/host-groups` | 添加主机组 |
-| DELETE | `/api/playbooks/{id}/host-groups/{hgId}` | 移除主机组 |
+| POST | `/api/playbooks/{id}/host-groups/{hostGroupId}` | 添加主机组 |
+| DELETE | `/api/playbooks/{id}/host-groups/{hostGroupId}` | 移除主机组 |
+| POST | `/api/playbooks/{id}/tags/{tagId}` | 添加 Tag |
+| DELETE | `/api/playbooks/{id}/tags/{tagId}` | 移除 Tag |
+| POST | `/api/playbooks/{id}/environments/{environmentId}` | 添加 Environment |
+| DELETE | `/api/playbooks/{id}/environments/{environmentId}` | 移除 Environment |
 | GET | `/api/playbooks/{id}/yaml` | 导出 YAML |
 
 ### 6.16 分页约定
@@ -374,7 +379,7 @@ com.ansible
 │   ├── service/
 │   └── controller/
 └── playbook/
-    ├── entity/{Playbook, PlaybookHostGroup, PlaybookRole, PlaybookTag}.java
+    ├── entity/{Playbook, PlaybookHostGroup, PlaybookRole, PlaybookTag, PlaybookEnvironment}.java
     ├── repository/
     ├── service/
     ├── controller/
