@@ -9,11 +9,12 @@ import {
   Popconfirm,
   Spin,
 } from 'antd';
-import { DeleteOutlined, CopyOutlined } from '@ant-design/icons';
+import { DeleteOutlined, CopyOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
 import {
   getPlaybook,
   addRole,
   removeRole,
+  reorderRoles,
   addHostGroup,
   removeHostGroup,
   addTag,
@@ -83,6 +84,16 @@ export default function PlaybookBuilder() {
 
   const handleRemoveRole = async (roleId: number) => {
     await removeRole(playbookId, roleId);
+    fetchData();
+  };
+
+  const handleMoveRole = async (currentIndex: number, direction: -1 | 1) => {
+    if (!playbook) return;
+    const newOrder = [...playbook.roleIds];
+    const targetIndex = currentIndex + direction;
+    if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    await reorderRoles(playbookId, newOrder);
     fetchData();
   };
 
@@ -191,7 +202,7 @@ export default function PlaybookBuilder() {
 
         <Card title="Roles（按顺序）" size="small">
           <Space direction="vertical" style={{ width: '100%' }}>
-            {selectedRoles.map((r) => (
+            {selectedRoles.map((r, idx) => (
               <div
                 key={r.id}
                 style={{
@@ -200,6 +211,20 @@ export default function PlaybookBuilder() {
                   gap: 8,
                 }}
               >
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<UpOutlined />}
+                  disabled={idx === 0}
+                  onClick={() => handleMoveRole(idx, -1)}
+                />
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<DownOutlined />}
+                  disabled={idx === selectedRoles.length - 1}
+                  onClick={() => handleMoveRole(idx, 1)}
+                />
                 <span>{r.name}</span>
                 <Popconfirm
                   title="确定移除？"
