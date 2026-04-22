@@ -9,6 +9,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.Getter;
+import org.springframework.lang.Nullable;
 
 @Getter
 public class TaskResponse {
@@ -34,6 +35,7 @@ public class TaskResponse {
   private final Long parentTaskId;
   private final String blockSection;
   private final List<TaskResponse> children;
+  @Nullable private final List<Long> tagIds;
 
   @JsonCreator
   @SuppressWarnings("PMD.ExcessiveParameterList")
@@ -56,7 +58,8 @@ public class TaskResponse {
       @JsonProperty("createdAt") LocalDateTime createdAt,
       @JsonProperty("parentTaskId") Long parentTaskId,
       @JsonProperty("blockSection") String blockSection,
-      @JsonProperty("children") List<TaskResponse> children) {
+      @JsonProperty("children") List<TaskResponse> children,
+      @JsonProperty("tagIds") List<Long> tagIds) {
     this.id = id;
     this.roleId = roleId;
     this.name = name;
@@ -76,6 +79,7 @@ public class TaskResponse {
     this.parentTaskId = parentTaskId;
     this.blockSection = blockSection;
     this.children = children;
+    this.tagIds = tagIds;
   }
 
   public TaskResponse(Task task) {
@@ -98,6 +102,7 @@ public class TaskResponse {
     this.parentTaskId = task.getParentTaskId();
     this.blockSection = task.getBlockSection();
     this.children = null;
+    this.tagIds = null;
   }
 
   private static List<String> parseNotify(String notifyJson) {

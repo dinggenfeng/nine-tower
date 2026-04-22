@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, message, Collapse, Tooltip } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
-import type { Handler, CreateHandlerRequest, UpdateHandlerRequest } from '../../types/entity/Task';
-import { createHandler, getHandlers, updateHandler, deleteHandler } from '../../api/handler';
+import type { Handler, CreateHandlerRequest, UpdateHandlerRequest, Task } from '../../types/entity/Task';
+import { createHandler, getHandlers, updateHandler, deleteHandler, getNotifyingTasks } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
 import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
 import { getModuleDefinition } from '../../constants/ansibleModules';
@@ -74,6 +74,8 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   const [previewYaml, setPreviewYaml] = useState<string>('');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [form] = Form.useForm();
+  const [notifyingTasksMap, setNotifyingTasksMap] = useState<Record<number, Task[]>>({});
+  const [expandedHandlerIds, setExpandedHandlerIds] = useState<number[]>([]);
 
   const fetchHandlers = useCallback(async () => {
     setLoading(true);
@@ -137,6 +139,22 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     })).join('\n\n');
     setPreviewYaml(yaml);
     setPreviewOpen(true);
+  };
+
+  const handleExpandHandler = async (expanded: boolean, handler: Handler) => {
+    if (expanded) {
+      setExpandedHandlerIds((prev) => [...prev, handler.id]);
+      if (!notifyingTasksMap[handler.id]) {
+        try {
+          const tasks = await getNotifyingTasks(handler.id);
+          setNotifyingTasksMap((prev) => ({ ...prev, [handler.id]: tasks }));
+        } catch {
+          setNotifyingTasksMap((prev) => ({ ...prev, [handler.id]: [] }));
+        }
+      }
+    } else {
+      setExpandedHandlerIds((prev) => prev.filter((id) => id !== handler.id));
+    }
   };
 
   const handlePreviewHandler = (handler: Handler) => {
@@ -286,6 +304,29 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         loading={loading}
         pagination={false}
         size="middle"
+        expandable={{
+          expandedRowKeys: expandedHandlerIds,
+          onExpandedRowsChange: (keys) => setExpandedHandlerIds(keys as number[]),
+          onExpand: handleExpandHandler,
+          expandedRowRender: (record) => {
+            const tasks = notifyingTasksMap[record.id];
+            if (!tasks) return <span>加载中...</span>;
+            if (tasks.length === 0) return <span style={{ color: '#999' }}>没有 Task 通知此 Handler</span>;
+            return (
+              <Table
+                dataSource={tasks}
+                columns={[
+                  { title: '名称', dataIndex: 'name', key: 'name' },
+                  { title: '模块', dataIndex: 'module', key: 'module', width: 120 },
+                  { title: '顺序', dataIndex: 'taskOrder', key: 'taskOrder', width: 70 },
+                ]}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            );
+          },
+        }}
       />
       <Modal
         title={editingHandler ? '编辑 Handler' : '创建 Handler'}

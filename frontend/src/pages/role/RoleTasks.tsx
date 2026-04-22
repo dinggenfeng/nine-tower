@@ -3,7 +3,7 @@ import { Button, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select,
 import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
 import type { Task, CreateTaskRequest, UpdateTaskRequest, BlockChildRequest, BlockSection } from '../../types/entity/Task';
 import type { Handler } from '../../types/entity/Task';
-import { createTask, getTasks, updateTask, deleteTask } from '../../api/task';
+import { createTask, getTasks, updateTask, deleteTask, updateTaskTags, getTaskTags } from '../../api/task';
 import { getHandlers } from '../../api/handler';
 import ModuleSelect from '../../components/role/ModuleSelect';
 import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
@@ -11,6 +11,7 @@ import { getModuleDefinition } from '../../constants/ansibleModules';
 import { taskToYaml, blockToYaml } from '../../utils/taskToYaml';
 import type { TaskYamlInput } from '../../utils/taskToYaml';
 import BlockTasksEditor from '../../components/role/BlockTasksEditor';
+import TagSelect from '../../components/role/TagSelect';
 
 interface RoleTasksProps {
   roleId: number;
@@ -81,6 +82,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [blockChildren, setBlockChildren] = useState<BlockChildRequest[]>([]);
   const [loopMode, setLoopMode] = useState<'expression' | 'list'>('expression');
   const [loopItems, setLoopItems] = useState<string[]>([]);
+  const [tagIds, setTagIds] = useState<number[]>([]);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -107,12 +109,13 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     setBlockChildren([]);
     setLoopMode('expression');
     setLoopItems([]);
+    setTagIds([]);
     form.resetFields();
     form.setFieldValue('taskOrder', tasks.length + 1);
     setModalOpen(true);
   };
 
-  const handleEdit = (task: Task) => {
+  const handleEdit = async (task: Task) => {
     setEditingTask(task);
     const { moduleParams, extraParams } = parseArgsToForm(task.args, task.module);
     setSelectedModule(task.module);
@@ -131,6 +134,13 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       becomeUser: task.becomeUser,
       ignoreErrors: task.ignoreErrors || false,
     });
+    // Load existing tags for this task
+    try {
+      const existingTagIds = await getTaskTags(task.id);
+      setTagIds(existingTagIds);
+    } catch {
+      setTagIds([]);
+    }
     // Detect loop mode from stored value
     if (task.loop) {
       try {
@@ -310,6 +320,12 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         delete data.notify;
       }
       await updateTask(editingTask.id, data);
+      // Update tags association
+      if (tagIds.length > 0) {
+        await updateTaskTags(editingTask.id, tagIds);
+      } else {
+        await updateTaskTags(editingTask.id, []);
+      }
       message.success('已更新');
     } else {
       let data: CreateTaskRequest = {
@@ -339,7 +355,11 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         delete data.register;
         delete data.notify;
       }
-      await createTask(roleId, data);
+      const created = await createTask(roleId, data);
+      // Update tags association for new task
+      if (tagIds.length > 0) {
+        await updateTaskTags(created.id, tagIds);
+      }
       message.success('已创建');
     }
     setModalOpen(false);
@@ -707,6 +727,19 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           options={handlers.map((h) => ({ label: h.name, value: h.name }))}
                           getPopupContainer={(node) => node.parentElement || document.body}
                         />
+                      </Form.Item>
+                      <Form.Item
+                        label={
+                          <span>
+                            Tags
+                            <Tooltip title="为任务关联标签，便于分类和筛选">
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            </Tooltip>
+                          </span>
+                        }
+                        style={{ gridColumn: '1 / -1' }}
+                      >
+                        <TagSelect value={tagIds} onChange={setTagIds} />
                       </Form.Item>
                     </div>
                   ),

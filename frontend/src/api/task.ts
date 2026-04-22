@@ -30,3 +30,15 @@ export async function updateTask(
 export async function deleteTask(id: number): Promise<void> {
   await request.delete(`/tasks/${id}`);
 }
+
+export async function updateTaskTags(
+  taskId: number,
+  tagIds: number[],
+): Promise<void> {
+  await request.put(`/tasks/${taskId}/tags`, tagIds);
+}
+
+export async function getTaskTags(taskId: number): Promise<number[]> {
+  const res = await request.get<number[]>(`/tasks/${taskId}/tags`);
+  return res.data;
+}

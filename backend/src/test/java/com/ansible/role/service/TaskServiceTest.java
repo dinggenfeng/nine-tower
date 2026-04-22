@@ -18,6 +18,8 @@ import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.security.ProjectAccessChecker;
+import com.ansible.tag.entity.TaskTag;
+import com.ansible.tag.repository.TaskTagRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -36,6 +38,7 @@ class TaskServiceTest {
   @Mock private RoleRepository roleRepository;
   @Mock private HandlerRepository handlerRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private TaskTagRepository taskTagRepository;
   @InjectMocks private TaskService taskService;
 
   private Role testRole;
@@ -427,6 +430,7 @@ class TaskServiceTest {
         .thenReturn(List.of(blockTask));
     when(taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(10L))
         .thenReturn(List.of(childTask));
+    when(taskTagRepository.findByTaskId(10L)).thenReturn(List.of());
 
     List<TaskResponse> result = taskService.getTasksByRole(1L, 10L);
 
@@ -474,5 +478,51 @@ class TaskServiceTest {
     inOrder.verify(taskRepository).deleteAll(List.of(childTask));
     inOrder.verify(taskRepository).delete(blockTask);
     inOrder.verify(taskRepository).flush();
+  }
+
+  @Test
+  void updateTaskTags_success() {
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+
+    taskService.updateTaskTags(1L, List.of(100L, 200L), 10L);
+
+    verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
+    verify(taskTagRepository).deleteByTaskId(1L);
+    verify(taskTagRepository).flush();
+    verify(taskTagRepository, org.mockito.Mockito.times(2)).save(any(TaskTag.class));
+  }
+
+  @Test
+  void getTaskTags_success() {
+    TaskTag tt1 = new TaskTag();
+    ReflectionTestUtils.setField(tt1, "id", 1L);
+    tt1.setTaskId(1L);
+    tt1.setTagId(100L);
+
+    TaskTag tt2 = new TaskTag();
+    ReflectionTestUtils.setField(tt2, "id", 2L);
+    tt2.setTaskId(1L);
+    tt2.setTagId(200L);
+
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskTagRepository.findByTaskId(1L)).thenReturn(List.of(tt1, tt2));
+
+    List<Long> tagIds = taskService.getTaskTags(1L, 10L);
+
+    assertThat(tagIds).containsExactly(100L, 200L);
+    verify(accessChecker).checkMembership(10L, 10L);
+  }
+
+  @Test
+  void getTaskTags_empty() {
+    when(taskRepository.findById(1L)).thenReturn(Optional.of(testTask));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(taskTagRepository.findByTaskId(1L)).thenReturn(List.of());
+
+    List<Long> tagIds = taskService.getTaskTags(1L, 10L);
+
+    assertThat(tagIds).isEmpty();
   }
 }

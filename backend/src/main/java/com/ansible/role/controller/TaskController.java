@@ -66,6 +66,23 @@ public class TaskController {
     return Result.success(taskService.getNotifiedHandlers(id, currentUserId));
   }
 
+  @PutMapping("/tasks/{id}/tags")
+  public Result<Void> updateTaskTags(
+      @PathVariable Long id,
+      @RequestBody List<Long> tagIds,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    taskService.updateTaskTags(id, tagIds, currentUserId);
+    return Result.success();
+  }
+
+  @GetMapping("/tasks/{id}/tags")
+  public Result<List<Long>> getTaskTags(
+      @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(taskService.getTaskTags(id, currentUserId));
+  }
+
   @DeleteMapping("/tasks/{id}")
   public Result<Void> deleteTask(
       @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
