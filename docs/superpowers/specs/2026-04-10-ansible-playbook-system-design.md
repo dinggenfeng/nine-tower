@@ -107,7 +107,7 @@
 | `HostGroup` | 主机组 | `projectId`, `name`, `description`, `createdBy` |
 | `Host` | 主机 | `hostGroupId`, `name`, `ip`, `port`, `ansibleUser`, `ansibleSshPass`, `ansibleSshPrivateKeyFile`, `ansibleBecome`, `createdBy` |
 | `Role` | 任务组（Ansible Role） | `projectId`, `name`, `description`, `createdBy` |
-| `Task` | 任务 | `roleId`, `name`, `module`, `args`(JSON), `when`, `loop`, `until`, `register`, `notify`(JSON数组，如`["Restart nginx"]`), `order`, `createdBy` |
+| `Task` | 任务 | `roleId`, `name`, `module`, `args`(JSON), `when`, `loop`, `until`, `register`, `notify`(JSON数组，如`["Restart nginx"]`), `taskOrder`, `become`, `becomeUser`, `ignoreErrors`, `parentTaskId`, `blockSection`(BLOCK/RESCUE/ALWAYS), `createdBy` |
 | `Handler` | 处理器 | `roleId`, `name`, `module`, `args`(JSON), `when`, `register`, `createdBy` |
 | `Tag` | 标签 | `projectId`, `name`, `createdBy` |
 | `TaskTag` | Task-Tag 关联 | `taskId`, `tagId` |
@@ -213,6 +213,8 @@
 | GET | `/api/tasks/{id}` | Task 详情 |
 | PUT | `/api/tasks/{id}` | 更新 Task |
 | DELETE | `/api/tasks/{id}` | 删除 Task |
+| PUT | `/api/roles/{roleId}/tasks/order` | 调整 Role 内 Task 顺序 |
+| GET | `/api/tasks/{id}/tags` | 获取 Task 关联标签 |
 | PUT | `/api/tasks/{id}/tags` | 更新 Task 标签 |
 | GET | `/api/tasks/{id}/notifies` | 获取此 Task notify 的 Handlers |
 
@@ -297,6 +299,9 @@
 | GET | `/api/environments/{id}` | 环境详情 |
 | PUT | `/api/environments/{id}` | 更新环境 |
 | DELETE | `/api/environments/{id}` | 删除环境 |
+| POST | `/api/environments/{envId}/configs` | 新增环境配置项 |
+| PUT | `/api/env-configs/{configId}` | 更新环境配置项 |
+| DELETE | `/api/env-configs/{configId}` | 删除环境配置项 |
 
 ### 6.15 Playbook
 
@@ -468,21 +473,26 @@ frontend/
 构建器允许用户通过 UI 组合：
 - **主机选择**：选择一个或多个主机组
 - **环境选择**：选择适用环境
-- **Role 列表**：从项目 Role 中添加，支持拖拽排序
+- **Role 列表**：从项目 Role 中添加，支持上下箭头排序
 - **标签过滤**：选择需要应用的 Tag
-- **YAML 预览**：实时渲染生成的 Playbook YAML
+- **Extra Vars 编辑**：在构建器中直接编辑/保存 Playbook 的 `extraVars`（YAML 文本）
+- **YAML 预览**：实时渲染生成的 Playbook YAML；后端在生成时自动合并项目级/主机组级/环境级变量 + `extraVars`，并按优先级去重（环境 > 主机组 > Role > 项目）
 - **导出**：复制或下载 YAML 文件
 
 ### 9.2 Task 完整属性编辑器
 
 Task 支持以下所有 Ansible 属性：
-- `name`、`module`、`args`（Key-Value 编辑）
+- `name`、`module`（模块下拉选择 + 动态参数表单）、`args`（Key-Value 编辑）
 - `when`（条件表达式）
 - `loop`（循环变量）
 - `until`（重试条件）
 - `register`（结果注册变量）
 - `notify`（触发 Handler 名称列表）
 - `tags`（关联标签）
+- `become` / `become_user`（提权执行）
+- `ignore_errors`（忽略错误）
+- **block/rescue/always 嵌套**：Task 通过 `parentTaskId` + `blockSection`(BLOCK/RESCUE/ALWAYS) 支持构建 block 分组结构
+- **排序**：Role 内 Task 支持上下箭头调整顺序（`PUT /api/roles/{roleId}/tasks/order`）
 
 同时提供实时 YAML 预览。
 
@@ -495,7 +505,9 @@ Task 支持以下所有 Ansible 属性：
 
 - 支持树形和表格两种视图
 - 按 scope 过滤：项目级/主机组级/Role级/环境级
-- 显示变量优先级说明（环境 > 主机组 > Role > 项目）
+- 显示变量优先级说明（环境 > 主机组 > Role vars > 项目 > Role defaults）
+- **跨 scope 同名检测**：当同一 key 在多个 scope 存在时，树节点会标记"胜出"的那条（实际生效值），其余同名条目降级显示
+- 优先级解析逻辑提取到 `frontend/src/utils/variablePriority.ts`，独立单元测试覆盖
 
 ### 9.5 文件管理（Role files/）
 
