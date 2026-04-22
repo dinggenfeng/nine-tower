@@ -84,4 +84,13 @@ public class EnvironmentController {
     environmentService.removeConfig(configId, currentUserId);
     return Result.success();
   }
+
+  @PutMapping("/env-configs/{configId}")
+  public Result<EnvConfigResponse> updateConfig(
+      @PathVariable Long configId,
+      @Valid @RequestBody EnvConfigRequest request,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(environmentService.updateConfig(configId, request, currentUserId));
+  }
 }

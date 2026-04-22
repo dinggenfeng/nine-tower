@@ -268,6 +268,76 @@ class EnvironmentControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void updateConfig_success() {
+    Long envId = createEnvironment("dev", null);
+
+    EnvConfigRequest createReq = new EnvConfigRequest();
+    createReq.setConfigKey("DB_HOST");
+    createReq.setConfigValue("localhost");
+
+    ResponseEntity<Result<EnvConfigResponse>> configResp =
+        restTemplate.exchange(
+            "/api/environments/" + envId + "/configs",
+            HttpMethod.POST,
+            new HttpEntity<>(createReq, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    Long configId = configResp.getBody().getData().getId();
+
+    EnvConfigRequest updateReq = new EnvConfigRequest();
+    updateReq.setConfigKey("DB_HOST");
+    updateReq.setConfigValue("192.168.1.1");
+
+    ResponseEntity<Result<EnvConfigResponse>> resp =
+        restTemplate.exchange(
+            "/api/env-configs/" + configId,
+            HttpMethod.PUT,
+            new HttpEntity<>(updateReq, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resp.getBody().getData().getConfigKey()).isEqualTo("DB_HOST");
+    assertThat(resp.getBody().getData().getConfigValue()).isEqualTo("192.168.1.1");
+  }
+
+  @Test
+  void updateConfig_duplicateKey_returns400() {
+    Long envId = createEnvironment("dev", null);
+
+    EnvConfigRequest req1 = new EnvConfigRequest();
+    req1.setConfigKey("DB_HOST");
+    req1.setConfigValue("localhost");
+    restTemplate.exchange(
+        "/api/environments/" + envId + "/configs",
+        HttpMethod.POST,
+        new HttpEntity<>(req1, authHeaders()),
+        new ParameterizedTypeReference<Result<EnvConfigResponse>>() {});
+
+    EnvConfigRequest req2 = new EnvConfigRequest();
+    req2.setConfigKey("DB_PORT");
+    req2.setConfigValue("5432");
+    ResponseEntity<Result<EnvConfigResponse>> config2Resp =
+        restTemplate.exchange(
+            "/api/environments/" + envId + "/configs",
+            HttpMethod.POST,
+            new HttpEntity<>(req2, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    Long config2Id = config2Resp.getBody().getData().getId();
+
+    EnvConfigRequest updateReq = new EnvConfigRequest();
+    updateReq.setConfigKey("DB_HOST");
+    updateReq.setConfigValue("3306");
+
+    ResponseEntity<Result<EnvConfigResponse>> resp =
+        restTemplate.exchange(
+            "/api/env-configs/" + config2Id,
+            HttpMethod.PUT,
+            new HttpEntity<>(updateReq, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  @Test
   void deleteEnvironment_cascadesConfigs() {
     Long envId = createEnvironment("dev", null);
 

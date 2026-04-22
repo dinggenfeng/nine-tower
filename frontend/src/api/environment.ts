@@ -58,3 +58,11 @@ export async function addConfig(
 export async function removeConfig(configId: number): Promise<void> {
   await request.delete(`/env-configs/${configId}`);
 }
+
+export async function updateConfig(
+  configId: number,
+  data: EnvConfigRequest
+): Promise<EnvConfig> {
+  const res = await request.put<EnvConfig>(`/env-configs/${configId}`, data);
+  return res.data;
+}

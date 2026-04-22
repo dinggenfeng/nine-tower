@@ -31,6 +31,7 @@ import {
   updateEnvironment,
   deleteEnvironment,
   addConfig,
+  updateConfig,
   removeConfig,
 } from '../../api/environment';
 
@@ -45,6 +46,7 @@ export default function EnvironmentManager() {
   const [envModalOpen, setEnvModalOpen] = useState(false);
   const [editingEnv, setEditingEnv] = useState<Environment | null>(null);
   const [configModalOpen, setConfigModalOpen] = useState(false);
+  const [editingConfig, setEditingConfig] = useState<EnvConfig | null>(null);
   const [activeEnvId, setActiveEnvId] = useState<number | null>(null);
   const [envForm] = Form.useForm<CreateEnvironmentRequest>();
   const [configForm] = Form.useForm<EnvConfigRequest>();
@@ -100,15 +102,31 @@ export default function EnvironmentManager() {
   };
 
   const handleAddConfig = (envId: number) => {
+    setEditingConfig(null);
     setActiveEnvId(envId);
     configForm.resetFields();
     setConfigModalOpen(true);
   };
 
+  const handleEditConfig = (envId: number, config: EnvConfig) => {
+    setEditingConfig(config);
+    setActiveEnvId(envId);
+    configForm.setFieldsValue({
+      configKey: config.configKey,
+      configValue: config.configValue,
+    });
+    setConfigModalOpen(true);
+  };
+
   const handleConfigSubmit = async () => {
     const values = await configForm.validateFields();
-    await addConfig(activeEnvId!, values);
-    message.success('配置项已添加');
+    if (editingConfig) {
+      await updateConfig(editingConfig.id, values);
+      message.success('配置项已更新');
+    } else {
+      await addConfig(activeEnvId!, values);
+      message.success('配置项已添加');
+    }
     setConfigModalOpen(false);
     fetchEnvironments();
   };
@@ -119,20 +137,28 @@ export default function EnvironmentManager() {
     fetchEnvironments();
   };
 
-  const configColumns = [
+  const configColumns = (envId: number) => [
     { title: 'Key', dataIndex: 'configKey', key: 'key' },
     { title: 'Value', dataIndex: 'configValue', key: 'value' },
     {
       title: '操作',
       key: 'action',
-      width: 80,
+      width: 100,
       render: (_: unknown, record: EnvConfig) => (
-        <Popconfirm
-          title="确定删除？"
-          onConfirm={() => handleRemoveConfig(record.id)}
-        >
-          <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-        </Popconfirm>
+        <Space>
+          <Button
+            type="text"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={() => handleEditConfig(envId, record)}
+          />
+          <Popconfirm
+            title="确定删除？"
+            onConfirm={() => handleRemoveConfig(record.id)}
+          >
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
@@ -195,7 +221,7 @@ export default function EnvironmentManager() {
             size="small"
             pagination={false}
             rowKey="id"
-            columns={configColumns}
+            columns={configColumns(env.id)}
             dataSource={env.configs}
             locale={{
               emptyText: (
@@ -236,7 +262,7 @@ export default function EnvironmentManager() {
       </Modal>
 
       <Modal
-        title="添加配置项"
+        title={editingConfig ? '编辑配置项' : '添加配置项'}
         open={configModalOpen}
         onOk={handleConfigSubmit}
         onCancel={() => setConfigModalOpen(false)}

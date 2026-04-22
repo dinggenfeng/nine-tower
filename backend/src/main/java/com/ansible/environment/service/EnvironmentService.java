@@ -115,6 +115,29 @@ public class EnvironmentService {
   }
 
   @Transactional
+  public EnvConfigResponse updateConfig(Long configId, EnvConfigRequest request, Long userId) {
+    EnvConfig config =
+        envConfigRepository
+            .findById(configId)
+            .orElseThrow(() -> new IllegalArgumentException("Config not found"));
+    Environment env =
+        environmentRepository
+            .findById(config.getEnvironmentId())
+            .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
+    accessChecker.checkOwnerOrAdmin(env.getProjectId(), config.getCreatedBy(), userId);
+    if (!config.getConfigKey().equals(request.getConfigKey())
+        && envConfigRepository.existsByEnvironmentIdAndConfigKeyAndIdNot(
+            config.getEnvironmentId(), request.getConfigKey(), configId)) {
+      throw new IllegalArgumentException(
+          "Config key '" + request.getConfigKey() + "' already exists");
+    }
+    config.setConfigKey(request.getConfigKey());
+    config.setConfigValue(request.getConfigValue());
+    config = envConfigRepository.save(config);
+    return new EnvConfigResponse(config);
+  }
+
+  @Transactional
   public void removeConfig(Long configId, Long userId) {
     EnvConfig config =
         envConfigRepository

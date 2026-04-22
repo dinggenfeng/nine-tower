@@ -229,6 +229,94 @@ class EnvironmentServiceTest {
   }
 
   @Test
+  void updateConfig_success() {
+    EnvConfig config = new EnvConfig();
+    ReflectionTestUtils.setField(config, "id", 10L);
+    config.setEnvironmentId(1L);
+    config.setConfigKey("DB_HOST");
+    config.setConfigValue("localhost");
+    config.setCreatedBy(100L);
+
+    EnvConfig savedConfig = new EnvConfig();
+    ReflectionTestUtils.setField(savedConfig, "id", 10L);
+    savedConfig.setEnvironmentId(1L);
+    savedConfig.setConfigKey("DB_HOST_NEW");
+    savedConfig.setConfigValue("127.0.0.1");
+    savedConfig.setCreatedBy(100L);
+
+    when(envConfigRepository.findById(10L)).thenReturn(Optional.of(config));
+    when(environmentRepository.findById(1L)).thenReturn(Optional.of(testEnv));
+    when(envConfigRepository.existsByEnvironmentIdAndConfigKeyAndIdNot(1L, "DB_HOST_NEW", 10L))
+        .thenReturn(false);
+    when(envConfigRepository.save(any(EnvConfig.class))).thenReturn(savedConfig);
+
+    EnvConfigRequest request = new EnvConfigRequest();
+    request.setConfigKey("DB_HOST_NEW");
+    request.setConfigValue("127.0.0.1");
+    EnvConfigResponse response = environmentService.updateConfig(10L, request, 100L);
+
+    assertThat(response.getConfigKey()).isEqualTo("DB_HOST_NEW");
+    assertThat(response.getConfigValue()).isEqualTo("127.0.0.1");
+  }
+
+  @Test
+  void updateConfig_sameKey_success() {
+    EnvConfig config = new EnvConfig();
+    ReflectionTestUtils.setField(config, "id", 10L);
+    config.setEnvironmentId(1L);
+    config.setConfigKey("DB_HOST");
+    config.setConfigValue("localhost");
+    config.setCreatedBy(100L);
+
+    when(envConfigRepository.findById(10L)).thenReturn(Optional.of(config));
+    when(environmentRepository.findById(1L)).thenReturn(Optional.of(testEnv));
+    when(envConfigRepository.save(any(EnvConfig.class))).thenReturn(config);
+
+    EnvConfigRequest request = new EnvConfigRequest();
+    request.setConfigKey("DB_HOST");
+    request.setConfigValue("newhost");
+    EnvConfigResponse response = environmentService.updateConfig(10L, request, 100L);
+
+    assertThat(response.getConfigValue()).isEqualTo("newhost");
+  }
+
+  @Test
+  void updateConfig_notFound_throws() {
+    when(envConfigRepository.findById(99L)).thenReturn(Optional.empty());
+
+    EnvConfigRequest request = new EnvConfigRequest();
+    request.setConfigKey("DB_HOST");
+    request.setConfigValue("localhost");
+
+    assertThatThrownBy(() -> environmentService.updateConfig(99L, request, 100L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Config not found");
+  }
+
+  @Test
+  void updateConfig_duplicateKey_throws() {
+    EnvConfig config = new EnvConfig();
+    ReflectionTestUtils.setField(config, "id", 10L);
+    config.setEnvironmentId(1L);
+    config.setConfigKey("DB_HOST");
+    config.setConfigValue("localhost");
+    config.setCreatedBy(100L);
+
+    when(envConfigRepository.findById(10L)).thenReturn(Optional.of(config));
+    when(environmentRepository.findById(1L)).thenReturn(Optional.of(testEnv));
+    when(envConfigRepository.existsByEnvironmentIdAndConfigKeyAndIdNot(1L, "DB_PORT", 10L))
+        .thenReturn(true);
+
+    EnvConfigRequest request = new EnvConfigRequest();
+    request.setConfigKey("DB_PORT");
+    request.setConfigValue("5432");
+
+    assertThatThrownBy(() -> environmentService.updateConfig(10L, request, 100L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("already exists");
+  }
+
+  @Test
   void removeConfig_success() {
     EnvConfig config = new EnvConfig();
     ReflectionTestUtils.setField(config, "id", 10L);
