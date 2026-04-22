@@ -1,5 +1,7 @@
 package com.ansible.playbook.service;
 
+import com.ansible.environment.entity.EnvConfig;
+import com.ansible.environment.repository.EnvConfigRepository;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
 import com.ansible.playbook.dto.CreatePlaybookRequest;
@@ -18,18 +20,25 @@ import com.ansible.playbook.repository.PlaybookRoleRepository;
 import com.ansible.playbook.repository.PlaybookTagRepository;
 import com.ansible.playbook.yaml.PlaybookYamlGenerator;
 import com.ansible.role.entity.Role;
+import com.ansible.role.entity.RoleDefaultVariable;
+import com.ansible.role.entity.RoleVariable;
+import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleRepository;
+import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
+import com.ansible.variable.entity.Variable;
 import com.ansible.variable.entity.VariableScope;
 import com.ansible.variable.repository.VariableRepository;
-import java.util.AbstractMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.yaml.snakeyaml.Yaml;
+import org.yaml.snakeyaml.error.YAMLException;
 
 @Service
 @RequiredArgsConstructor
@@ -42,9 +51,12 @@ public class PlaybookService {
   private final PlaybookTagRepository playbookTagRepository;
   private final PlaybookEnvironmentRepository playbookEnvironmentRepository;
   private final RoleRepository roleRepository;
+  private final RoleVariableRepository roleVariableRepository;
+  private final RoleDefaultVariableRepository roleDefaultVariableRepository;
   private final HostGroupRepository hostGroupRepository;
   private final TagRepository tagRepository;
   private final VariableRepository variableRepository;
+  private final EnvConfigRepository envConfigRepository;
   private final PlaybookYamlGenerator yamlGenerator;
   private final ProjectAccessChecker accessChecker;
 
@@ -247,8 +259,10 @@ public class PlaybookService {
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
     accessChecker.checkMembership(p.getProjectId(), userId);
 
+    List<PlaybookRole> playbookRoles =
+        playbookRoleRepository.findByPlaybookIdOrderByOrderIndexAsc(playbookId);
     List<String> roleNames =
-        playbookRoleRepository.findByPlaybookIdOrderByOrderIndexAsc(playbookId).stream()
+        playbookRoles.stream()
             .map(
                 pr ->
                     roleRepository
@@ -257,8 +271,10 @@ public class PlaybookService {
                         .orElse("unknown"))
             .toList();
 
+    List<PlaybookHostGroup> playbookHostGroups =
+        playbookHostGroupRepository.findByPlaybookId(playbookId);
     List<String> hostGroupNames =
-        playbookHostGroupRepository.findByPlaybookId(playbookId).stream()
+        playbookHostGroups.stream()
             .map(
                 phg ->
                     hostGroupRepository
@@ -269,19 +285,106 @@ public class PlaybookService {
 
     List<String> tagNames =
         playbookTagRepository.findByPlaybookId(playbookId).stream()
-            .map(
-                pt ->
-                    tagRepository.findById(pt.getTagId()).map(Tag::getName).orElse("unknown"))
+            .map(pt -> tagRepository.findById(pt.getTagId()).map(Tag::getName).orElse("unknown"))
             .toList();
 
-    List<Map.Entry<String, String>> projectVars =
-        variableRepository
-            .findByScopeAndScopeIdOrderByIdAsc(VariableScope.PROJECT, p.getProjectId())
-            .stream()
-            .<Map.Entry<String, String>>map(v -> new AbstractMap.SimpleEntry<>(v.getKey(), v.getValue()))
-            .toList();
+    Map<String, String> mergedVars = collectMergedVars(p, playbookRoles, playbookHostGroups);
 
-    return yamlGenerator.generate(roleNames, hostGroupNames, tagNames, projectVars);
+    return yamlGenerator.generate(roleNames, hostGroupNames, tagNames, mergedVars);
+  }
+
+  /**
+   * Merge variables from all sources by precedence (low → high; later overwrites earlier):
+   *
+   * <ol>
+   *   <li>Role defaults (lowest)
+   *   <li>Role vars
+   *   <li>Project-scope variables
+   *   <li>HostGroup-scope variables
+   *   <li>Environment-scope variables + EnvConfig values
+   *   <li>Playbook extraVars (highest)
+   * </ol>
+   */
+  @SuppressWarnings("PMD.UseConcurrentHashMap")
+  private Map<String, String> collectMergedVars(
+      Playbook p, List<PlaybookRole> playbookRoles, List<PlaybookHostGroup> playbookHostGroups) {
+    Map<String, String> merged = new LinkedHashMap<>();
+    addRoleDefaults(merged, playbookRoles);
+    addRoleVars(merged, playbookRoles);
+    addScopeVars(merged, VariableScope.PROJECT, p.getProjectId());
+    addHostGroupVars(merged, playbookHostGroups);
+    addEnvironmentVars(merged, p.getId());
+    parseExtraVars(p.getExtraVars()).forEach(merged::put);
+    return merged;
+  }
+
+  private void addRoleDefaults(Map<String, String> merged, List<PlaybookRole> playbookRoles) {
+    for (PlaybookRole pr : playbookRoles) {
+      for (RoleDefaultVariable v :
+          roleDefaultVariableRepository.findAllByRoleIdOrderByKeyAsc(pr.getRoleId())) {
+        merged.put(v.getKey(), v.getValue());
+      }
+    }
+  }
+
+  private void addRoleVars(Map<String, String> merged, List<PlaybookRole> playbookRoles) {
+    for (PlaybookRole pr : playbookRoles) {
+      for (RoleVariable v : roleVariableRepository.findAllByRoleIdOrderByKeyAsc(pr.getRoleId())) {
+        merged.put(v.getKey(), v.getValue());
+      }
+    }
+  }
+
+  private void addScopeVars(Map<String, String> merged, VariableScope scope, Long scopeId) {
+    for (Variable v : variableRepository.findByScopeAndScopeIdOrderByIdAsc(scope, scopeId)) {
+      merged.put(v.getKey(), v.getValue());
+    }
+  }
+
+  private void addHostGroupVars(
+      Map<String, String> merged, List<PlaybookHostGroup> playbookHostGroups) {
+    for (PlaybookHostGroup phg : playbookHostGroups) {
+      addScopeVars(merged, VariableScope.HOSTGROUP, phg.getHostGroupId());
+    }
+  }
+
+  private void addEnvironmentVars(Map<String, String> merged, Long playbookId) {
+    for (PlaybookEnvironment pe : playbookEnvironmentRepository.findByPlaybookId(playbookId)) {
+      for (EnvConfig cfg :
+          envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(pe.getEnvironmentId())) {
+        merged.put(cfg.getConfigKey(), cfg.getConfigValue());
+      }
+      addScopeVars(merged, VariableScope.ENVIRONMENT, pe.getEnvironmentId());
+    }
+  }
+
+  /**
+   * Parse the {@code extraVars} TEXT field as a YAML mapping. If the field is null, blank, or
+   * doesn't yield a Map, return an empty map. Non-string values are stringified.
+   */
+  @SuppressWarnings({"unchecked", "PMD.UseConcurrentHashMap"})
+  private Map<String, String> parseExtraVars(String extraVars) {
+    if (extraVars == null || extraVars.isBlank()) {
+      return Map.of();
+    }
+    Object parsed;
+    try {
+      parsed = new Yaml().load(extraVars);
+    } catch (YAMLException ex) {
+      return Map.of();
+    }
+    if (!(parsed instanceof Map)) {
+      return Map.of();
+    }
+    Map<String, String> result = new LinkedHashMap<>();
+    for (Map.Entry<Object, Object> e : ((Map<Object, Object>) parsed).entrySet()) {
+      if (e.getKey() != null) {
+        result.put(
+            String.valueOf(e.getKey()),
+            e.getValue() == null ? "" : String.valueOf(e.getValue()));
+      }
+    }
+    return result;
   }
 
   private PlaybookResponse toResponse(Playbook p) {
