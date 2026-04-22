@@ -125,7 +125,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     if (playbookRoleRepository.existsByPlaybookIdAndRoleId(playbookId, request.roleId())) {
       throw new IllegalArgumentException("Role already added to this playbook");
     }
@@ -145,7 +145,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     playbookRoleRepository.deleteByPlaybookIdAndRoleId(playbookId, roleId);
   }
 
@@ -155,7 +155,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     List<PlaybookRole> existing =
         playbookRoleRepository.findByPlaybookIdOrderByOrderIndexAsc(playbookId);
     for (int i = 0; i < roleIds.size(); i++) {
@@ -175,7 +175,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     if (playbookHostGroupRepository.existsByPlaybookIdAndHostGroupId(playbookId, hostGroupId)) {
       throw new IllegalArgumentException("Host group already added");
     }
@@ -192,7 +192,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     playbookHostGroupRepository.deleteByPlaybookIdAndHostGroupId(playbookId, hostGroupId);
   }
 
@@ -202,7 +202,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     if (playbookTagRepository.existsByPlaybookIdAndTagId(playbookId, tagId)) {
       throw new IllegalArgumentException("Tag already added");
     }
@@ -219,7 +219,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     playbookTagRepository.deleteByPlaybookIdAndTagId(playbookId, tagId);
   }
 
@@ -229,7 +229,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     if (playbookEnvironmentRepository.existsByPlaybookIdAndEnvironmentId(
         playbookId, environmentId)) {
       throw new IllegalArgumentException("Environment already added");
@@ -247,7 +247,7 @@ public class PlaybookService {
         playbookRepository
             .findById(playbookId)
             .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
-    accessChecker.checkMembership(p.getProjectId(), userId);
+    accessChecker.checkOwnerOrAdmin(p.getProjectId(), p.getCreatedBy(), userId);
     playbookEnvironmentRepository.deleteByPlaybookIdAndEnvironmentId(playbookId, environmentId);
   }
 

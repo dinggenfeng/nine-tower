@@ -201,7 +201,7 @@ public class TaskService {
         roleRepository
             .findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
-    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+    accessChecker.checkOwnerOrAdmin(role.getProjectId(), role.getCreatedBy(), currentUserId);
     List<Task> existing =
         taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
     if (taskIds.size() != existing.size()) {

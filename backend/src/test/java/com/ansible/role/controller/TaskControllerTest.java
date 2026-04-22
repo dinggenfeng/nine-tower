@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.ansible.AbstractIntegrationTest;
 import com.ansible.common.Result;
+import com.ansible.common.enums.ProjectRole;
+import com.ansible.project.dto.AddMemberRequest;
 import com.ansible.project.dto.CreateProjectRequest;
 import com.ansible.project.dto.ProjectResponse;
 import com.ansible.project.repository.ProjectMemberRepository;
@@ -384,5 +386,44 @@ class TaskControllerTest extends AbstractIntegrationTest {
             new HttpEntity<>(List.of(999L), authHeaders()),
             new ParameterizedTypeReference<>() {});
     assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
+
+  @Test
+  void reorderTasks_forbiddenForNonOwnerMember() {
+    Long t1 = createTask("Task 1", "apt", 1);
+    Long t2 = createTask("Task 2", "copy", 2);
+
+    RegisterRequest bobReg = new RegisterRequest();
+    bobReg.setUsername("bob");
+    bobReg.setPassword("password123");
+    bobReg.setEmail("bob@example.com");
+    ResponseEntity<Result<TokenResponse>> bobResp =
+        restTemplate.exchange(
+            "/api/auth/register",
+            HttpMethod.POST,
+            new HttpEntity<>(bobReg),
+            new ParameterizedTypeReference<>() {});
+    String bobToken = bobResp.getBody().getData().getToken();
+    Long bobId = bobResp.getBody().getData().getUser().getId();
+
+    AddMemberRequest addBob = new AddMemberRequest();
+    addBob.setUserId(bobId);
+    addBob.setRole(ProjectRole.PROJECT_MEMBER);
+    restTemplate.exchange(
+        "/api/projects/" + projectId + "/members",
+        HttpMethod.POST,
+        new HttpEntity<>(addBob, authHeaders()),
+        new ParameterizedTypeReference<Result<Void>>() {});
+
+    HttpHeaders bobHeaders = new HttpHeaders();
+    bobHeaders.setBearerAuth(bobToken);
+
+    ResponseEntity<Result<Void>> bobReorder =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/tasks/order",
+            HttpMethod.PUT,
+            new HttpEntity<>(List.of(t2, t1), bobHeaders),
+            new ParameterizedTypeReference<>() {});
+    assertThat(bobReorder.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
   }
 }
