@@ -8,10 +8,12 @@ import {
   message,
   Popconfirm,
   Spin,
+  Input,
 } from 'antd';
-import { DeleteOutlined, CopyOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
+import { DeleteOutlined, CopyOutlined, UpOutlined, DownOutlined, SaveOutlined } from '@ant-design/icons';
 import {
   getPlaybook,
+  updatePlaybook,
   addRole,
   removeRole,
   reorderRoles,
@@ -47,6 +49,8 @@ export default function PlaybookBuilder() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [yamlPreview, setYamlPreview] = useState('');
+  const [extraVarsText, setExtraVarsText] = useState('');
+  const [savingVars, setSavingVars] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -62,6 +66,7 @@ export default function PlaybookBuilder() {
         generateYaml(playbookId),
       ]);
       setPlaybook(pb);
+      setExtraVarsText(pb.extraVars ?? '');
       setRoles(rList);
       setHostGroups(hgList);
       setTags(tList);
@@ -130,6 +135,22 @@ export default function PlaybookBuilder() {
   const handleCopyYaml = () => {
     navigator.clipboard.writeText(yamlPreview);
     message.success('已复制到剪贴板');
+  };
+
+  const handleSaveExtraVars = async () => {
+    if (!playbook) return;
+    setSavingVars(true);
+    try {
+      await updatePlaybook(playbookId, {
+        name: playbook.name,
+        description: playbook.description,
+        extraVars: extraVarsText || undefined,
+      });
+      message.success('Extra Vars 已保存');
+      fetchData();
+    } finally {
+      setSavingVars(false);
+    }
   };
 
   if (loading) return <Spin />;
@@ -319,6 +340,29 @@ export default function PlaybookBuilder() {
               />
             )}
           </Space>
+        </Card>
+
+        <Card
+          title="Extra Vars"
+          size="small"
+          extra={
+            <Button
+              icon={<SaveOutlined />}
+              size="small"
+              loading={savingVars}
+              onClick={handleSaveExtraVars}
+            >
+              保存
+            </Button>
+          }
+        >
+          <Input.TextArea
+            value={extraVarsText}
+            onChange={(e) => setExtraVarsText(e.target.value)}
+            placeholder="key: value&#10;app_port: 8080"
+            rows={5}
+            style={{ fontFamily: 'monospace' }}
+          />
         </Card>
 
         <Card
