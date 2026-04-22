@@ -7,7 +7,7 @@ import {
   Modal,
   Popconfirm,
   Space,
-  Table,
+  Tree,
   message,
 } from 'antd';
 import {
@@ -16,7 +16,11 @@ import {
   DeleteOutlined,
   FileTextOutlined,
   ArrowLeftOutlined,
+  FolderOutlined,
+  DownloadOutlined,
 } from '@ant-design/icons';
+import CodeMirror from '@uiw/react-codemirror';
+import { yaml } from '@codemirror/lang-yaml';
 import type {
   Template,
   CreateTemplateRequest,
@@ -28,6 +32,7 @@ import {
   getTemplate,
   updateTemplate,
   deleteTemplate,
+  getTemplateDownloadUrl,
 } from '../../api/template';
 
 interface RoleTemplatesProps {
@@ -58,7 +63,6 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fetchData();
   }, [fetchData]);
 
-  // --- 基本信息 Modal ---
   const handleCreate = () => {
     setEditingTemplate(null);
     form.resetFields();
@@ -110,11 +114,16 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fetchData();
   };
 
-  // --- 内容编辑 ---
   const handleEditContent = async (record: Template) => {
     const detail = await getTemplate(record.id);
     setContentTemplate(detail);
     setContentValue(detail.content || '');
+  };
+
+  const handleDownload = (record: Template) => {
+    const token = localStorage.getItem('token');
+    const url = `${getTemplateDownloadUrl(record.id)}?token=${token}`;
+    window.open(url, '_blank');
   };
 
   const handleSaveContent = async () => {
@@ -134,7 +143,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     }
   };
 
-  // --- 内容编辑视图 ---
+  // --- Content editor view ---
   if (contentTemplate) {
     return (
       <div>
@@ -165,55 +174,116 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
             目标路径: {contentTemplate.targetPath || '未设置'}
           </span>
         </Card>
-        <Input.TextArea
+        <CodeMirror
           value={contentValue}
-          onChange={(e) => setContentValue(e.target.value)}
-          rows={20}
-          placeholder="Jinja2 模板内容"
-          style={{ fontFamily: 'monospace', fontSize: 13 }}
+          onChange={(value) => setContentValue(value)}
+          extensions={[yaml()]}
+          height="500px"
+          basicSetup={{
+            lineNumbers: true,
+            highlightActiveLine: true,
+            bracketMatching: true,
+          }}
         />
       </div>
     );
   }
 
-  // --- 列表视图 ---
-  const columns = [
-    { title: '文件名', dataIndex: 'name', key: 'name' },
-    {
-      title: '目录',
-      dataIndex: 'parentDir',
-      key: 'parentDir',
-      render: (dir: string | null) => dir || '/',
-    },
-    { title: '目标路径', dataIndex: 'targetPath', key: 'targetPath' },
-    {
-      title: '操作',
-      key: 'action',
-      render: (_: unknown, record: Template) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<FileTextOutlined />}
-            onClick={() => handleEditContent(record)}
-          >
-            编辑内容
-          </Button>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
-            编辑
-          </Button>
-          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
-            <Button type="link" danger icon={<DeleteOutlined />}>
-              删除
+  // --- Tree view ---
+  // Build directory tree from flat template list (templates have parentDir for hierarchy)
+  interface AntTreeNode {
+    key: string;
+    title: React.ReactNode;
+    children?: AntTreeNode[];
+  }
+
+  const buildTreeData = (): AntTreeNode[] => {
+    // Group templates by directory path
+    const dirNodes = new Map<string, AntTreeNode>();
+    const rootNodes: AntTreeNode[] = [];
+
+    for (const t of templates) {
+      const parts = t.parentDir ? t.parentDir.split('/').filter(Boolean) : [];
+      let currentLevel = rootNodes;
+      let pathSoFar = '';
+
+      // Create directory nodes for each path segment
+      for (const part of parts) {
+        pathSoFar = pathSoFar ? `${pathSoFar}/${part}` : part;
+        if (!dirNodes.has(pathSoFar)) {
+          const dirNode: AntTreeNode = {
+            key: `dir:${pathSoFar}`,
+            title: (
+              <Space>
+                <FolderOutlined />
+                <span>{part}</span>
+              </Space>
+            ),
+            children: [],
+          };
+          dirNodes.set(pathSoFar, dirNode);
+          currentLevel.push(dirNode);
+        }
+        const existing = dirNodes.get(pathSoFar)!;
+        currentLevel = existing.children!;
+      }
+
+      // Add the template file node
+      currentLevel.push({
+        key: `file:${t.id}`,
+        title: (
+          <Space>
+            <FileTextOutlined />
+            <span>{t.name}</span>
+            <Button
+              type="link"
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEditContent(t);
+              }}
+            >
+              内容
             </Button>
-          </Popconfirm>
-        </Space>
-      ),
-    },
-  ];
+            <Button
+              type="link"
+              size="small"
+              icon={<EditOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleEdit(t);
+              }}
+            />
+            <Button
+              type="link"
+              size="small"
+              icon={<DownloadOutlined />}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(t);
+              }}
+            />
+            <Popconfirm
+              title="确定删除？"
+              onConfirm={() => handleDelete(t.id)}
+            >
+              <Button
+                type="link"
+                size="small"
+                danger
+                icon={<DeleteOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Popconfirm>
+          </Space>
+        ),
+      });
+    }
+
+    return rootNodes;
+  };
+
+  const antTreeData = buildTreeData();
 
   return (
     <div>
@@ -222,13 +292,14 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           添加模板
         </Button>
       </div>
-      <Table
-        columns={columns}
-        dataSource={templates}
-        rowKey="id"
-        loading={loading}
-        pagination={false}
-      />
+      {loading ? (
+        <span>加载中...</span>
+      ) : (
+        <Tree
+          treeData={antTreeData}
+          defaultExpandAll
+        />
+      )}
       <Modal
         title={editingTemplate ? '编辑模板' : '添加模板'}
         open={modalOpen}

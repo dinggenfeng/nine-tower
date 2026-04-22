@@ -34,3 +34,7 @@ export async function updateTemplate(
 export async function deleteTemplate(id: number): Promise<void> {
   await request.delete(`/templates/${id}`);
 }
+
+export function getTemplateDownloadUrl(id: number): string {
+  return `/api/templates/${id}/download`;
+}

@@ -241,4 +241,34 @@ class TemplateControllerTest extends AbstractIntegrationTest {
             new ParameterizedTypeReference<>() {});
     assertThat(listResp.getBody().getData()).isEmpty();
   }
+
+  @Test
+  void downloadTemplate_success() {
+    Long templateId =
+        createTemplate("nginx.conf.j2", null, "/etc/nginx/nginx.conf", "server { listen 80; }");
+
+    ResponseEntity<byte[]> resp =
+        restTemplate.exchange(
+            "/api/templates/" + templateId + "/download",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            byte[].class);
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resp.getBody()).isNotNull();
+    assertThat(new String(resp.getBody())).isEqualTo("server { listen 80; }");
+    assertThat(resp.getHeaders().getContentDisposition().getFilename()).isEqualTo("nginx.conf.j2");
+  }
+
+  @Test
+  void downloadTemplate_notFound() {
+    ResponseEntity<byte[]> resp =
+        restTemplate.exchange(
+            "/api/templates/99999/download",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            byte[].class);
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+  }
 }
