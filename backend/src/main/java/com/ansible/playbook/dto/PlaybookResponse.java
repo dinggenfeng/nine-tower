@@ -12,5 +12,6 @@ public record PlaybookResponse(
     List<Long> roleIds,
     List<Long> hostGroupIds,
     List<Long> tagIds,
+    List<Long> environmentIds,
     LocalDateTime createdAt,
     LocalDateTime updatedAt) {}

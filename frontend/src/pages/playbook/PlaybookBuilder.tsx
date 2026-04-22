@@ -18,15 +18,19 @@ import {
   removeHostGroup,
   addTag,
   removeTag,
+  addEnvironment,
+  removeEnvironment,
   generateYaml,
 } from '../../api/playbook';
 import { getRoles } from '../../api/role';
 import { getHostGroups } from '../../api/host';
 import { listTags } from '../../api/tag';
+import { listEnvironments } from '../../api/environment';
 import type { Playbook } from '../../types/entity/Playbook';
 import type { Role } from '../../types/entity/Role';
 import type { HostGroup } from '../../types/entity/Host';
 import type { Tag } from '../../types/entity/Tag';
+import type { Environment } from '../../types/entity/Environment';
 
 export default function PlaybookBuilder() {
   const { id: projectId, pbId } = useParams<{
@@ -40,6 +44,7 @@ export default function PlaybookBuilder() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
+  const [environments, setEnvironments] = useState<Environment[]>([]);
   const [yamlPreview, setYamlPreview] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -47,17 +52,19 @@ export default function PlaybookBuilder() {
     if (!pid || !playbookId) return;
     setLoading(true);
     try {
-      const [pb, rList, hgList, tList, yaml] = await Promise.all([
+      const [pb, rList, hgList, tList, envList, yaml] = await Promise.all([
         getPlaybook(playbookId),
         getRoles(pid),
         getHostGroups(pid),
         listTags(pid),
+        listEnvironments(pid),
         generateYaml(playbookId),
       ]);
       setPlaybook(pb);
       setRoles(rList);
       setHostGroups(hgList);
       setTags(tList);
+      setEnvironments(envList);
       setYamlPreview(yaml);
     } finally {
       setLoading(false);
@@ -99,6 +106,16 @@ export default function PlaybookBuilder() {
     fetchData();
   };
 
+  const handleAddEnvironment = async (envId: number) => {
+    await addEnvironment(playbookId, envId);
+    fetchData();
+  };
+
+  const handleRemoveEnvironment = async (envId: number) => {
+    await removeEnvironment(playbookId, envId);
+    fetchData();
+  };
+
   const handleCopyYaml = () => {
     navigator.clipboard.writeText(yamlPreview);
     message.success('已复制到剪贴板');
@@ -116,6 +133,9 @@ export default function PlaybookBuilder() {
   const availableTags = tags.filter(
     (t) => !playbook.tagIds.includes(t.id)
   );
+  const availableEnvironments = environments.filter(
+    (e) => !playbook.environmentIds.includes(e.id)
+  );
   const selectedRoles = playbook.roleIds
     .map((id) => roles.find((r) => r.id === id))
     .filter((r): r is Role => r != null);
@@ -125,6 +145,9 @@ export default function PlaybookBuilder() {
   const selectedTags = playbook.tagIds
     .map((id) => tags.find((t) => t.id === id))
     .filter((t): t is Tag => t != null);
+  const selectedEnvironments = playbook.environmentIds
+    .map((id) => environments.find((e) => e.id === id))
+    .filter((e): e is Environment => e != null);
 
   return (
     <div>
@@ -233,6 +256,40 @@ export default function PlaybookBuilder() {
                 options={availableTags.map((t) => ({
                   label: t.name,
                   value: t.id,
+                }))}
+              />
+            )}
+          </Space>
+        </Card>
+
+        <Card title="环境" size="small">
+          <Space wrap>
+            {selectedEnvironments.map((e) => (
+              <span key={e.id}>
+                <Space>
+                  <strong>{e.name}</strong>
+                  <Popconfirm
+                    title="确定移除？"
+                    onConfirm={() => handleRemoveEnvironment(e.id)}
+                  >
+                    <Button
+                      type="text"
+                      size="small"
+                      danger
+                      icon={<DeleteOutlined />}
+                    />
+                  </Popconfirm>
+                </Space>
+              </span>
+            ))}
+            {availableEnvironments.length > 0 && (
+              <Select
+                placeholder="添加环境"
+                style={{ width: 180 }}
+                onSelect={(val: number) => handleAddEnvironment(val)}
+                options={availableEnvironments.map((e) => ({
+                  label: e.name,
+                  value: e.id,
                 }))}
               />
             )}

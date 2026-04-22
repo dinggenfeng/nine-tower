@@ -12,9 +12,11 @@ import com.ansible.playbook.dto.CreatePlaybookRequest;
 import com.ansible.playbook.dto.PlaybookResponse;
 import com.ansible.playbook.dto.PlaybookRoleRequest;
 import com.ansible.playbook.entity.Playbook;
+import com.ansible.playbook.entity.PlaybookEnvironment;
 import com.ansible.playbook.entity.PlaybookHostGroup;
 import com.ansible.playbook.entity.PlaybookRole;
 import com.ansible.playbook.entity.PlaybookTag;
+import com.ansible.playbook.repository.PlaybookEnvironmentRepository;
 import com.ansible.playbook.repository.PlaybookHostGroupRepository;
 import com.ansible.playbook.repository.PlaybookRepository;
 import com.ansible.playbook.repository.PlaybookRoleRepository;
@@ -25,6 +27,7 @@ import com.ansible.role.repository.RoleRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
+import com.ansible.variable.repository.VariableRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -41,9 +44,11 @@ class PlaybookServiceTest {
   @Mock private PlaybookRoleRepository playbookRoleRepository;
   @Mock private PlaybookHostGroupRepository playbookHostGroupRepository;
   @Mock private PlaybookTagRepository playbookTagRepository;
+  @Mock private PlaybookEnvironmentRepository playbookEnvironmentRepository;
   @Mock private RoleRepository roleRepository;
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private TagRepository tagRepository;
+  @Mock private VariableRepository variableRepository;
   @Mock private PlaybookYamlGenerator yamlGenerator;
   @Mock private ProjectAccessChecker accessChecker;
 
@@ -76,6 +81,7 @@ class PlaybookServiceTest {
     when(playbookRoleRepository.findByPlaybookIdOrderByOrderIndexAsc(1L)).thenReturn(List.of());
     when(playbookHostGroupRepository.findByPlaybookId(1L)).thenReturn(List.of());
     when(playbookTagRepository.findByPlaybookId(1L)).thenReturn(List.of());
+    when(playbookEnvironmentRepository.findByPlaybookId(1L)).thenReturn(List.of());
 
     List<PlaybookResponse> list = playbookService.listPlaybooks(1L, 100L);
     assertThat(list).hasSize(1);
@@ -172,7 +178,12 @@ class PlaybookServiceTest {
     tag.setName("deploy");
     when(tagRepository.findById(3L)).thenReturn(Optional.of(tag));
 
-    when(yamlGenerator.generate(List.of("nginx"), List.of("web_servers"), List.of("deploy")))
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(
+            com.ansible.variable.entity.VariableScope.PROJECT, 1L))
+        .thenReturn(List.of());
+
+    when(yamlGenerator.generate(
+            List.of("nginx"), List.of("web_servers"), List.of("deploy"), List.of()))
         .thenReturn("- hosts: web_servers\n  roles:\n    - nginx\n  tags: [deploy]\n");
 
     String yaml = playbookService.generateYaml(1L, 100L);
@@ -192,6 +203,49 @@ class PlaybookServiceTest {
     verify(playbookRoleRepository).deleteByPlaybookId(1L);
     verify(playbookHostGroupRepository).deleteByPlaybookId(1L);
     verify(playbookTagRepository).deleteByPlaybookId(1L);
+    verify(playbookEnvironmentRepository).deleteByPlaybookId(1L);
     verify(playbookRepository).delete(p);
+  }
+
+  @Test
+  void addEnvironment_success() {
+    Playbook p = new Playbook();
+    ReflectionTestUtils.setField(p, "id", 1L);
+    p.setProjectId(1L);
+    when(playbookRepository.findById(1L)).thenReturn(Optional.of(p));
+    when(playbookEnvironmentRepository.existsByPlaybookIdAndEnvironmentId(1L, 7L))
+        .thenReturn(false);
+    PlaybookEnvironment savedEnv = new PlaybookEnvironment();
+    ReflectionTestUtils.setField(savedEnv, "id", 100L);
+    when(playbookEnvironmentRepository.save(any(PlaybookEnvironment.class)))
+        .thenReturn(savedEnv);
+
+    playbookService.addEnvironment(1L, 7L, 100L);
+    verify(playbookEnvironmentRepository).save(any(PlaybookEnvironment.class));
+  }
+
+  @Test
+  void addEnvironment_duplicate_throws() {
+    Playbook p = new Playbook();
+    ReflectionTestUtils.setField(p, "id", 1L);
+    p.setProjectId(1L);
+    when(playbookRepository.findById(1L)).thenReturn(Optional.of(p));
+    when(playbookEnvironmentRepository.existsByPlaybookIdAndEnvironmentId(1L, 7L))
+        .thenReturn(true);
+
+    assertThatThrownBy(() -> playbookService.addEnvironment(1L, 7L, 100L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("already added");
+  }
+
+  @Test
+  void removeEnvironment_success() {
+    Playbook p = new Playbook();
+    ReflectionTestUtils.setField(p, "id", 1L);
+    p.setProjectId(1L);
+    when(playbookRepository.findById(1L)).thenReturn(Optional.of(p));
+
+    playbookService.removeEnvironment(1L, 7L, 100L);
+    verify(playbookEnvironmentRepository).deleteByPlaybookIdAndEnvironmentId(1L, 7L);
   }
 }

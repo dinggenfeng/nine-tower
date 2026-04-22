@@ -140,6 +140,26 @@ public class PlaybookController {
     return Result.success();
   }
 
+  @PostMapping("/playbooks/{playbookId}/environments/{environmentId}")
+  public Result<Void> addEnvironment(
+      @PathVariable Long playbookId,
+      @PathVariable Long environmentId,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long userId = Long.valueOf(userDetails.getUsername());
+    playbookService.addEnvironment(playbookId, environmentId, userId);
+    return Result.success();
+  }
+
+  @DeleteMapping("/playbooks/{playbookId}/environments/{environmentId}")
+  public Result<Void> removeEnvironment(
+      @PathVariable Long playbookId,
+      @PathVariable Long environmentId,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long userId = Long.valueOf(userDetails.getUsername());
+    playbookService.removeEnvironment(playbookId, environmentId, userId);
+    return Result.success();
+  }
+
   @GetMapping("/playbooks/{playbookId}/yaml")
   public Result<String> generateYaml(
       @PathVariable Long playbookId, @AuthenticationPrincipal UserDetails userDetails) {

@@ -89,6 +89,24 @@ export async function removeTag(
   await request.delete(`/playbooks/${playbookId}/tags/${tagId}`);
 }
 
+export async function addEnvironment(
+  playbookId: number,
+  environmentId: number
+): Promise<void> {
+  await request.post(
+    `/playbooks/${playbookId}/environments/${environmentId}`
+  );
+}
+
+export async function removeEnvironment(
+  playbookId: number,
+  environmentId: number
+): Promise<void> {
+  await request.delete(
+    `/playbooks/${playbookId}/environments/${environmentId}`
+  );
+}
+
 export async function generateYaml(playbookId: number): Promise<string> {
   const res = await request.get<string>(`/playbooks/${playbookId}/yaml`);
   return res.data;

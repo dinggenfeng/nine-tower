@@ -7,9 +7,11 @@ import com.ansible.playbook.dto.PlaybookResponse;
 import com.ansible.playbook.dto.PlaybookRoleRequest;
 import com.ansible.playbook.dto.UpdatePlaybookRequest;
 import com.ansible.playbook.entity.Playbook;
+import com.ansible.playbook.entity.PlaybookEnvironment;
 import com.ansible.playbook.entity.PlaybookHostGroup;
 import com.ansible.playbook.entity.PlaybookRole;
 import com.ansible.playbook.entity.PlaybookTag;
+import com.ansible.playbook.repository.PlaybookEnvironmentRepository;
 import com.ansible.playbook.repository.PlaybookHostGroupRepository;
 import com.ansible.playbook.repository.PlaybookRepository;
 import com.ansible.playbook.repository.PlaybookRoleRepository;
@@ -20,23 +22,29 @@ import com.ansible.role.repository.RoleRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
+import com.ansible.variable.entity.VariableScope;
+import com.ansible.variable.repository.VariableRepository;
+import java.util.AbstractMap;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings({"PMD.TooManyMethods", "PMD.CouplingBetweenObjects"})
+@SuppressWarnings({"PMD.TooManyMethods", "PMD.CouplingBetweenObjects", "PMD.ExcessiveImports"})
 public class PlaybookService {
 
   private final PlaybookRepository playbookRepository;
   private final PlaybookRoleRepository playbookRoleRepository;
   private final PlaybookHostGroupRepository playbookHostGroupRepository;
   private final PlaybookTagRepository playbookTagRepository;
+  private final PlaybookEnvironmentRepository playbookEnvironmentRepository;
   private final RoleRepository roleRepository;
   private final HostGroupRepository hostGroupRepository;
   private final TagRepository tagRepository;
+  private final VariableRepository variableRepository;
   private final PlaybookYamlGenerator yamlGenerator;
   private final ProjectAccessChecker accessChecker;
 
@@ -95,6 +103,7 @@ public class PlaybookService {
     playbookRoleRepository.deleteByPlaybookId(playbookId);
     playbookHostGroupRepository.deleteByPlaybookId(playbookId);
     playbookTagRepository.deleteByPlaybookId(playbookId);
+    playbookEnvironmentRepository.deleteByPlaybookId(playbookId);
     playbookRepository.delete(p);
   }
 
@@ -202,6 +211,34 @@ public class PlaybookService {
     playbookTagRepository.deleteByPlaybookIdAndTagId(playbookId, tagId);
   }
 
+  @Transactional
+  public void addEnvironment(Long playbookId, Long environmentId, Long userId) {
+    Playbook p =
+        playbookRepository
+            .findById(playbookId)
+            .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
+    accessChecker.checkMembership(p.getProjectId(), userId);
+    if (playbookEnvironmentRepository.existsByPlaybookIdAndEnvironmentId(
+        playbookId, environmentId)) {
+      throw new IllegalArgumentException("Environment already added");
+    }
+    PlaybookEnvironment pe = new PlaybookEnvironment();
+    pe.setPlaybookId(playbookId);
+    pe.setEnvironmentId(environmentId);
+    pe.setCreatedBy(userId);
+    playbookEnvironmentRepository.save(pe);
+  }
+
+  @Transactional
+  public void removeEnvironment(Long playbookId, Long environmentId, Long userId) {
+    Playbook p =
+        playbookRepository
+            .findById(playbookId)
+            .orElseThrow(() -> new IllegalArgumentException("Playbook not found"));
+    accessChecker.checkMembership(p.getProjectId(), userId);
+    playbookEnvironmentRepository.deleteByPlaybookIdAndEnvironmentId(playbookId, environmentId);
+  }
+
   @Transactional(readOnly = true)
   public String generateYaml(Long playbookId, Long userId) {
     Playbook p =
@@ -237,7 +274,14 @@ public class PlaybookService {
                     tagRepository.findById(pt.getTagId()).map(Tag::getName).orElse("unknown"))
             .toList();
 
-    return yamlGenerator.generate(roleNames, hostGroupNames, tagNames);
+    List<Map.Entry<String, String>> projectVars =
+        variableRepository
+            .findByScopeAndScopeIdOrderByIdAsc(VariableScope.PROJECT, p.getProjectId())
+            .stream()
+            .<Map.Entry<String, String>>map(v -> new AbstractMap.SimpleEntry<>(v.getKey(), v.getValue()))
+            .toList();
+
+    return yamlGenerator.generate(roleNames, hostGroupNames, tagNames, projectVars);
   }
 
   private PlaybookResponse toResponse(Playbook p) {
@@ -253,6 +297,10 @@ public class PlaybookService {
         playbookTagRepository.findByPlaybookId(p.getId()).stream()
             .map(PlaybookTag::getTagId)
             .toList();
+    List<Long> environmentIds =
+        playbookEnvironmentRepository.findByPlaybookId(p.getId()).stream()
+            .map(PlaybookEnvironment::getEnvironmentId)
+            .toList();
 
     return new PlaybookResponse(
         p.getId(),
@@ -263,6 +311,7 @@ public class PlaybookService {
         roleIds,
         hostGroupIds,
         tagIds,
+        environmentIds,
         p.getCreatedAt(),
         p.getUpdatedAt());
   }

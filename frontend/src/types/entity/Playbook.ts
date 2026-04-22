@@ -7,6 +7,7 @@ export interface Playbook {
   roleIds: number[];
   hostGroupIds: number[];
   tagIds: number[];
+  environmentIds: number[];
   createdAt: string;
   updatedAt: string;
 }
