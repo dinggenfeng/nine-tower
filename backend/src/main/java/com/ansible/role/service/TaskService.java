@@ -11,6 +11,8 @@ import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.security.ProjectAccessChecker;
+import com.ansible.tag.entity.TaskTag;
+import com.ansible.tag.repository.TaskTagRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,6 +36,7 @@ public class TaskService {
   private final RoleRepository roleRepository;
   private final HandlerRepository handlerRepository;
   private final ProjectAccessChecker accessChecker;
+  private final TaskTagRepository taskTagRepository;
 
   @Transactional
   public TaskResponse createTask(Long roleId, CreateTaskRequest request, Long currentUserId) {
@@ -236,6 +239,45 @@ public class TaskService {
     }
   }
 
+  @Transactional
+  public void updateTaskTags(Long taskId, List<Long> tagIds, Long currentUserId) {
+    Task task =
+        taskRepository
+            .findById(taskId)
+            .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+    Role role =
+        roleRepository
+            .findById(task.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkOwnerOrAdmin(role.getProjectId(), task.getCreatedBy(), currentUserId);
+
+    taskTagRepository.deleteByTaskId(taskId);
+    taskTagRepository.flush();
+    for (Long tagId : tagIds) {
+      TaskTag taskTag = new TaskTag();
+      taskTag.setTaskId(taskId);
+      taskTag.setTagId(tagId);
+      taskTag.setCreatedBy(currentUserId);
+      taskTagRepository.save(taskTag);
+    }
+  }
+
+  @Transactional(readOnly = true)
+  public List<Long> getTaskTags(Long taskId, Long currentUserId) {
+    Task task =
+        taskRepository
+            .findById(taskId)
+            .orElseThrow(() -> new IllegalArgumentException("Task not found"));
+    Role role =
+        roleRepository
+            .findById(task.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+    return taskTagRepository.findByTaskId(taskId).stream()
+        .map(TaskTag::getTagId)
+        .toList();
+  }
+
   @Transactional(readOnly = true)
   public List<HandlerResponse> getNotifiedHandlers(Long taskId, Long currentUserId) {
     Task task =
@@ -316,8 +358,15 @@ public class TaskService {
     }
   }
 
+  private List<Long> getTagIdsForTask(Long taskId) {
+    return taskTagRepository.findByTaskId(taskId).stream()
+        .map(TaskTag::getTagId)
+        .toList();
+  }
+
   private TaskResponse buildBlockResponse(Task blockTask) {
     List<Task> children = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(blockTask.getId());
+    List<Long> tagIds = getTagIdsForTask(blockTask.getId());
     List<TaskResponse> childResponses = children.stream()
         .map(TaskResponse::new)
         .toList();
@@ -340,7 +389,8 @@ public class TaskService {
         blockTask.getCreatedAt(),
         blockTask.getParentTaskId(),
         blockTask.getBlockSection(),
-        childResponses
+        childResponses,
+        tagIds
     );
   }
 }

@@ -18,6 +18,9 @@ import com.ansible.role.dto.UpdateTaskRequest;
 import com.ansible.role.repository.HandlerRepository;
 import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TaskRepository;
+import com.ansible.tag.entity.Tag;
+import com.ansible.tag.repository.TagRepository;
+import com.ansible.tag.repository.TaskTagRepository;
 import com.ansible.user.dto.RegisterRequest;
 import com.ansible.user.dto.TokenResponse;
 import com.ansible.user.repository.UserRepository;
@@ -43,6 +46,8 @@ class TaskControllerTest extends AbstractIntegrationTest {
   @Autowired private RoleRepository roleRepository;
   @Autowired private TaskRepository taskRepository;
   @Autowired private HandlerRepository handlerRepository;
+  @Autowired private TagRepository tagRepository;
+  @Autowired private TaskTagRepository taskTagRepository;
 
   private String token;
   private Long projectId;
@@ -85,6 +90,8 @@ class TaskControllerTest extends AbstractIntegrationTest {
 
   @AfterEach
   void tearDown() {
+    taskTagRepository.deleteAll();
+    tagRepository.deleteAll();
     taskRepository.deleteAll();
     handlerRepository.deleteAll();
     roleRepository.deleteAll();
@@ -271,5 +278,69 @@ class TaskControllerTest extends AbstractIntegrationTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(taskRepository.findById(taskId)).isEmpty();
+  }
+
+  @Test
+  void updateTaskTags_success() {
+    Long taskId = createTask("Install nginx", "apt", 1);
+    // Create tags in the project
+    Tag tag1 = new Tag();
+    tag1.setProjectId(projectId);
+    tag1.setName("tag1");
+    tag1.setCreatedBy(1L);
+    tag1 = tagRepository.save(tag1);
+
+    Tag tag2 = new Tag();
+    tag2.setProjectId(projectId);
+    tag2.setName("tag2");
+    tag2.setCreatedBy(1L);
+    tag2 = tagRepository.save(tag2);
+
+    ResponseEntity<Result<Void>> response =
+        restTemplate.exchange(
+            "/api/tasks/" + taskId + "/tags",
+            HttpMethod.PUT,
+            new HttpEntity<>(List.of(tag1.getId(), tag2.getId()), authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(taskTagRepository.findByTaskId(taskId)).hasSize(2);
+  }
+
+  @Test
+  void getTaskTags_success() {
+    Long taskId = createTask("Install nginx", "apt", 1);
+
+    // Verify empty initially
+    ResponseEntity<Result<List<Long>>> emptyResp =
+        restTemplate.exchange(
+            "/api/tasks/" + taskId + "/tags",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    assertThat(emptyResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(emptyResp.getBody().getData()).isEmpty();
+
+    // Create and associate tags
+    Tag tag1 = new Tag();
+    tag1.setProjectId(projectId);
+    tag1.setName("tagA");
+    tag1.setCreatedBy(1L);
+    tag1 = tagRepository.save(tag1);
+
+    restTemplate.exchange(
+        "/api/tasks/" + taskId + "/tags",
+        HttpMethod.PUT,
+        new HttpEntity<>(List.of(tag1.getId()), authHeaders()),
+        new ParameterizedTypeReference<Result<Void>>() {});
+
+    ResponseEntity<Result<List<Long>>> response =
+        restTemplate.exchange(
+            "/api/tasks/" + taskId + "/tags",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().getData()).containsExactly(tag1.getId());
   }
 }
