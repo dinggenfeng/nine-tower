@@ -6,8 +6,12 @@ import com.ansible.role.dto.TemplateResponse;
 import com.ansible.role.dto.UpdateTemplateRequest;
 import com.ansible.role.service.TemplateService;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -64,5 +68,17 @@ public class TemplateController {
     Long currentUserId = Long.valueOf(userDetails.getUsername());
     templateService.deleteTemplate(id, currentUserId);
     return Result.success();
+  }
+
+  @GetMapping("/templates/{id}/download")
+  public ResponseEntity<byte[]> downloadTemplate(
+      @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    String content = templateService.getTemplateContent(id, currentUserId);
+    String filename = templateService.getTemplateName(id, currentUserId);
+    return ResponseEntity.ok()
+        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .body(content.getBytes(StandardCharsets.UTF_8));
   }
 }

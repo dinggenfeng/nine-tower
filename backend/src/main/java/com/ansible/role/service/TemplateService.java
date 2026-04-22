@@ -122,6 +122,29 @@ public class TemplateService {
     return new TemplateResponse(saved);
   }
 
+  @Transactional(readOnly = true)
+  public String getTemplateContent(Long templateId, Long currentUserId) {
+    Template template =
+        templateRepository
+            .findById(templateId)
+            .orElseThrow(() -> new IllegalArgumentException("Template not found"));
+    Role role =
+        roleRepository
+            .findById(template.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
+    return template.getContent() != null ? template.getContent() : "";
+  }
+
+  @Transactional(readOnly = true)
+  public String getTemplateName(Long templateId, Long currentUserId) {
+    Template template =
+        templateRepository
+            .findById(templateId)
+            .orElseThrow(() -> new IllegalArgumentException("Template not found"));
+    return template.getName();
+  }
+
   @Transactional
   public void deleteTemplate(Long templateId, Long currentUserId) {
     Template template =

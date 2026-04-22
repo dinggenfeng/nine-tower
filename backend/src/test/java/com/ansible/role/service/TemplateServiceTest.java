@@ -240,4 +240,52 @@ class TemplateServiceTest {
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Template not found");
   }
+
+  @Test
+  void getTemplateContent_success() {
+    when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+
+    String content = templateService.getTemplateContent(1L, 10L);
+
+    assertThat(content).isEqualTo("server { listen {{ http_port }}; }");
+  }
+
+  @Test
+  void getTemplateContent_nullReturnsEmpty() {
+    testTemplate.setContent(null);
+    when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+
+    String content = templateService.getTemplateContent(1L, 10L);
+
+    assertThat(content).isEmpty();
+  }
+
+  @Test
+  void getTemplateContent_notFound() {
+    when(templateRepository.findById(99L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> templateService.getTemplateContent(99L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Template not found");
+  }
+
+  @Test
+  void getTemplateName_success() {
+    when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+
+    String name = templateService.getTemplateName(1L, 10L);
+
+    assertThat(name).isEqualTo("nginx.conf.j2");
+  }
+
+  @Test
+  void getTemplateName_notFound() {
+    when(templateRepository.findById(99L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> templateService.getTemplateName(99L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Template not found");
+  }
 }
