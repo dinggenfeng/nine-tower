@@ -43,6 +43,10 @@ import type { Environment } from '../../types/entity/Environment';
 import type { HostGroup } from '../../types/entity/Host';
 import type { Role } from '../../types/entity/Role';
 import type { RoleVariable, RoleDefaultVariable } from '../../types/entity/RoleVariable';
+import {
+  resolveVariablePriority,
+  type VariableScopeKind,
+} from '../../utils/variablePriority';
 
 const scopeLabels: Record<VariableScope, string> = {
   PROJECT: '项目级',
@@ -136,39 +140,15 @@ export default function VariableManager() {
       const roleDefaultsMap = new Map<number, RoleDefaultVariable[]>();
       roleDefaultResults.forEach((r) => roleDefaultsMap.set(r.roleId, r.defaults));
 
-      // Duplicate key detection across scopes
-      const priorityRank: Record<string, number> = {
-        ENVIRONMENT: 5,
-        HOSTGROUP: 4,
-        PROJECT: 3,
-        ROLE_VARS: 2,
-        ROLE_DEFAULTS: 1,
-      };
-      const keyScopes = new Map<string, { scope: string; priority: number }[]>();
-      const trackKey = (key: string, scope: string) => {
-        const entries = keyScopes.get(key) || [];
-        entries.push({ scope, priority: priorityRank[scope] || 0 });
-        keyScopes.set(key, entries);
-      };
-      projectVars.forEach((v) => trackKey(v.key, 'PROJECT'));
-      hostgroupVars.forEach((v) => trackKey(v.key, 'HOSTGROUP'));
-      envVars.forEach((v) => trackKey(v.key, 'ENVIRONMENT'));
-      roleVarResults.forEach((r) => r.vars.forEach((v) => trackKey(v.key, 'ROLE_VARS')));
-      roleDefaultResults.forEach((r) => r.defaults.forEach((v) => trackKey(v.key, 'ROLE_DEFAULTS')));
+      const { duplicateKeys, winningScope } = resolveVariablePriority({
+        projectVars,
+        hostgroupVars,
+        environmentVars: envVars,
+        roleVars: roleVarResults.flatMap((r) => r.vars),
+        roleDefaults: roleDefaultResults.flatMap((r) => r.defaults),
+      });
 
-      const duplicateKeys = new Set(
-        [...keyScopes.entries()]
-          .filter(([, scopes]) => scopes.length > 1)
-          .map(([key]) => key),
-      );
-      const winningScope = new Map(
-        [...keyScopes.entries()].map(([key, scopes]) => [
-          key,
-          scopes.sort((a, b) => b.priority - a.priority)[0].scope,
-        ]),
-      );
-
-      const scopeNameMap: Record<string, string> = {
+      const scopeNameMap: Record<VariableScopeKind, string> = {
         ENVIRONMENT: '环境级',
         HOSTGROUP: '主机组级',
         PROJECT: '项目级',
@@ -176,7 +156,11 @@ export default function VariableManager() {
         ROLE_DEFAULTS: 'Role 默认',
       };
 
-      const buildTitle = (key: string, value: string, currentScope: string): React.ReactNode => {
+      const buildTitle = (
+        key: string,
+        value: string,
+        currentScope: VariableScopeKind,
+      ): React.ReactNode => {
         if (!duplicateKeys.has(key)) return `${key} = ${value}`;
         const winner = winningScope.get(key);
         if (winner === currentScope) {
