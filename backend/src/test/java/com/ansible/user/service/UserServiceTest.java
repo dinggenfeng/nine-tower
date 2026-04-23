@@ -66,7 +66,7 @@ class UserServiceTest {
     request.setEmail("new@example.com");
 
     when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-    when(userRepository.existsByEmail("new@example.com")).thenReturn(false);
+    when(userRepository.existsByEmailAndIdNot("new@example.com", 1L)).thenReturn(false);
     when(userRepository.save(any(User.class))).thenReturn(testUser);
 
     userService.updateUser(1L, request, 1L);
@@ -91,7 +91,7 @@ class UserServiceTest {
     request.setEmail("taken@example.com");
 
     when(userRepository.findById(1L)).thenReturn(Optional.of(testUser));
-    when(userRepository.existsByEmail("taken@example.com")).thenReturn(true);
+    when(userRepository.existsByEmailAndIdNot("taken@example.com", 1L)).thenReturn(true);
 
     assertThatThrownBy(() -> userService.updateUser(1L, request, 1L))
         .isInstanceOf(IllegalArgumentException.class)
