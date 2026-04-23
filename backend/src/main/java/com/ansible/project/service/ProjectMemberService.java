@@ -79,10 +79,19 @@ public class ProjectMemberService {
   public ProjectMemberResponse updateMemberRole(
       Long projectId, Long userId, UpdateMemberRoleRequest request, Long currentUserId) {
     accessChecker.checkAdmin(projectId, currentUserId);
+    if (userId.equals(currentUserId)) {
+      throw new IllegalArgumentException("不能修改自己的角色");
+    }
     ProjectMember member =
         projectMemberRepository
             .findByProjectIdAndUserId(projectId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Member not found in this project"));
+    if (member.getRole() == ProjectRole.PROJECT_ADMIN
+        && request.getRole() != ProjectRole.PROJECT_ADMIN
+        && projectMemberRepository.countByProjectIdAndRole(projectId, ProjectRole.PROJECT_ADMIN)
+            == 1) {
+      throw new IllegalArgumentException("项目必须至少保留一个管理员");
+    }
     member.setRole(request.getRole());
     ProjectMember saved = projectMemberRepository.save(member);
     User user =

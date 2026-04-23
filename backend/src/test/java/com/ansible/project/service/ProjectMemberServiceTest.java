@@ -171,4 +171,59 @@ class ProjectMemberServiceTest {
     verify(accessChecker).checkAdmin(1L, 10L);
     assertThat(testMember.getRole()).isEqualTo(ProjectRole.PROJECT_ADMIN);
   }
+
+  @Test
+  void updateMemberRole_fails_when_changing_own_role() {
+    UpdateMemberRoleRequest request = new UpdateMemberRoleRequest();
+    request.setRole(ProjectRole.PROJECT_MEMBER);
+
+    assertThatThrownBy(() -> projectMemberService.updateMemberRole(1L, 10L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("不能修改自己的角色");
+  }
+
+  @Test
+  void updateMemberRole_fails_when_downgrading_last_admin() {
+    ProjectMember adminMember = new ProjectMember();
+    adminMember.setProjectId(1L);
+    adminMember.setUserId(20L);
+    adminMember.setRole(ProjectRole.PROJECT_ADMIN);
+
+    UpdateMemberRoleRequest request = new UpdateMemberRoleRequest();
+    request.setRole(ProjectRole.PROJECT_MEMBER);
+
+    when(projectMemberRepository.findByProjectIdAndUserId(1L, 20L))
+        .thenReturn(Optional.of(adminMember));
+    when(projectMemberRepository.countByProjectIdAndRole(1L, ProjectRole.PROJECT_ADMIN))
+        .thenReturn(1L);
+
+    assertThatThrownBy(() -> projectMemberService.updateMemberRole(1L, 20L, request, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("项目必须至少保留一个管理员");
+  }
+
+  @Test
+  void updateMemberRole_success_when_downgrading_non_last_admin() {
+    ProjectMember adminMember = new ProjectMember();
+    adminMember.setId(1L);
+    adminMember.setProjectId(1L);
+    adminMember.setUserId(20L);
+    adminMember.setRole(ProjectRole.PROJECT_ADMIN);
+
+    UpdateMemberRoleRequest request = new UpdateMemberRoleRequest();
+    request.setRole(ProjectRole.PROJECT_MEMBER);
+
+    when(projectMemberRepository.findByProjectIdAndUserId(1L, 20L))
+        .thenReturn(Optional.of(adminMember));
+    when(projectMemberRepository.countByProjectIdAndRole(1L, ProjectRole.PROJECT_ADMIN))
+        .thenReturn(2L);
+    when(projectMemberRepository.save(any(ProjectMember.class))).thenReturn(adminMember);
+    when(userRepository.findById(20L)).thenReturn(Optional.of(testUser));
+
+    ProjectMemberResponse response =
+        projectMemberService.updateMemberRole(1L, 20L, request, 10L);
+
+    assertThat(adminMember.getRole()).isEqualTo(ProjectRole.PROJECT_MEMBER);
+    verify(projectMemberRepository).save(adminMember);
+  }
 }
