@@ -21,7 +21,11 @@ export async function registerUser(page: Page, username?: string) {
   await page.getByPlaceholder('用户名').fill(name);
   await page.getByPlaceholder('密码', { exact: false }).first().fill('Test1234!');
   await page.getByPlaceholder('邮箱').fill(`${name}@e2e.test`);
+  const registerResponse = page.waitForResponse(
+    (r) => r.url().includes('/api/auth/register') && r.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: /注\s*册/ }).click();
+  await registerResponse;
   await page.waitForURL('**/projects');
   return { username: name };
 }
@@ -33,7 +37,11 @@ export async function loginUser(page: Page, username: string, password = 'Test12
   await page.goto('/login');
   await page.getByPlaceholder('用户名').fill(username);
   await page.getByPlaceholder('密码').fill(password);
+  const loginResponse = page.waitForResponse(
+    (r) => r.url().includes('/api/auth/login') && r.request().method() === 'POST',
+  );
   await page.getByRole('button', { name: /登\s*录/ }).click();
+  await loginResponse;
   await page.waitForURL('**/projects');
 }
 
