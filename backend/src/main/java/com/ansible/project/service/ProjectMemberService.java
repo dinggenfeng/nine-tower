@@ -1,5 +1,6 @@
 package com.ansible.project.service;
 
+import com.ansible.common.enums.ProjectRole;
 import com.ansible.project.dto.AddMemberRequest;
 import com.ansible.project.dto.ProjectMemberResponse;
 import com.ansible.project.dto.UpdateMemberRoleRequest;
@@ -59,10 +60,18 @@ public class ProjectMemberService {
   @Transactional
   public void removeMember(Long projectId, Long userId, Long currentUserId) {
     accessChecker.checkAdmin(projectId, currentUserId);
+    if (userId.equals(currentUserId)) {
+      throw new IllegalArgumentException("不能将自己移出项目");
+    }
     ProjectMember member =
         projectMemberRepository
             .findByProjectIdAndUserId(projectId, userId)
             .orElseThrow(() -> new IllegalArgumentException("Member not found in this project"));
+    if (member.getRole() == ProjectRole.PROJECT_ADMIN
+        && projectMemberRepository.countByProjectIdAndRole(projectId, ProjectRole.PROJECT_ADMIN)
+            == 1) {
+      throw new IllegalArgumentException("项目必须至少保留一个管理员");
+    }
     projectMemberRepository.delete(member);
   }
 

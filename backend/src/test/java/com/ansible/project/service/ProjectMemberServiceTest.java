@@ -132,6 +132,30 @@ class ProjectMemberServiceTest {
   }
 
   @Test
+  void removeMember_fails_when_removing_self() {
+    assertThatThrownBy(() -> projectMemberService.removeMember(1L, 10L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("不能将自己移出项目");
+  }
+
+  @Test
+  void removeMember_fails_when_removing_last_admin() {
+    ProjectMember adminMember = new ProjectMember();
+    adminMember.setProjectId(1L);
+    adminMember.setUserId(20L);
+    adminMember.setRole(ProjectRole.PROJECT_ADMIN);
+
+    when(projectMemberRepository.findByProjectIdAndUserId(1L, 20L))
+        .thenReturn(Optional.of(adminMember));
+    when(projectMemberRepository.countByProjectIdAndRole(1L, ProjectRole.PROJECT_ADMIN))
+        .thenReturn(1L);
+
+    assertThatThrownBy(() -> projectMemberService.removeMember(1L, 20L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("项目必须至少保留一个管理员");
+  }
+
+  @Test
   void updateMemberRole_success() {
     UpdateMemberRoleRequest request = new UpdateMemberRoleRequest();
     request.setRole(ProjectRole.PROJECT_ADMIN);
