@@ -17,6 +17,11 @@ vi.mock('../../../stores/projectStore', () => ({
   }),
 }));
 
+vi.mock('../../../stores/authStore', () => ({
+  useAuthStore: (selector: (s: { user: { id: number; username: string; email: string } | null }) => unknown) =>
+    selector({ user: { id: 1, username: 'admin', email: 'admin@test.com' } }),
+}));
+
 vi.mock('react-router-dom', async () => {
   const actual = await vi.importActual('react-router-dom');
   return { ...actual, useParams: () => ({ id: '5' }) };
@@ -76,5 +81,28 @@ describe('MemberManagement', () => {
       // Modal title
       expect(screen.getAllByText('添加成员').length).toBeGreaterThan(1);
     });
+  });
+
+  it('does not show Select or remove button for the current user row', async () => {
+    mockGetMembers.mockResolvedValue([
+      { ...baseMember, userId: 1, username: 'admin', email: 'a@x.test', role: 'PROJECT_ADMIN' },
+      { ...baseMember, userId: 2, username: 'bob', email: 'b@x.test', role: 'PROJECT_MEMBER' },
+    ]);
+    renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('admin')).toBeInTheDocument();
+      expect(screen.getByText('bob')).toBeInTheDocument();
+    });
+
+    const adminRow = screen.getByText('admin').closest('tr');
+    expect(adminRow).toBeTruthy();
+    expect(adminRow!.querySelector('.ant-select')).toBeNull();
+
+    const bobRow = screen.getByText('bob').closest('tr');
+    expect(bobRow!.querySelector('.ant-select')).toBeTruthy();
+
+    const removeButtons = screen.queryAllByRole('button', { name: /移除/ });
+    expect(removeButtons).toHaveLength(1);
   });
 });

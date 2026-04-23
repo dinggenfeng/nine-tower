@@ -1,10 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Table,
   Button,
   Modal,
   Form,
-  InputNumber,
   Select,
   message,
   Popconfirm,
@@ -21,7 +20,10 @@ import {
   removeMember,
   updateMemberRole,
 } from '../../api/project';
+import { userApi } from '../../api/user';
+import type { User } from '../../types/entity/User';
 import { useProjectStore } from '../../stores/projectStore';
+import { useAuthStore } from '../../stores/authStore';
 import { colors } from '../../theme';
 import PageHeader from '../../components/PageHeader';
 
@@ -32,8 +34,12 @@ export default function MemberManagement() {
   const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [form] = Form.useForm<AddMemberRequest>();
+  const [userOptions, setUserOptions] = useState<User[]>([]);
+  const [userSearchLoading, setUserSearchLoading] = useState(false);
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { currentProject } = useProjectStore();
   const isAdmin = currentProject?.myRole === 'PROJECT_ADMIN';
+  const currentUser = useAuthStore((s) => s.user);
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -49,27 +55,72 @@ export default function MemberManagement() {
   }, [fetchMembers]);
 
   const handleAdd = async () => {
-    const values = await form.validateFields();
-    await addMember(projectId, values);
-    message.success('成员添加成功');
-    setAddModalOpen(false);
-    form.resetFields();
-    fetchMembers();
+    try {
+      const values = await form.validateFields();
+      await addMember(projectId, values);
+      message.success('成员添加成功');
+      setAddModalOpen(false);
+      form.resetFields();
+      fetchMembers();
+    } catch (error: unknown) {
+      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      const msg =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (error as { message?: string })?.message ||
+        '添加失败';
+      message.error(msg);
+    }
+  };
+
+  const handleUserSearch = (keyword: string) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    if (!keyword) {
+      setUserOptions([]);
+      return;
+    }
+    searchTimer.current = setTimeout(async () => {
+      setUserSearchLoading(true);
+      try {
+        const res = await userApi.searchUsers(keyword);
+        setUserOptions(res.data.content);
+      } finally {
+        setUserSearchLoading(false);
+      }
+    }, 300);
   };
 
   const handleRemove = async (userId: number) => {
-    await removeMember(projectId, userId);
-    message.success('成员已移除');
-    fetchMembers();
+    try {
+      await removeMember(projectId, userId);
+      message.success('成员已移除');
+      fetchMembers();
+    } catch (error: unknown) {
+      const msg =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (error as { message?: string })?.message ||
+        '移除失败';
+      message.error(msg);
+    }
   };
 
   const handleRoleChange = async (
     userId: number,
     role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
   ) => {
-    await updateMemberRole(projectId, userId, { role });
-    message.success('角色更新成功');
-    fetchMembers();
+    try {
+      await updateMemberRole(projectId, userId, { role });
+      message.success('角色更新成功');
+      fetchMembers();
+    } catch (error: unknown) {
+      const msg =
+        (error as { response?: { data?: { message?: string } } })?.response?.data
+          ?.message ||
+        (error as { message?: string })?.message ||
+        '角色更新失败';
+      message.error(msg);
+    }
   };
 
   const columns = [
@@ -79,8 +130,32 @@ export default function MemberManagement() {
       title: '角色',
       dataIndex: 'role',
       key: 'role',
-      render: (role: string, record: ProjectMember) =>
-        isAdmin ? (
+      render: (role: string, record: ProjectMember) => {
+        const isSelf = record.userId === currentUser?.id;
+        const roleLabel = role === 'PROJECT_ADMIN' ? '管理员' : '成员';
+        if (!isAdmin || isSelf) {
+          return (
+            <span
+              style={{
+                background:
+                  role === 'PROJECT_ADMIN'
+                    ? colors.tagAdminBg
+                    : colors.tagMemberBg,
+                color:
+                  role === 'PROJECT_ADMIN'
+                    ? colors.tagAdminColor
+                    : colors.tagMemberColor,
+                fontSize: 12,
+                padding: '2px 8px',
+                borderRadius: 4,
+                fontWeight: 500,
+              }}
+            >
+              {roleLabel}
+            </span>
+          );
+        }
+        return (
           <Select
             value={role}
             onChange={(value) =>
@@ -95,26 +170,8 @@ export default function MemberManagement() {
             ]}
             style={{ width: 120 }}
           />
-        ) : (
-          <span
-            style={{
-              background:
-                role === 'PROJECT_ADMIN'
-                  ? colors.tagAdminBg
-                  : colors.tagMemberBg,
-              color:
-                role === 'PROJECT_ADMIN'
-                  ? colors.tagAdminColor
-                  : colors.tagMemberColor,
-              fontSize: 12,
-              padding: '2px 8px',
-              borderRadius: 4,
-              fontWeight: 500,
-            }}
-          >
-            {role === 'PROJECT_ADMIN' ? '管理员' : '成员'}
-          </span>
-        ),
+        );
+      },
     },
     {
       title: '加入时间',
@@ -127,16 +184,19 @@ export default function MemberManagement() {
           {
             title: '操作',
             key: 'action',
-            render: (_: unknown, record: ProjectMember) => (
-              <Popconfirm
-                title="确认移除此成员？"
-                onConfirm={() => handleRemove(record.userId)}
-              >
-                <Button type="link" danger size="small">
-                  移除
-                </Button>
-              </Popconfirm>
-            ),
+            render: (_: unknown, record: ProjectMember) => {
+              if (record.userId === currentUser?.id) return null;
+              return (
+                <Popconfirm
+                  title="确认移除此成员？"
+                  onConfirm={() => handleRemove(record.userId)}
+                >
+                  <Button type="link" danger size="small">
+                    移除
+                  </Button>
+                </Popconfirm>
+              );
+            },
           },
         ]
       : []),
@@ -180,10 +240,23 @@ export default function MemberManagement() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="userId"
-            label="用户 ID"
-            rules={[{ required: true, message: '请输入用户 ID' }]}
+            label="选择用户"
+            rules={[{ required: true, message: '请选择用户' }]}
           >
-            <InputNumber style={{ width: '100%' }} min={1} />
+            <Select
+              showSearch
+              placeholder="搜索用户名"
+              filterOption={false}
+              onSearch={handleUserSearch}
+              loading={userSearchLoading}
+              notFoundContent="输入关键词搜索用户"
+            >
+              {userOptions.map((u) => (
+                <Select.Option key={u.id} value={u.id}>
+                  {u.username} ({u.email})
+                </Select.Option>
+              ))}
+            </Select>
           </Form.Item>
           <Form.Item
             name="role"
