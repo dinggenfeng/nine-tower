@@ -35,7 +35,7 @@ const baseEnv = {
   projectId: 9,
   name: '',
   description: '',
-  configs: [] as { id: number; environmentId: number; configKey: string; configValue: string; createdAt: string; updatedAt: string }[],
+  configs: [] as { id: number; environmentId: number; configKey: string; configValue: string }[],
   createdBy: 1,
   createdAt: '',
   updatedAt: '',
@@ -68,7 +68,7 @@ describe('EnvironmentManager', () => {
         name: 'production',
         description: 'prod env',
         configs: [
-          { id: 10, environmentId: 1, configKey: 'DB_HOST', configValue: 'db.internal', createdAt: '', updatedAt: '' },
+          { id: 10, environmentId: 1, configKey: 'DB_HOST', configValue: 'db.internal' },
         ],
       },
     ]);

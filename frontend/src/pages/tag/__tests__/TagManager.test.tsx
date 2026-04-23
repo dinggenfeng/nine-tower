@@ -40,8 +40,8 @@ describe('TagManager', () => {
 
   it('renders the loaded tag rows in the table', async () => {
     mockListTags.mockResolvedValue([
-      { id: 1, name: 'deploy', projectId: 7, createdBy: 1, createdAt: '', updatedAt: '' },
-      { id: 2, name: 'staging', projectId: 7, createdBy: 1, createdAt: '', updatedAt: '' },
+      { id: 1, name: 'deploy', projectId: 7, createdAt: '', updatedAt: '' },
+      { id: 2, name: 'staging', projectId: 7, createdAt: '', updatedAt: '' },
     ]);
     renderPage();
     await waitFor(() => {

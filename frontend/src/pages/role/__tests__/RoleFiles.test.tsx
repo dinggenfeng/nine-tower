@@ -14,7 +14,9 @@ vi.mock('../../../api/roleFile', () => ({
 import { getFiles } from '../../../api/roleFile';
 const mockGet = vi.mocked(getFiles);
 
-const baseFile = {
+import type { RoleFile } from '../../../types/entity/RoleFile';
+
+const baseFile: RoleFile = {
   id: 0,
   roleId: 3,
   parentDir: '',
@@ -22,8 +24,7 @@ const baseFile = {
   isDirectory: false,
   size: 0,
   textContent: '',
-  children: undefined as undefined | unknown[],
-  createdBy: 1,
+  children: null,
   createdAt: '',
   updatedAt: '',
 };

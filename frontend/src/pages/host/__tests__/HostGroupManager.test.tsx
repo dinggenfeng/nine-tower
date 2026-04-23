@@ -39,7 +39,6 @@ const baseHg = {
   description: '',
   createdBy: 1,
   createdAt: '',
-  updatedAt: '',
 };
 
 const baseHost = {
@@ -49,10 +48,11 @@ const baseHost = {
   ip: '',
   port: 22,
   ansibleUser: 'root',
+  ansibleSshPass: '',
+  ansibleSshPrivateKeyFile: '',
   ansibleBecome: false,
   createdBy: 1,
   createdAt: '',
-  updatedAt: '',
 };
 
 describe('HostGroupManager', () => {
