@@ -231,6 +231,7 @@ export default function HostGroupManager() {
             size="small"
             icon={<PlusOutlined />}
             onClick={() => openHgModal()}
+            aria-label="新建主机组"
           />
         </div>
         <div className={styles.groupList}>

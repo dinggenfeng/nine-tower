@@ -8,7 +8,7 @@ test('file and directory CRUD', async ({ page }) => {
   // Create role
   await page.getByRole('button', { name: '新建 Role' }).click();
   await page.getByLabel('名称').fill('file-role');
-  await page.getByRole('button', { name: '确定' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
   await page.getByText('file-role').click();
   await page.waitForURL(/.*\/roles\/\d+/);
 
@@ -17,13 +17,13 @@ test('file and directory CRUD', async ({ page }) => {
 
   // Create directory
   await page.getByRole('button', { name: '新建目录' }).click();
-  await page.getByLabel('目录名').fill('scripts');
-  await page.getByRole('button', { name: '确定' }).click();
+  await page.getByLabel('名称').fill('scripts');
+  await page.getByRole('button', { name: /确\s*定/ }).click();
 
   // Create file
   await page.getByRole('button', { name: '新建文件' }).click();
-  await page.getByLabel('文件名').fill('deploy.sh');
-  await page.getByRole('textbox', { name: '内容' }).fill('#!/bin/bash\necho deploy');
-  await page.getByRole('button', { name: '确定' }).click();
+  await page.getByLabel('名称').fill('deploy.sh');
+  await page.getByLabel('文件内容').fill('#!/bin/bash\necho deploy');
+  await page.getByRole('button', { name: /确\s*定/ }).click();
   await expect(page.getByText('deploy.sh')).toBeVisible();
 });

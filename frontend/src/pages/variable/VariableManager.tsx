@@ -92,7 +92,8 @@ export default function VariableManager() {
     if (!pid) return;
     setLoading(true);
     try {
-      const data = await listVariables(pid, scope, scopeId);
+      // For PROJECT scope, pass pid as scopeId to filter by project
+      const data = await listVariables(pid, scope, scope === 'PROJECT' ? pid : scopeId);
       setVariables(data);
     } finally {
       setLoading(false);
@@ -366,7 +367,7 @@ export default function VariableManager() {
     } else {
       const data: CreateVariableRequest = {
         scope: values.scope,
-        scopeId: values.scopeId,
+        scopeId: values.scopeId ?? pid,
         key: values.key,
         value: values.value,
       };

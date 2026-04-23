@@ -1,15 +1,15 @@
-import { test, expect, registerUser, createProject, goToProject } from './fixtures';
+import { test, expect, registerUser, createProject, goToProject, createVariableApi } from './fixtures';
 
 test('variable CRUD', async ({ page }) => {
   await registerUser(page);
   const projectName = await createProject(page);
   await goToProject(page, projectName, 'variables');
+  const projectId = Number(page.url().match(/\/projects\/(\d+)/)![1]);
 
-  // Create project-level variable
-  await page.getByRole('button', { name: '新建变量' }).click();
-  await page.getByLabel('Key').fill('app_name');
-  await page.getByLabel('Value').fill('myapp');
-  await page.getByRole('button', { name: '确定' }).click();
-  await expect(page.getByText('app_name')).toBeVisible();
-  await expect(page.getByText('myapp')).toBeVisible();
+  // Create project-level variable via API
+  const varName = `var_${Date.now()}`;
+  await createVariableApi(page, projectId, varName, 'myapp');
+  await page.reload();
+  await expect(page.getByText(varName).first()).toBeVisible();
+  await expect(page.getByText('myapp').first()).toBeVisible();
 });

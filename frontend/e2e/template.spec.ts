@@ -8,22 +8,18 @@ test('template CRUD', async ({ page }) => {
   // Create role
   await page.getByRole('button', { name: '新建 Role' }).click();
   await page.getByLabel('名称').fill('tpl-role');
-  await page.getByRole('button', { name: '确定' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
   await page.getByText('tpl-role').click();
   await page.waitForURL(/.*\/roles\/\d+/);
 
   // Switch to Templates tab
   await page.getByRole('tab', { name: 'Templates' }).click();
 
-  // Create directory
-  await page.getByRole('button', { name: '新建目录' }).click();
-  await page.getByLabel('目录名').fill('conf.d');
-  await page.getByRole('button', { name: '确定' }).click();
-
   // Create template
-  await page.getByRole('button', { name: '新建模板' }).click();
+  await page.getByRole('button', { name: '添加模板' }).click();
   await page.getByLabel('文件名').fill('nginx.conf.j2');
+  await page.getByLabel('目录').fill('conf.d');
   await page.getByLabel('目标路径').fill('/etc/nginx/nginx.conf');
-  await page.getByRole('button', { name: '确定' }).click();
+  await page.getByRole('button', { name: /确\s*定/ }).click();
   await expect(page.getByText('nginx.conf.j2')).toBeVisible();
 });

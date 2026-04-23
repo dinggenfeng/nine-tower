@@ -24,7 +24,6 @@ test('project CRUD', async ({ page }) => {
   await page.waitForURL(/.*\/projects\/\d+/);
   await page.getByText('设置').click();
   await page.getByRole('button', { name: '删除项目' }).click();
-  await page.getByRole('button', { name: '确定' }).click();
   await expect(page).toHaveURL(/.*\/projects$/);
   await expect(page.getByText(`${projectName} Updated`)).not.toBeVisible();
 });
@@ -39,5 +38,5 @@ test('member management', async ({ page }) => {
   await page.getByText('成员').click();
 
   // Verify the creator is listed as admin
-  await expect(page.getByText('PROJECT_ADMIN')).toBeVisible();
+  await expect(page.getByText('管理员')).toBeVisible();
 });
