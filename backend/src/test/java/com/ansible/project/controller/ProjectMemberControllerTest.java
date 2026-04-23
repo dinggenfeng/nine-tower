@@ -216,4 +216,99 @@ class ProjectMemberControllerTest extends AbstractIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(response.getBody().getData().getRole()).isEqualTo(ProjectRole.PROJECT_ADMIN);
   }
+
+  @Test
+  void removeMember_fails_when_removing_self() {
+    ResponseEntity<Result<Void>> response =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/members/" + aliceId,
+            HttpMethod.DELETE,
+            new HttpEntity<>(aliceHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().getMessage()).contains("不能将自己移出项目");
+  }
+
+  @Test
+  void updateMemberRole_fails_when_changing_own_role() {
+    UpdateMemberRoleRequest req = new UpdateMemberRoleRequest();
+    req.setRole(ProjectRole.PROJECT_MEMBER);
+
+    ResponseEntity<Result<ProjectMemberResponse>> response =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/members/" + aliceId,
+            HttpMethod.PUT,
+            new HttpEntity<>(req, aliceHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().getMessage()).contains("不能修改自己的角色");
+  }
+
+  @Test
+  void removeMember_fails_when_removing_last_admin_via_orphan_protection() {
+    // Self-protection fires first: alice tries to remove herself (sole admin)
+    ResponseEntity<Result<Void>> response =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/members/" + aliceId,
+            HttpMethod.DELETE,
+            new HttpEntity<>(aliceHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().getMessage()).contains("不能将自己移出项目");
+  }
+
+  @Test
+  void updateMemberRole_fails_when_downgrading_only_other_admin() {
+    // alice promotes bob to admin
+    AddMemberRequest addBob = new AddMemberRequest();
+    addBob.setUserId(bobId);
+    addBob.setRole(ProjectRole.PROJECT_ADMIN);
+    restTemplate.exchange(
+        "/api/projects/" + projectId + "/members",
+        HttpMethod.POST,
+        new HttpEntity<>(addBob, aliceHeaders()),
+        new ParameterizedTypeReference<Result<ProjectMemberResponse>>() {});
+
+    // alice tries to downgrade herself — self-protection blocks it
+    UpdateMemberRoleRequest req = new UpdateMemberRoleRequest();
+    req.setRole(ProjectRole.PROJECT_MEMBER);
+    ResponseEntity<Result<ProjectMemberResponse>> response =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/members/" + aliceId,
+            HttpMethod.PUT,
+            new HttpEntity<>(req, aliceHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(response.getBody().getMessage()).contains("不能修改自己的角色");
+  }
+
+  @Test
+  void updateMemberRole_success_when_multiple_admins() {
+    // Make bob an admin
+    AddMemberRequest addBob = new AddMemberRequest();
+    addBob.setUserId(bobId);
+    addBob.setRole(ProjectRole.PROJECT_ADMIN);
+    restTemplate.exchange(
+        "/api/projects/" + projectId + "/members",
+        HttpMethod.POST,
+        new HttpEntity<>(addBob, aliceHeaders()),
+        new ParameterizedTypeReference<Result<ProjectMemberResponse>>() {});
+
+    // Alice can downgrade bob (not self, and alice remains admin)
+    UpdateMemberRoleRequest req = new UpdateMemberRoleRequest();
+    req.setRole(ProjectRole.PROJECT_MEMBER);
+    ResponseEntity<Result<ProjectMemberResponse>> response =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/members/" + bobId,
+            HttpMethod.PUT,
+            new HttpEntity<>(req, aliceHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().getData().getRole()).isEqualTo(ProjectRole.PROJECT_MEMBER);
+  }
 }
