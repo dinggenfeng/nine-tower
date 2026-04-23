@@ -53,7 +53,9 @@ function renderRoleTasks() {
   );
 }
 
-const sampleTask = {
+import type { Task } from '../../../types/entity/Task';
+
+const sampleTask: Task = {
   id: 1,
   roleId: 10,
   name: 'Install nginx',
@@ -61,17 +63,18 @@ const sampleTask = {
   args: '{"name":"nginx"}',
   whenCondition: '',
   loop: '',
+  until: '',
   register: '',
-  notify: [] as string[],
+  notify: [],
   taskOrder: 1,
   become: false,
   becomeUser: '',
   ignoreErrors: false,
-  parentTaskId: null as number | null,
-  blockSection: null as string | null,
+  parentTaskId: null,
+  blockSection: null,
+  children: [],
   createdBy: 1,
   createdAt: '',
-  updatedAt: '',
 };
 
 describe('RoleTasks', () => {

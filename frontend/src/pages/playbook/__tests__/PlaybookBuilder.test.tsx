@@ -66,7 +66,7 @@ function setupMocks(overrides: Record<string, unknown> = {}) {
     projectId: 1,
     name: 'deploy.yml',
     description: '',
-    extraVars: null,
+    extraVars: '',
     roleIds: [],
     hostGroupIds: [],
     tagIds: [],
