@@ -1,17 +1,52 @@
 import { useEffect, useState } from 'react';
-import { Button, Empty, List, Modal, Form, Input, message, Dropdown, type MenuProps } from 'antd';
+import {
+  Button,
+  Modal,
+  Form,
+  Input,
+  message,
+  Dropdown,
+  Spin,
+  type MenuProps,
+} from 'antd';
 import {
   PlusOutlined,
   DeleteOutlined,
   SettingOutlined,
   MoreOutlined,
+  FolderOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import type { Project, CreateProjectRequest } from '../../types/entity/Project';
 import { getMyProjects, createProject, deleteProject } from '../../api/project';
-import { colors } from '../../theme';
+import styles from './ProjectList.module.css';
 
 const { TextArea } = Input;
+
+const avatarGradients = [
+  'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+  'linear-gradient(135deg, #6366f1, #4f46e5)',
+  'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+  'linear-gradient(135deg, #06b6d4, #0891b2)',
+  'linear-gradient(135deg, #10b981, #059669)',
+  'linear-gradient(135deg, #f59e0b, #d97706)',
+  'linear-gradient(135deg, #ef4444, #dc2626)',
+  'linear-gradient(135deg, #ec4899, #db2777)',
+  'linear-gradient(135deg, #64748b, #475569)',
+  'linear-gradient(135deg, #0ea5e9, #0284c7)',
+];
+
+function getAvatarStyle(name: string) {
+  const code = name.charCodeAt(0) || 0;
+  return { background: avatarGradients[code % avatarGradients.length] };
+}
+
+function formatDate(dateStr: string) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -56,16 +91,12 @@ export default function ProjectList() {
   };
 
   return (
-    <div style={{ padding: 24 }}>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 8,
-        }}
-      >
-        <h2 style={{ margin: 0, color: '#1e293b' }}>我的项目</h2>
+    <div className={styles.page}>
+      <div className={styles.header}>
+        <div className={styles.titleGroup}>
+          <h2 className={styles.title}>我的项目</h2>
+          <span className={styles.count}>共 {projects.length} 个项目</span>
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -74,150 +105,97 @@ export default function ProjectList() {
           新建项目
         </Button>
       </div>
-      <div style={{ color: '#64748b', fontSize: 14, marginBottom: 20 }}>
-        共 {projects.length} 个项目
-      </div>
 
-      <List
-        grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 3, xl: 4 }}
-        loading={loading}
-        dataSource={projects}
-        locale={{
-          emptyText: (
-            <Empty description="暂无项目">
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => setCreateModalOpen(true)}
-              >
-                创建第一个项目
-              </Button>
-            </Empty>
-          ),
-        }}
-        renderItem={(project) => {
-          const isAdmin = project.myRole === 'PROJECT_ADMIN';
-          const initial = project.name[0]?.toUpperCase() || 'P';
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+          <Spin size="large" />
+        </div>
+      ) : projects.length === 0 ? (
+        <div className={styles.emptyWrap}>
+          <div className={styles.emptyIconWrap}>
+            <FolderOutlined />
+          </div>
+          <div className={styles.emptyTitle}>暂无项目</div>
+          <div className={styles.emptyDesc}>创建你的第一个 Ansible Playbook 项目</div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setCreateModalOpen(true)}
+          >
+            创建第一个项目
+          </Button>
+        </div>
+      ) : (
+        <div className={styles.grid}>
+          {projects.map((project, index) => {
+            const isAdmin = project.myRole === 'PROJECT_ADMIN';
+            const initial = project.name[0]?.toUpperCase() || 'P';
 
-          const menuItems: MenuProps['items'] = [
-            ...(isAdmin
-              ? [
-                  {
-                    key: 'settings',
-                    icon: <SettingOutlined />,
-                    label: '项目设置',
-                    onClick: () => navigate(`/projects/${project.id}/settings`),
-                  },
-                  {
-                    key: 'delete',
-                    icon: <DeleteOutlined />,
-                    label: '删除项目',
-                    danger: true,
-                    onClick: () => handleDelete(project.id),
-                  },
-                ]
-              : []),
-          ];
+            const menuItems: MenuProps['items'] = [
+              ...(isAdmin
+                ? [
+                    {
+                      key: 'settings',
+                      icon: <SettingOutlined />,
+                      label: '项目设置',
+                      onClick: () => navigate(`/projects/${project.id}/settings`),
+                    },
+                    {
+                      key: 'delete',
+                      icon: <DeleteOutlined />,
+                      label: '删除项目',
+                      danger: true,
+                      onClick: () => handleDelete(project.id),
+                    },
+                  ]
+                : []),
+            ];
 
-          return (
-            <List.Item>
+            return (
               <div
+                key={project.id}
+                className={`${styles.card} ${styles.cardAnimated}`}
+                style={{ animationDelay: `${index * 0.05}s` }}
                 onClick={() => navigate(`/projects/${project.id}/roles`)}
-                style={{
-                  background: '#fff',
-                  borderRadius: 8,
-                  padding: 16,
-                  border: '1px solid #e2e8f0',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-                  e.currentTarget.style.borderColor = '#cbd5e1';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)';
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                }}
               >
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      background: '#1e293b',
-                      borderRadius: 6,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 14,
-                      fontWeight: 600,
-                      color: '#f1f5f9',
-                    }}
-                  >
+                <div className={styles.cardTop}>
+                  <div className={styles.avatar} style={getAvatarStyle(project.name)}>
                     {initial}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div className={styles.cardActions}>
                     <span
-                      style={{
-                        background: isAdmin ? colors.tagAdminBg : colors.tagMemberBg,
-                        color: isAdmin ? colors.tagAdminColor : colors.tagMemberColor,
-                        fontSize: 11,
-                        padding: '2px 8px',
-                        borderRadius: 4,
-                        fontWeight: 500,
-                      }}
+                      className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleMember}`}
                     >
                       {isAdmin ? '管理员' : '成员'}
                     </span>
-                    {menuItems && menuItems.length > 0 && (
-                      <Dropdown
-                        menu={{ items: menuItems }}
-                        trigger={['click']}
-                        placement="bottomRight"
-                      >
-                        <MoreOutlined
-                          onClick={(e) => e.stopPropagation()}
-                          style={{ color: '#94a3b8', fontSize: 16 }}
-                        />
-                      </Dropdown>
+                    {menuItems.length > 0 && (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Dropdown
+                          menu={{ items: menuItems }}
+                          trigger={['click']}
+                          placement="bottomRight"
+                        >
+                          <span className={styles.menuBtn}>
+                            <MoreOutlined />
+                          </span>
+                        </Dropdown>
+                      </div>
                     )}
                   </div>
                 </div>
-                <div
-                  style={{
-                    fontSize: 15,
-                    fontWeight: 600,
-                    color: '#1e293b',
-                    marginTop: 12,
-                  }}
-                >
-                  {project.name}
-                </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: '#64748b',
-                    marginTop: 4,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
+                <h3 className={styles.cardName}>{project.name}</h3>
+                <div className={styles.cardDesc}>
                   {project.description || '暂无描述'}
                 </div>
+                <div className={styles.cardFooter}>
+                  <ClockCircleOutlined style={{ fontSize: 12 }} />
+                  <span style={{ marginLeft: 4 }}>{formatDate(project.createdAt)}</span>
+                </div>
               </div>
-            </List.Item>
-          );
-        }}
-      />
+            );
+          })}
+        </div>
+      )}
 
       <Modal
         title="创建项目"

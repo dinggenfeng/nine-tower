@@ -43,12 +43,16 @@ public class UserService {
             .findById(userId)
             .orElseThrow(() -> new IllegalArgumentException("User not found"));
     if (StringUtils.hasText(request.getEmail())) {
-      if (userRepository.existsByEmail(request.getEmail())) {
+      if (userRepository.existsByEmailAndIdNot(request.getEmail(), userId)) {
         throw new IllegalArgumentException("Email already registered");
       }
       user.setEmail(request.getEmail());
     }
     if (StringUtils.hasText(request.getPassword())) {
+      if (!StringUtils.hasText(request.getOldPassword())
+          || !passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+        throw new IllegalArgumentException("Old password is incorrect");
+      }
       user.setPassword(passwordEncoder.encode(request.getPassword()));
     }
     return new UserResponse(userRepository.save(user));

@@ -10,6 +10,7 @@ interface ApiResult<T> {
 export interface UpdateUserPayload {
   email?: string;
   password?: string;
+  oldPassword?: string;
 }
 
 export const userApi = {
