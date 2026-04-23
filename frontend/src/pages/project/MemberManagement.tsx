@@ -40,6 +40,7 @@ export default function MemberManagement() {
   const { currentProject } = useProjectStore();
   const isAdmin = currentProject?.myRole === 'PROJECT_ADMIN';
   const currentUser = useAuthStore((s) => s.user);
+  const adminCount = members.filter((m) => m.role === 'PROJECT_ADMIN').length;
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -91,6 +92,11 @@ export default function MemberManagement() {
   };
 
   const handleRemove = async (userId: number) => {
+    const target = members.find((m) => m.userId === userId);
+    if (target?.role === 'PROJECT_ADMIN' && adminCount <= 1) {
+      message.warning('该成员是最后一个管理员，无法移除');
+      return;
+    }
     try {
       await removeMember(projectId, userId);
       message.success('成员已移除');
@@ -109,6 +115,15 @@ export default function MemberManagement() {
     userId: number,
     role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
   ) => {
+    const target = members.find((m) => m.userId === userId);
+    if (
+      target?.role === 'PROJECT_ADMIN' &&
+      role !== 'PROJECT_ADMIN' &&
+      adminCount <= 1
+    ) {
+      message.warning('该成员是最后一个管理员，无法降级');
+      return;
+    }
     try {
       await updateMemberRole(projectId, userId, { role });
       message.success('角色更新成功');

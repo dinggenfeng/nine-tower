@@ -27,8 +27,9 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useParams: () => ({ id: '5' }) };
 });
 
-import { getMembers } from '../../../api/project';
+import { getMembers, updateMemberRole } from '../../../api/project';
 const mockGetMembers = vi.mocked(getMembers);
+const mockUpdateMemberRole = vi.mocked(updateMemberRole);
 
 function renderPage() {
   return render(
@@ -104,5 +105,27 @@ describe('MemberManagement', () => {
 
     const removeButtons = screen.queryAllByRole('button', { name: /移除/ });
     expect(removeButtons).toHaveLength(1);
+  });
+
+  it('warns and blocks role change when there is only one admin', async () => {
+    mockGetMembers.mockResolvedValue([
+      { ...baseMember, userId: 2, username: 'onlyadmin', email: 'oa@x.test', role: 'PROJECT_ADMIN' },
+      { ...baseMember, userId: 1, username: 'admin', email: 'a@x.test', role: 'PROJECT_MEMBER' },
+    ]);
+    renderPage();
+
+    const select = await screen.findByRole('combobox');
+    await userEvent.click(select);
+    // Use getAllByText since "成员" appears both as a role label and as a dropdown option;
+    // the dropdown option is inside .ant-select-item-option-content
+    const options = await screen.findAllByText('成员');
+    const dropdownOption = options.find(
+      (el) => el.closest('.ant-select-item-option-content') !== null
+        || el.closest('[role="option"]') !== null,
+    );
+    expect(dropdownOption).toBeTruthy();
+    await userEvent.click(dropdownOption!);
+
+    expect(mockUpdateMemberRole).not.toHaveBeenCalled();
   });
 });
