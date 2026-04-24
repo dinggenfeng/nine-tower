@@ -206,4 +206,34 @@ class RoleFileServiceTest {
     verify(roleFileRepository).deleteAll(List.of(child));
     verify(roleFileRepository).delete(dir);
   }
+
+  @Test
+  void getFileContent_withoutMembership_throwsSecurityException() {
+    RoleFile file = createFile(10L, 1L, "", "test.yml", false);
+    when(roleFileRepository.findById(10L)).thenReturn(Optional.of(file));
+
+    Role role = new Role();
+    role.setProjectId(100L);
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
+    when(accessChecker.checkMembership(100L, 2L))
+        .thenThrow(new SecurityException("Not a member of this project"));
+
+    assertThatThrownBy(() -> roleFileService.getFileContent(10L, 2L))
+        .isInstanceOf(SecurityException.class);
+  }
+
+  @Test
+  void getFileName_withoutMembership_throwsSecurityException() {
+    RoleFile file = createFile(10L, 1L, "", "test.yml", false);
+    when(roleFileRepository.findById(10L)).thenReturn(Optional.of(file));
+
+    Role role = new Role();
+    role.setProjectId(100L);
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
+    when(accessChecker.checkMembership(100L, 2L))
+        .thenThrow(new SecurityException("Not a member of this project"));
+
+    assertThatThrownBy(() -> roleFileService.getFileName(10L, 2L))
+        .isInstanceOf(SecurityException.class);
+  }
 }
