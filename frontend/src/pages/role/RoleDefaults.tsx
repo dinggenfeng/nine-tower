@@ -54,24 +54,24 @@ export default function RoleDefaults({ roleId }: RoleDefaultsProps) {
   const handleSubmit = async () => {
     setSaving(true);
     try {
-    const values = await form.validateFields();
-    if (editingVar) {
-      const data: UpdateRoleDefaultVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await updateRoleDefault(editingVar.id, data);
-      message.success("默认变量已更新");
-    } else {
-      const data: CreateRoleDefaultVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await createRoleDefault(roleId, data);
-      message.success("默认变量已创建");
-    }
-    setModalOpen(false);
-    fetchData();
+      const values = await form.validateFields();
+      if (editingVar) {
+        const data: UpdateRoleDefaultVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await updateRoleDefault(editingVar.id, data);
+        message.success("默认变量已更新");
+      } else {
+        const data: CreateRoleDefaultVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await createRoleDefault(roleId, data);
+        message.success("默认变量已创建");
+      }
+      setModalOpen(false);
+      fetchData();
     } finally {
       setSaving(false);
     }
