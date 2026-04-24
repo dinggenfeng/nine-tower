@@ -1,18 +1,25 @@
 package com.ansible.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+@ExtendWith(MockitoExtension.class)
 class JwtTokenProviderTest {
+
+  @Mock private AuditLogService auditLogService;
 
   private JwtTokenProvider provider;
 
   @BeforeEach
   void setUp() {
-    provider = new JwtTokenProvider();
+    provider = new JwtTokenProvider(auditLogService);
     ReflectionTestUtils.setField(
         provider, "jwtSecret", "test-secret-key-that-is-at-least-256-bits-long-for-hmac-sha");
     ReflectionTestUtils.setField(provider, "jwtExpirationMs", 3600000L);
@@ -40,7 +47,7 @@ class JwtTokenProviderTest {
 
   @Test
   void validateToken_expiredToken_returnsFalse() {
-    JwtTokenProvider expiredProvider = new JwtTokenProvider();
+    JwtTokenProvider expiredProvider = new JwtTokenProvider(auditLogService);
     ReflectionTestUtils.setField(
         expiredProvider,
         "jwtSecret",

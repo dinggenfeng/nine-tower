@@ -20,7 +20,12 @@ public class JwtTokenProvider {
   @Value("${app.jwt.expiration-ms}")
   private long jwtExpirationMs;
 
+  private final AuditLogService auditLogService;
   private SecretKey signingKey;
+
+  public JwtTokenProvider(AuditLogService auditLogService) {
+    this.auditLogService = auditLogService;
+  }
 
   @PostConstruct
   void init() {
@@ -49,6 +54,7 @@ public class JwtTokenProvider {
       Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token);
       return true;
     } catch (JwtException | IllegalArgumentException e) {
+      auditLogService.logTokenValidationFailure(e.getMessage());
       return false;
     }
   }

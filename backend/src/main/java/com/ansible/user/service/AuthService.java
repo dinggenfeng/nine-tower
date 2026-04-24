@@ -1,5 +1,6 @@
 package com.ansible.user.service;
 
+import com.ansible.security.AuditLogService;
 import com.ansible.security.JwtTokenProvider;
 import com.ansible.user.dto.LoginRequest;
 import com.ansible.user.dto.RegisterRequest;
@@ -20,6 +21,7 @@ public class AuthService {
   private final UserRepository userRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtTokenProvider jwtTokenProvider;
+  private final AuditLogService auditLogService;
 
   @Value("${app.jwt.expiration-ms}")
   private long jwtExpirationMs;
@@ -46,8 +48,13 @@ public class AuthService {
     User user =
         userRepository
             .findByUsername(request.getUsername())
-            .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+            .orElseThrow(
+                () -> {
+                  auditLogService.logLoginFailure(request.getUsername(), "user not found");
+                  return new IllegalArgumentException("Invalid username or password");
+                });
     if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
+      auditLogService.logLoginFailure(request.getUsername(), "wrong password");
       throw new IllegalArgumentException("Invalid username or password");
     }
     String token = jwtTokenProvider.generateToken(user.getId());
