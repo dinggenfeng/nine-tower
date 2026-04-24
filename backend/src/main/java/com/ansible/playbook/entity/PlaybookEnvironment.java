@@ -3,6 +3,7 @@ package com.ansible.playbook.entity;
 import com.ansible.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.Getter;
@@ -12,7 +13,8 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "playbook_environments",
-    uniqueConstraints = {@UniqueConstraint(columnNames = {"playbookId", "environmentId"})})
+    uniqueConstraints = {@UniqueConstraint(columnNames = {"playbookId", "environmentId"})},
+    indexes = {@Index(name = "idx_playbook_environment_environment_id", columnList = "environment_id")})
 @Getter
 @Setter
 @NoArgsConstructor
