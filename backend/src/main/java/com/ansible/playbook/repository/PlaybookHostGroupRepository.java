@@ -13,4 +13,6 @@ public interface PlaybookHostGroupRepository
   boolean existsByPlaybookIdAndHostGroupId(Long playbookId, Long hostGroupId);
 
   void deleteByPlaybookId(Long playbookId);
+
+  void deleteByHostGroupId(Long hostGroupId);
 }

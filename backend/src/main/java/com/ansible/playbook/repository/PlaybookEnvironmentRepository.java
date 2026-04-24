@@ -13,4 +13,6 @@ public interface PlaybookEnvironmentRepository extends JpaRepository<PlaybookEnv
   void deleteByPlaybookIdAndEnvironmentId(Long playbookId, Long environmentId);
 
   void deleteByPlaybookId(Long playbookId);
+
+  void deleteByEnvironmentId(Long environmentId);
 }

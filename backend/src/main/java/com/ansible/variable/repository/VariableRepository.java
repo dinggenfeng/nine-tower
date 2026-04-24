@@ -15,4 +15,6 @@ public interface VariableRepository extends JpaRepository<Variable, Long> {
 
   boolean existsByScopeAndScopeIdAndKeyAndIdNot(
       VariableScope scope, Long scopeId, String key, Long id);
+
+  void deleteByScopeAndScopeId(VariableScope scope, Long scopeId);
 }

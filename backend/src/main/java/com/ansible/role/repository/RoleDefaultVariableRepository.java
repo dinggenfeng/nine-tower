@@ -9,4 +9,6 @@ public interface RoleDefaultVariableRepository extends JpaRepository<RoleDefault
   List<RoleDefaultVariable> findAllByRoleIdOrderByKeyAsc(Long roleId);
 
   boolean existsByRoleIdAndKey(Long roleId, String key);
+
+  void deleteByRoleId(Long roleId);
 }

@@ -6,4 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PlaybookRepository extends JpaRepository<Playbook, Long> {
   List<Playbook> findByProjectIdOrderByIdAsc(Long projectId);
+
+  void deleteByProjectId(Long projectId);
 }

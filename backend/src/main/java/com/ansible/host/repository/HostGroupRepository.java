@@ -9,4 +9,6 @@ public interface HostGroupRepository extends JpaRepository<HostGroup, Long> {
   List<HostGroup> findAllByProjectId(Long projectId);
 
   boolean existsByProjectIdAndName(Long projectId, String name);
+
+  void deleteByProjectId(Long projectId);
 }

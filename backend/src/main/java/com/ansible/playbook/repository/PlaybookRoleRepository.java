@@ -12,4 +12,6 @@ public interface PlaybookRoleRepository extends JpaRepository<PlaybookRole, Long
   boolean existsByPlaybookIdAndRoleId(Long playbookId, Long roleId);
 
   void deleteByPlaybookId(Long playbookId);
+
+  void deleteByRoleId(Long roleId);
 }

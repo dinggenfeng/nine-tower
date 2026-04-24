@@ -9,4 +9,6 @@ public interface HandlerRepository extends JpaRepository<Handler, Long> {
   List<Handler> findAllByRoleId(Long roleId);
 
   List<Handler> findAllByRoleIdAndNameIn(Long roleId, List<String> names);
+
+  void deleteByRoleId(Long roleId);
 }

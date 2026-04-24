@@ -12,4 +12,6 @@ public interface PlaybookTagRepository extends JpaRepository<PlaybookTag, Long> 
   boolean existsByPlaybookIdAndTagId(Long playbookId, Long tagId);
 
   void deleteByPlaybookId(Long playbookId);
+
+  void deleteByTagId(Long tagId);
 }

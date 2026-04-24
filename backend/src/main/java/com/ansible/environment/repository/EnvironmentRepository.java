@@ -11,4 +11,6 @@ public interface EnvironmentRepository extends JpaRepository<Environment, Long> 
   boolean existsByProjectIdAndName(Long projectId, String name);
 
   boolean existsByProjectIdAndNameAndIdNot(Long projectId, String name, Long id);
+
+  void deleteByProjectId(Long projectId);
 }
