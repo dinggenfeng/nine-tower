@@ -79,7 +79,8 @@ public class TaskService {
             .findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
-    List<Task> topLevel = taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
+    List<Task> topLevel =
+        taskRepository.findAllByRoleIdAndParentTaskIdIsNullOrderByTaskOrderAsc(roleId);
     return topLevel.stream()
         .map(task -> {
           if ("block".equals(task.getModule())) {
@@ -106,9 +107,9 @@ public class TaskService {
 
   @Transactional
   @SuppressWarnings({
-    "PMD.CyclomaticComplexity",
-    "PMD.NPathComplexity",
-    "PMD.CognitiveComplexity"
+      "PMD.CyclomaticComplexity",
+      "PMD.NPathComplexity",
+      "PMD.CognitiveComplexity"
   })
   public TaskResponse updateTask(Long taskId, UpdateTaskRequest request, Long currentUserId) {
     Task task =
@@ -334,7 +335,7 @@ public class TaskService {
       return List.of();
     }
     try {
-      return MAPPER.readValue(notifyJson, new TypeReference<>() {});
+      return MAPPER.readValue(notifyJson, new TypeReference<>() { });
     } catch (JsonProcessingException e) {
       return List.of();
     }
@@ -395,7 +396,8 @@ public class TaskService {
   }
 
   private TaskResponse buildBlockResponse(Task blockTask) {
-    List<Task> children = taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(blockTask.getId());
+    List<Task> children =
+        taskRepository.findAllByParentTaskIdOrderByTaskOrderAsc(blockTask.getId());
     List<Long> tagIds = getTagIdsForTask(blockTask.getId());
     List<TaskResponse> childResponses = children.stream()
         .map(TaskResponse::new)

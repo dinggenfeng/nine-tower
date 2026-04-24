@@ -10,4 +10,4 @@ public record VariableResponse(
     String key,
     String value,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt) {}
+    LocalDateTime updatedAt) { }

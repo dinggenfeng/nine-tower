@@ -33,7 +33,8 @@ public abstract class BaseEntity {
 
   @PrePersist
   void onCreate() {
-    createdAt = updatedAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+    createdAt = updatedAt;
   }
 
   @PreUpdate

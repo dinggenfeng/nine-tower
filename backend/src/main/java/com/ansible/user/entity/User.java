@@ -41,7 +41,8 @@ public class User {
 
   @PrePersist
   void onCreate() {
-    createdAt = updatedAt = LocalDateTime.now();
+    updatedAt = LocalDateTime.now();
+    createdAt = updatedAt;
   }
 
   @PreUpdate

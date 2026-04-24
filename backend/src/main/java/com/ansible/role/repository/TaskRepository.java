@@ -18,6 +18,8 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
   void deleteByRoleId(Long roleId);
 
   @Modifying
-  @Query("DELETE FROM TaskTag tt WHERE tt.taskId IN (SELECT t.id FROM Task t WHERE t.roleId = :roleId)")
+  @Query(
+      "DELETE FROM TaskTag tt "
+          + "WHERE tt.taskId IN (SELECT t.id FROM Task t WHERE t.roleId = :roleId)")
   void deleteTaskTagsByRoleId(@Param("roleId") Long roleId);
 }

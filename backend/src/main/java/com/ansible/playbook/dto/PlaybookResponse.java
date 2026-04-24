@@ -14,4 +14,4 @@ public record PlaybookResponse(
     List<Long> tagIds,
     List<Long> environmentIds,
     LocalDateTime createdAt,
-    LocalDateTime updatedAt) {}
+    LocalDateTime updatedAt) { }

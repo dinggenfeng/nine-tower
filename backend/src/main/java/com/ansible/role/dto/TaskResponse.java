@@ -110,7 +110,7 @@ public class TaskResponse {
       return List.of();
     }
     try {
-      return MAPPER.readValue(notifyJson, new TypeReference<>() {});
+      return MAPPER.readValue(notifyJson, new TypeReference<>() { });
     } catch (JsonProcessingException e) {
       return List.of();
     }

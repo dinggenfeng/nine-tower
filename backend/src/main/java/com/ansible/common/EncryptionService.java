@@ -40,7 +40,8 @@ public class EncryptionService {
       Cipher cipher = Cipher.getInstance(ALGORITHM);
       GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
       cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec);
-      byte[] ciphertext = cipher.doFinal(plaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+      byte[] ciphertext =
+          cipher.doFinal(plaintext.getBytes(java.nio.charset.StandardCharsets.UTF_8));
       byte[] combined = new byte[iv.length + ciphertext.length];
       System.arraycopy(iv, 0, combined, 0, iv.length);
       System.arraycopy(ciphertext, 0, combined, iv.length, ciphertext.length);

@@ -13,8 +13,8 @@ import lombok.Setter;
 @Table(
     name = "tasks",
     indexes = {
-      @Index(name = "idx_task_role_id", columnList = "role_id"),
-      @Index(name = "idx_task_parent_task_id", columnList = "parent_task_id")
+        @Index(name = "idx_task_role_id", columnList = "role_id"),
+        @Index(name = "idx_task_parent_task_id", columnList = "parent_task_id")
     })
 @Getter
 @Setter

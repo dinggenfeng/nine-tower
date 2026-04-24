@@ -14,7 +14,9 @@ import lombok.Setter;
 @Table(
     name = "playbook_host_groups",
     uniqueConstraints = {@UniqueConstraint(columnNames = {"playbookId", "hostGroupId"})},
-    indexes = {@Index(name = "idx_playbook_host_group_host_group_id", columnList = "host_group_id")})
+    indexes = {
+        @Index(name = "idx_playbook_host_group_host_group_id", columnList = "host_group_id")
+    })
 @Getter
 @Setter
 @NoArgsConstructor

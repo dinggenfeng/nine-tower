@@ -10,7 +10,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "hosts", indexes = {@Index(name = "idx_host_host_group_id", columnList = "host_group_id")})
+@Table(
+    name = "hosts",
+    indexes = {@Index(name = "idx_host_host_group_id", columnList = "host_group_id")})
 @Getter
 @Setter
 @NoArgsConstructor

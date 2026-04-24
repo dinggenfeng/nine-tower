@@ -86,7 +86,8 @@ public class PlaybookService {
         .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookRole::getPlaybookId,
             java.util.stream.Collectors.mapping(PlaybookRole::getRoleId,
                 java.util.stream.Collectors.toList())));
-    Map<Long, List<Long>> hostGroupIdsMap = playbookHostGroupRepository.findByPlaybookIdIn(playbookIds)
+    Map<Long, List<Long>> hostGroupIdsMap =
+        playbookHostGroupRepository.findByPlaybookIdIn(playbookIds)
         .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookHostGroup::getPlaybookId,
             java.util.stream.Collectors.mapping(PlaybookHostGroup::getHostGroupId,
                 java.util.stream.Collectors.toList())));

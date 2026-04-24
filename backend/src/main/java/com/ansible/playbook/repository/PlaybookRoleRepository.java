@@ -18,6 +18,7 @@ public interface PlaybookRoleRepository extends JpaRepository<PlaybookRole, Long
   void deleteByRoleId(Long roleId);
 
   @Query(
-      "SELECT pr FROM PlaybookRole pr WHERE pr.playbookId IN :playbookIds ORDER BY pr.orderIndex ASC")
+      "SELECT pr FROM PlaybookRole pr "
+          + "WHERE pr.playbookId IN :playbookIds ORDER BY pr.orderIndex ASC")
   List<PlaybookRole> findByPlaybookIdIn(@Param("playbookIds") List<Long> playbookIds);
 }
