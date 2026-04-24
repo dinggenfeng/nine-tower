@@ -32,6 +32,18 @@ export async function deleteTemplate(id: number): Promise<void> {
   await request.delete(`/templates/${id}`);
 }
 
-export function getTemplateDownloadUrl(id: number): string {
-  return `/api/templates/${id}/download`;
+export async function downloadTemplate(id: number): Promise<void> {
+  const token = localStorage.getItem("token");
+  const resp = await fetch(`/api/templates/${id}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!resp.ok) throw new Error("下载失败");
+  const blob = await resp.blob();
+  const filename = resp.headers.get("Content-Disposition")?.match(/filename="(.+?)"/)?.[1] ?? "template";
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }

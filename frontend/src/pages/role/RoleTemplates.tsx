@@ -22,7 +22,7 @@ import {
   getTemplate,
   updateTemplate,
   deleteTemplate,
-  getTemplateDownloadUrl,
+  downloadTemplate,
 } from "../../api/template";
 
 interface RoleTemplatesProps {
@@ -110,10 +110,12 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     setContentValue(detail.content || "");
   };
 
-  const handleDownload = (record: Template) => {
-    const token = localStorage.getItem("token");
-    const url = `${getTemplateDownloadUrl(record.id)}?token=${token}`;
-    window.open(url, "_blank");
+  const handleDownload = async (record: Template) => {
+    try {
+      await downloadTemplate(record.id);
+    } catch {
+      message.error("下载失败");
+    }
   };
 
   const handleSaveContent = async () => {

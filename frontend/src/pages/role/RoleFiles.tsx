@@ -14,7 +14,7 @@ import {
   createFile,
   updateFile,
   deleteFile,
-  getFileDownloadUrl,
+  downloadFile,
 } from "../../api/roleFile";
 
 interface RoleFilesProps {
@@ -103,10 +103,12 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
     fetchData();
   };
 
-  const handleDownload = (fileId: number) => {
-    const token = localStorage.getItem("token");
-    const url = `${getFileDownloadUrl(fileId)}?token=${token}`;
-    window.open(url, "_blank");
+  const handleDownload = async (fileId: number) => {
+    try {
+      await downloadFile(fileId);
+    } catch {
+      message.error("下载失败");
+    }
   };
 
   interface TreeNode {
