@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react';
-import { Button, Card, Skeleton, Tabs } from 'antd';
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { useParams, useNavigate } from 'react-router-dom';
-import type { Role } from '../../types/entity/Role';
-import { getRole } from '../../api/role';
-import RoleTasks from './RoleTasks';
-import RoleHandlers from './RoleHandlers';
-import RoleTemplates from './RoleTemplates';
-import RoleFiles from './RoleFiles';
-import RoleVars from './RoleVars';
-import RoleDefaults from './RoleDefaults';
+import { useEffect, useState } from "react";
+import { Button, Card, Skeleton, Tabs } from "antd";
+import { ArrowLeftOutlined } from "@ant-design/icons";
+import { useParams, useNavigate } from "react-router-dom";
+import type { Role } from "../../types/entity/Role";
+import { getRole } from "../../api/role";
+import RoleTasks from "./RoleTasks";
+import RoleHandlers from "./RoleHandlers";
+import RoleTemplates from "./RoleTemplates";
+import RoleFiles from "./RoleFiles";
+import RoleVars from "./RoleVars";
+import RoleDefaults from "./RoleDefaults";
 
 export default function RoleDetail() {
   const { id, roleId } = useParams<{ id: string; roleId: string }>();
@@ -31,12 +31,12 @@ export default function RoleDetail() {
   }
 
   const tabItems = [
-    { key: 'tasks', label: 'Tasks', children: <RoleTasks roleId={Number(roleId)} /> },
-    { key: 'handlers', label: 'Handlers', children: <RoleHandlers roleId={Number(roleId)} /> },
-    { key: 'templates', label: 'Templates', children: <RoleTemplates roleId={Number(roleId)} /> },
-    { key: 'files', label: 'Files', children: <RoleFiles roleId={Number(roleId)} /> },
-    { key: 'vars', label: 'Vars', children: <RoleVars roleId={Number(roleId)} /> },
-    { key: 'defaults', label: 'Defaults', children: <RoleDefaults roleId={Number(roleId)} /> },
+    { key: "tasks", label: "Tasks", children: <RoleTasks roleId={Number(roleId)} /> },
+    { key: "handlers", label: "Handlers", children: <RoleHandlers roleId={Number(roleId)} /> },
+    { key: "templates", label: "Templates", children: <RoleTemplates roleId={Number(roleId)} /> },
+    { key: "files", label: "Files", children: <RoleFiles roleId={Number(roleId)} /> },
+    { key: "vars", label: "Vars", children: <RoleVars roleId={Number(roleId)} /> },
+    { key: "defaults", label: "Defaults", children: <RoleDefaults roleId={Number(roleId)} /> },
   ];
 
   return (
@@ -46,27 +46,19 @@ export default function RoleDetail() {
           type="text"
           icon={<ArrowLeftOutlined />}
           onClick={() => navigate(`/projects/${id}/roles`)}
-          style={{ color: '#64748b', padding: '4px 8px' }}
+          style={{ color: "#64748b", padding: "4px 8px" }}
         >
           返回 Roles
         </Button>
       </div>
       <Card
         style={{ marginBottom: 16 }}
-        title={
-          <span style={{ fontSize: 18, fontWeight: 600 }}>{role?.name}</span>
-        }
+        title={<span style={{ fontSize: 18, fontWeight: 600 }}>{role?.name}</span>}
       >
-        <p style={{ color: '#64748b', margin: 0 }}>
-          {role?.description || '无描述'}
-        </p>
+        <p style={{ color: "#64748b", margin: 0 }}>{role?.description || "无描述"}</p>
       </Card>
       <Card bodyStyle={{ padding: 0 }}>
-        <Tabs
-          defaultActiveKey="tasks"
-          items={tabItems}
-          style={{ padding: '0 24px' }}
-        />
+        <Tabs defaultActiveKey="tasks" items={tabItems} style={{ padding: "0 24px" }} />
       </Card>
     </div>
   );

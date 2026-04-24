@@ -142,6 +142,11 @@ public class TemplateService {
         templateRepository
             .findById(templateId)
             .orElseThrow(() -> new IllegalArgumentException("Template not found"));
+    Role role =
+        roleRepository
+            .findById(template.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), currentUserId);
     return template.getName();
   }
 

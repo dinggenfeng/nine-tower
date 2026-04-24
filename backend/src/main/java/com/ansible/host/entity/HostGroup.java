@@ -3,13 +3,14 @@ package com.ansible.host.entity;
 import com.ansible.common.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "host_groups")
+@Table(name = "host_groups", indexes = {@Index(name = "idx_host_group_project_id", columnList = "project_id")})
 @Getter
 @Setter
 @NoArgsConstructor

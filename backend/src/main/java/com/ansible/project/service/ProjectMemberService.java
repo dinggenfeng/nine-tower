@@ -10,6 +10,8 @@ import com.ansible.security.ProjectAccessChecker;
 import com.ansible.user.entity.User;
 import com.ansible.user.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,15 +28,17 @@ public class ProjectMemberService {
   public List<ProjectMemberResponse> listMembers(Long projectId, Long currentUserId) {
     accessChecker.checkMembership(projectId, currentUserId);
     List<ProjectMember> members = projectMemberRepository.findAllByProjectId(projectId);
+    List<Long> userIds = members.stream().map(ProjectMember::getUserId).toList();
+    Map<Long, User> userMap = userRepository.findAllById(userIds).stream()
+        .collect(Collectors.toMap(User::getId, u -> u));
     return members.stream()
-        .map(
-            member -> {
-              User user =
-                  userRepository
-                      .findById(member.getUserId())
-                      .orElseThrow(() -> new IllegalArgumentException("User not found"));
-              return new ProjectMemberResponse(member, user);
-            })
+        .map(member -> {
+          User user = userMap.get(member.getUserId());
+          if (user == null) {
+            throw new IllegalArgumentException("User not found");
+          }
+          return new ProjectMemberResponse(member, user);
+        })
         .toList();
   }
 

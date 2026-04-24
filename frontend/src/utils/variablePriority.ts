@@ -1,9 +1,9 @@
 export type VariableScopeKind =
-  | 'PROJECT'
-  | 'HOSTGROUP'
-  | 'ENVIRONMENT'
-  | 'ROLE_VARS'
-  | 'ROLE_DEFAULTS';
+  | "PROJECT"
+  | "HOSTGROUP"
+  | "ENVIRONMENT"
+  | "ROLE_VARS"
+  | "ROLE_DEFAULTS";
 
 const PRIORITY_RANK: Record<VariableScopeKind, number> = {
   ENVIRONMENT: 5,
@@ -30,9 +30,7 @@ export interface VariablePriorityResult {
   winningScope: Map<string, VariableScopeKind>;
 }
 
-export function resolveVariablePriority(
-  input: VariablePriorityInput,
-): VariablePriorityResult {
+export function resolveVariablePriority(input: VariablePriorityInput): VariablePriorityResult {
   const keyScopes = new Map<string, VariableScopeKind[]>();
   const track = (vars: KeyedVariable[], scope: VariableScopeKind) => {
     vars.forEach((v) => {
@@ -41,19 +39,17 @@ export function resolveVariablePriority(
       keyScopes.set(v.key, entries);
     });
   };
-  track(input.projectVars, 'PROJECT');
-  track(input.hostgroupVars, 'HOSTGROUP');
-  track(input.environmentVars, 'ENVIRONMENT');
-  track(input.roleVars, 'ROLE_VARS');
-  track(input.roleDefaults, 'ROLE_DEFAULTS');
+  track(input.projectVars, "PROJECT");
+  track(input.hostgroupVars, "HOSTGROUP");
+  track(input.environmentVars, "ENVIRONMENT");
+  track(input.roleVars, "ROLE_VARS");
+  track(input.roleDefaults, "ROLE_DEFAULTS");
 
   const duplicateKeys = new Set<string>();
   const winningScope = new Map<string, VariableScopeKind>();
   keyScopes.forEach((scopes, key) => {
     if (scopes.length > 1) duplicateKeys.add(key);
-    const winner = scopes.reduce((best, s) =>
-      PRIORITY_RANK[s] > PRIORITY_RANK[best] ? s : best,
-    );
+    const winner = scopes.reduce((best, s) => (PRIORITY_RANK[s] > PRIORITY_RANK[best] ? s : best));
     winningScope.set(key, winner);
   });
 

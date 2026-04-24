@@ -1,26 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Space,
-  Table,
-  message,
-} from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { useCallback, useEffect, useState } from "react";
+import { Button, Form, Input, Modal, Popconfirm, Space, Table, message } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import type {
   RoleVariable,
   CreateRoleVariableRequest,
   UpdateRoleVariableRequest,
-} from '../../types/entity/RoleVariable';
+} from "../../types/entity/RoleVariable";
 import {
   createRoleVariable,
   getRoleVariables,
   updateRoleVariable,
   deleteRoleVariable,
-} from '../../api/roleVariable';
+} from "../../api/roleVariable";
 
 interface RoleVarsProps {
   roleId: number;
@@ -31,6 +22,7 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<RoleVariable | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -60,45 +52,46 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingVar) {
-      const data: UpdateRoleVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await updateRoleVariable(editingVar.id, data);
-      message.success('变量已更新');
-    } else {
-      const data: CreateRoleVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await createRoleVariable(roleId, data);
-      message.success('变量已创建');
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingVar) {
+        const data: UpdateRoleVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await updateRoleVariable(editingVar.id, data);
+        message.success("变量已更新");
+      } else {
+        const data: CreateRoleVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await createRoleVariable(roleId, data);
+        message.success("变量已创建");
+      }
+      setModalOpen(false);
+      fetchData();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchData();
   };
 
   const handleDelete = async (id: number) => {
     await deleteRoleVariable(id);
-    message.success('变量已删除');
+    message.success("变量已删除");
     fetchData();
   };
 
   const columns = [
-    { title: 'Key', dataIndex: 'key', key: 'key' },
-    { title: 'Value', dataIndex: 'value', key: 'value' },
+    { title: "Key", dataIndex: "key", key: "key" },
+    { title: "Value", dataIndex: "value", key: "value" },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: RoleVariable) => (
         <Space>
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             编辑
           </Button>
           <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
@@ -126,17 +119,14 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
         pagination={false}
       />
       <Modal
-        title={editingVar ? '编辑变量' : '添加变量'}
+        title={editingVar ? "编辑变量" : "添加变量"}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="key"
-            label="Key"
-            rules={[{ required: true, message: '请输入变量名' }]}
-          >
+          <Form.Item name="key" label="Key" rules={[{ required: true, message: "请输入变量名" }]}>
             <Input placeholder="例如: http_port" />
           </Form.Item>
           <Form.Item name="value" label="Value">

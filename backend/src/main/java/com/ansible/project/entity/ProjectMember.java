@@ -8,6 +8,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
@@ -19,7 +20,8 @@ import lombok.Setter;
 @Entity
 @Table(
     name = "project_members",
-    uniqueConstraints = @UniqueConstraint(columnNames = {"projectId", "userId"}))
+    uniqueConstraints = @UniqueConstraint(columnNames = {"projectId", "userId"}),
+    indexes = {@Index(name = "idx_project_member_user_id", columnList = "user_id")})
 @Getter
 @Setter
 @NoArgsConstructor

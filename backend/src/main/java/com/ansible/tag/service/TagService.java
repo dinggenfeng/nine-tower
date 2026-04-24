@@ -1,5 +1,6 @@
 package com.ansible.tag.service;
 
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.dto.CreateTagRequest;
 import com.ansible.tag.dto.TagResponse;
@@ -17,7 +18,9 @@ public class TagService {
 
   private final TagRepository tagRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
+  @Transactional
   public TagResponse createTag(Long projectId, CreateTagRequest request, Long userId) {
     accessChecker.checkMembership(projectId, userId);
     if (tagRepository.existsByProjectIdAndName(projectId, request.name())) {
@@ -39,6 +42,7 @@ public class TagService {
         .toList();
   }
 
+  @Transactional
   public TagResponse updateTag(Long tagId, UpdateTagRequest request, Long userId) {
     Tag tag =
         tagRepository
@@ -54,12 +58,14 @@ public class TagService {
     return new TagResponse(tagRepository.save(tag));
   }
 
+  @Transactional
   public void deleteTag(Long tagId, Long userId) {
     Tag tag =
         tagRepository
             .findById(tagId)
             .orElseThrow(() -> new IllegalArgumentException("Tag not found"));
     accessChecker.checkOwnerOrAdmin(tag.getProjectId(), tag.getCreatedBy(), userId);
+    cleanupService.cleanupTagResources(tagId);
     tagRepository.delete(tag);
   }
 }

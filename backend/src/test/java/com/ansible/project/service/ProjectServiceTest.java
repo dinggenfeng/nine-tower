@@ -32,6 +32,7 @@ class ProjectServiceTest {
   @Mock private ProjectRepository projectRepository;
   @Mock private ProjectMemberRepository projectMemberRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
 
   @InjectMocks private ProjectService projectService;
 
@@ -72,9 +73,8 @@ class ProjectServiceTest {
 
   @Test
   void getMyProjects_returns_user_projects() {
-    when(projectRepository.findAllByMemberUserId(10L)).thenReturn(List.of(testProject));
-    when(projectMemberRepository.findByProjectIdAndUserId(1L, 10L))
-        .thenReturn(Optional.of(adminMember));
+    when(projectMemberRepository.findByUserId(10L)).thenReturn(List.of(adminMember));
+    when(projectRepository.findAllById(List.of(1L))).thenReturn(List.of(testProject));
 
     List<ProjectResponse> projects = projectService.getMyProjects(10L);
 
@@ -124,6 +124,7 @@ class ProjectServiceTest {
     projectService.deleteProject(1L, 10L);
 
     verify(accessChecker).checkAdmin(1L, 10L);
+    verify(cleanupService).cleanupProject(1L);
     verify(projectMemberRepository).deleteByProjectId(1L);
     verify(projectRepository).delete(testProject);
   }

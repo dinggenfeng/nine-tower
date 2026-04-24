@@ -1,4 +1,4 @@
-export type VariableScope = 'PROJECT' | 'HOSTGROUP' | 'ENVIRONMENT';
+export type VariableScope = "PROJECT" | "HOSTGROUP" | "ENVIRONMENT";
 
 export interface Variable {
   id: number;

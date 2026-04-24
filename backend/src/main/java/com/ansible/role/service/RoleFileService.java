@@ -4,6 +4,7 @@ import com.ansible.security.ProjectAccessChecker;
 import com.ansible.role.dto.CreateFileRequest;
 import com.ansible.role.dto.FileResponse;
 import com.ansible.role.dto.UpdateFileRequest;
+import com.ansible.role.entity.Role;
 import com.ansible.role.entity.RoleFile;
 import com.ansible.role.repository.RoleFileRepository;
 import java.nio.charset.StandardCharsets;
@@ -98,6 +99,11 @@ public class RoleFileService {
     if (Boolean.TRUE.equals(file.getIsDirectory())) {
       throw new IllegalArgumentException("Cannot download a directory");
     }
+    Role role =
+        roleRepository
+            .findById(file.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), userId);
     return file.getContent();
   }
 
@@ -107,6 +113,11 @@ public class RoleFileService {
         roleFileRepository
             .findById(fileId)
             .orElseThrow(() -> new IllegalArgumentException("File not found"));
+    Role role =
+        roleRepository
+            .findById(file.getRoleId())
+            .orElseThrow(() -> new IllegalArgumentException("Role not found"));
+    accessChecker.checkMembership(role.getProjectId(), userId);
     return file.getName();
   }
 

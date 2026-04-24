@@ -1,5 +1,6 @@
 package com.ansible.environment.service;
 
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.environment.dto.CreateEnvironmentRequest;
 import com.ansible.environment.dto.EnvConfigRequest;
@@ -11,6 +12,8 @@ import com.ansible.environment.entity.Environment;
 import com.ansible.environment.repository.EnvConfigRepository;
 import com.ansible.environment.repository.EnvironmentRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +25,7 @@ public class EnvironmentService {
   private final EnvironmentRepository environmentRepository;
   private final EnvConfigRepository envConfigRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
   @Transactional
   public EnvironmentResponse createEnvironment(
@@ -43,12 +47,18 @@ public class EnvironmentService {
   @Transactional(readOnly = true)
   public List<EnvironmentResponse> listEnvironments(Long projectId, Long userId) {
     accessChecker.checkMembership(projectId, userId);
-    return environmentRepository.findByProjectIdOrderByIdAsc(projectId).stream()
-        .map(
-            env ->
-                new EnvironmentResponse(
-                    env,
-                    envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(env.getId())))
+    List<Environment> environments = environmentRepository.findByProjectIdOrderByIdAsc(projectId);
+    if (environments.isEmpty()) {
+      return List.of();
+    }
+    List<Long> envIds = environments.stream().map(Environment::getId).toList();
+    Map<Long, List<EnvConfig>> configsMap = envConfigRepository
+        .findByEnvironmentIdInOrderByEnvironmentIdAscConfigKeyAsc(envIds)
+        .stream()
+        .collect(Collectors.groupingBy(EnvConfig::getEnvironmentId));
+    return environments.stream()
+        .map(env -> new EnvironmentResponse(
+            env, configsMap.getOrDefault(env.getId(), List.of())))
         .toList();
   }
 
@@ -90,7 +100,7 @@ public class EnvironmentService {
             .findById(envId)
             .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
     accessChecker.checkOwnerOrAdmin(env.getProjectId(), env.getCreatedBy(), userId);
-    envConfigRepository.deleteByEnvironmentId(envId);
+    cleanupService.cleanupEnvironmentResources(envId);
     environmentRepository.delete(env);
   }
 

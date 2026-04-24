@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.security.AuditLogService;
 import com.ansible.security.JwtTokenProvider;
 import com.ansible.user.dto.LoginRequest;
 import com.ansible.user.dto.RegisterRequest;
@@ -30,6 +31,7 @@ class AuthServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private PasswordEncoder passwordEncoder;
   @Mock private JwtTokenProvider jwtTokenProvider;
+  @Mock private AuditLogService auditLogService;
 
   @InjectMocks private AuthService authService;
 

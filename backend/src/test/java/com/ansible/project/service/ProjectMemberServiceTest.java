@@ -58,7 +58,7 @@ class ProjectMemberServiceTest {
   @Test
   void listMembers_success() {
     when(projectMemberRepository.findAllByProjectId(1L)).thenReturn(List.of(testMember));
-    when(userRepository.findById(20L)).thenReturn(Optional.of(testUser));
+    when(userRepository.findAllById(List.of(20L))).thenReturn(List.of(testUser));
 
     List<ProjectMemberResponse> members = projectMemberService.listMembers(1L, 10L);
 

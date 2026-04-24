@@ -1,16 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState, useCallback } from "react";
+import { useParams } from "react-router-dom";
+import { Card, Select, Button, Space, message, Popconfirm, Spin, Input } from "antd";
 import {
-  Card,
-  Select,
-  Button,
-  Space,
-  message,
-  Popconfirm,
-  Spin,
-  Input,
-} from 'antd';
-import { DeleteOutlined, CopyOutlined, UpOutlined, DownOutlined, SaveOutlined } from '@ant-design/icons';
+  DeleteOutlined,
+  CopyOutlined,
+  UpOutlined,
+  DownOutlined,
+  SaveOutlined,
+} from "@ant-design/icons";
 import {
   getPlaybook,
   updatePlaybook,
@@ -24,16 +21,16 @@ import {
   addEnvironment,
   removeEnvironment,
   generateYaml,
-} from '../../api/playbook';
-import { getRoles } from '../../api/role';
-import { getHostGroups } from '../../api/host';
-import { listTags } from '../../api/tag';
-import { listEnvironments } from '../../api/environment';
-import type { Playbook } from '../../types/entity/Playbook';
-import type { Role } from '../../types/entity/Role';
-import type { HostGroup } from '../../types/entity/Host';
-import type { Tag } from '../../types/entity/Tag';
-import type { Environment } from '../../types/entity/Environment';
+} from "../../api/playbook";
+import { getRoles } from "../../api/role";
+import { getHostGroups } from "../../api/host";
+import { listTags } from "../../api/tag";
+import { listEnvironments } from "../../api/environment";
+import type { Playbook } from "../../types/entity/Playbook";
+import type { Role } from "../../types/entity/Role";
+import type { HostGroup } from "../../types/entity/Host";
+import type { Tag } from "../../types/entity/Tag";
+import type { Environment } from "../../types/entity/Environment";
 
 export default function PlaybookBuilder() {
   const { id: projectId, pbId } = useParams<{
@@ -48,8 +45,8 @@ export default function PlaybookBuilder() {
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
-  const [yamlPreview, setYamlPreview] = useState('');
-  const [extraVarsText, setExtraVarsText] = useState('');
+  const [yamlPreview, setYamlPreview] = useState("");
+  const [extraVarsText, setExtraVarsText] = useState("");
   const [savingVars, setSavingVars] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +63,7 @@ export default function PlaybookBuilder() {
         generateYaml(playbookId),
       ]);
       setPlaybook(pb);
-      setExtraVarsText(pb.extraVars ?? '');
+      setExtraVarsText(pb.extraVars ?? "");
       setRoles(rList);
       setHostGroups(hgList);
       setTags(tList);
@@ -83,7 +80,7 @@ export default function PlaybookBuilder() {
 
   const handleAddRole = async (roleId: number) => {
     await addRole(playbookId, roleId);
-    message.success('Role 已添加');
+    message.success("Role 已添加");
     fetchData();
   };
 
@@ -97,7 +94,10 @@ export default function PlaybookBuilder() {
     const newOrder = [...playbook.roleIds];
     const targetIndex = currentIndex + direction;
     if (targetIndex < 0 || targetIndex >= newOrder.length) return;
-    [newOrder[currentIndex], newOrder[targetIndex]] = [newOrder[targetIndex], newOrder[currentIndex]];
+    [newOrder[currentIndex], newOrder[targetIndex]] = [
+      newOrder[targetIndex],
+      newOrder[currentIndex],
+    ];
     await reorderRoles(playbookId, newOrder);
     fetchData();
   };
@@ -132,9 +132,13 @@ export default function PlaybookBuilder() {
     fetchData();
   };
 
-  const handleCopyYaml = () => {
-    navigator.clipboard.writeText(yamlPreview);
-    message.success('已复制到剪贴板');
+  const handleCopyYaml = async () => {
+    try {
+      await navigator.clipboard.writeText(yamlPreview);
+      message.success("已复制到剪贴板");
+    } catch {
+      message.error("复制失败");
+    }
   };
 
   const handleSaveExtraVars = async () => {
@@ -146,7 +150,7 @@ export default function PlaybookBuilder() {
         description: playbook.description,
         extraVars: extraVarsText || undefined,
       });
-      message.success('Extra Vars 已保存');
+      message.success("Extra Vars 已保存");
       fetchData();
     } finally {
       setSavingVars(false);
@@ -156,18 +160,10 @@ export default function PlaybookBuilder() {
   if (loading) return <Spin />;
   if (!playbook) return <div>Playbook not found</div>;
 
-  const availableRoles = roles.filter(
-    (r) => !playbook.roleIds.includes(r.id)
-  );
-  const availableHostGroups = hostGroups.filter(
-    (h) => !playbook.hostGroupIds.includes(h.id)
-  );
-  const availableTags = tags.filter(
-    (t) => !playbook.tagIds.includes(t.id)
-  );
-  const availableEnvironments = environments.filter(
-    (e) => !playbook.environmentIds.includes(e.id)
-  );
+  const availableRoles = roles.filter((r) => !playbook.roleIds.includes(r.id));
+  const availableHostGroups = hostGroups.filter((h) => !playbook.hostGroupIds.includes(h.id));
+  const availableTags = tags.filter((t) => !playbook.tagIds.includes(t.id));
+  const availableEnvironments = environments.filter((e) => !playbook.environmentIds.includes(e.id));
   const selectedRoles = playbook.roleIds
     .map((id) => roles.find((r) => r.id === id))
     .filter((r): r is Role => r != null);
@@ -186,23 +182,15 @@ export default function PlaybookBuilder() {
       <h2>{playbook.name}</h2>
       {playbook.description && <p>{playbook.description}</p>}
 
-      <Space direction="vertical" style={{ width: '100%' }} size={16}>
+      <Space direction="vertical" style={{ width: "100%" }} size={16}>
         <Card title="主机组" size="small">
           <Space wrap>
             {selectedHostGroups.map((hg) => (
               <span key={hg.id}>
                 <Space>
                   <strong>{hg.name}</strong>
-                  <Popconfirm
-                    title="确定移除？"
-                    onConfirm={() => handleRemoveHostGroup(hg.id)}
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
+                  <Popconfirm title="确定移除？" onConfirm={() => handleRemoveHostGroup(hg.id)}>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                   </Popconfirm>
                 </Space>
               </span>
@@ -222,13 +210,13 @@ export default function PlaybookBuilder() {
         </Card>
 
         <Card title="Roles（按顺序）" size="small">
-          <Space direction="vertical" style={{ width: '100%' }}>
+          <Space direction="vertical" style={{ width: "100%" }}>
             {selectedRoles.map((r, idx) => (
               <div
                 key={r.id}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
+                  display: "flex",
+                  alignItems: "center",
                   gap: 8,
                 }}
               >
@@ -247,16 +235,8 @@ export default function PlaybookBuilder() {
                   onClick={() => handleMoveRole(idx, 1)}
                 />
                 <span>{r.name}</span>
-                <Popconfirm
-                  title="确定移除？"
-                  onConfirm={() => handleRemoveRole(r.id)}
-                >
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                  />
+                <Popconfirm title="确定移除？" onConfirm={() => handleRemoveRole(r.id)}>
+                  <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                 </Popconfirm>
               </div>
             ))}
@@ -280,16 +260,8 @@ export default function PlaybookBuilder() {
               <span key={t.id}>
                 <Space>
                   <strong>{t.name}</strong>
-                  <Popconfirm
-                    title="确定移除？"
-                    onConfirm={() => handleRemoveTag(t.id)}
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
+                  <Popconfirm title="确定移除？" onConfirm={() => handleRemoveTag(t.id)}>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                   </Popconfirm>
                 </Space>
               </span>
@@ -314,16 +286,8 @@ export default function PlaybookBuilder() {
               <span key={e.id}>
                 <Space>
                   <strong>{e.name}</strong>
-                  <Popconfirm
-                    title="确定移除？"
-                    onConfirm={() => handleRemoveEnvironment(e.id)}
-                  >
-                    <Button
-                      type="text"
-                      size="small"
-                      danger
-                      icon={<DeleteOutlined />}
-                    />
+                  <Popconfirm title="确定移除？" onConfirm={() => handleRemoveEnvironment(e.id)}>
+                    <Button type="text" size="small" danger icon={<DeleteOutlined />} />
                   </Popconfirm>
                 </Space>
               </span>
@@ -361,7 +325,7 @@ export default function PlaybookBuilder() {
             onChange={(e) => setExtraVarsText(e.target.value)}
             placeholder="key: value&#10;app_port: 8080"
             rows={5}
-            style={{ fontFamily: 'monospace' }}
+            style={{ fontFamily: "monospace" }}
           />
         </Card>
 
@@ -369,24 +333,21 @@ export default function PlaybookBuilder() {
           title="YAML 预览"
           size="small"
           extra={
-            <Button
-              icon={<CopyOutlined />}
-              onClick={handleCopyYaml}
-            >
+            <Button icon={<CopyOutlined />} onClick={handleCopyYaml}>
               复制
             </Button>
           }
         >
           <pre
             style={{
-              background: '#f5f5f5',
+              background: "#f5f5f5",
               padding: 12,
               borderRadius: 4,
-              overflow: 'auto',
+              overflow: "auto",
               fontSize: 13,
             }}
           >
-            {yamlPreview || '---'}
+            {yamlPreview || "---"}
           </pre>
         </Card>
       </Space>

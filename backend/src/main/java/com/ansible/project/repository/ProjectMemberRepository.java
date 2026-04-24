@@ -17,4 +17,6 @@ public interface ProjectMemberRepository extends JpaRepository<ProjectMember, Lo
   void deleteByProjectId(Long projectId);
 
   long countByProjectIdAndRole(Long projectId, ProjectRole role);
+
+  List<ProjectMember> findByUserId(Long userId);
 }

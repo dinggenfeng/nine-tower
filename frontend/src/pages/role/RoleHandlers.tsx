@@ -1,68 +1,47 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Input, Modal, Popconfirm, Space, Switch, Table, message, Collapse, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined } from '@ant-design/icons';
-import type { Handler, CreateHandlerRequest, UpdateHandlerRequest, Task } from '../../types/entity/Task';
-import { createHandler, getHandlers, updateHandler, deleteHandler, getNotifyingTasks } from '../../api/handler';
-import ModuleSelect from '../../components/role/ModuleSelect';
-import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
-import { getModuleDefinition } from '../../constants/ansibleModules';
-import { taskToYaml } from '../../utils/taskToYaml';
+import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Space,
+  Switch,
+  Table,
+  message,
+  Collapse,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  DownOutlined,
+  QuestionCircleOutlined,
+  EyeOutlined,
+  CopyOutlined,
+} from "@ant-design/icons";
+import type {
+  Handler,
+  CreateHandlerRequest,
+  UpdateHandlerRequest,
+  Task,
+} from "../../types/entity/Task";
+import {
+  createHandler,
+  getHandlers,
+  updateHandler,
+  deleteHandler,
+  getNotifyingTasks,
+} from "../../api/handler";
+import ModuleSelect from "../../components/role/ModuleSelect";
+import { ModuleParamsGrid, ExtraParamsInput } from "../../components/role/ModuleParamsForm";
+import { getModuleDefinition } from "../../constants/ansibleModules";
+import { taskToYaml } from "../../utils/taskToYaml";
+import { buildArgsJson, parseArgsToForm } from "../../utils/argsParser";
 
 interface RoleHandlersProps {
   roleId: number;
-}
-
-/** Merge moduleParams + extraParams into a JSON string for the args field */
-function buildArgsJson(
-  moduleParams: Record<string, unknown> | undefined,
-  extraParams: { key: string; value: string }[] | undefined,
-): string {
-  const result: Record<string, unknown> = {};
-  if (moduleParams) {
-    for (const [k, v] of Object.entries(moduleParams)) {
-      if (v !== undefined && v !== '' && v !== null) {
-        result[k] = v;
-      }
-    }
-  }
-  if (extraParams) {
-    for (const item of extraParams) {
-      if (item.key) {
-        result[item.key] = item.value;
-      }
-    }
-  }
-  return Object.keys(result).length > 0 ? JSON.stringify(result) : '';
-}
-
-/** Parse args JSON string into moduleParams + extraParams for form population */
-function parseArgsToForm(
-  argsJson: string | undefined,
-  moduleName: string | undefined,
-): { moduleParams: Record<string, unknown>; extraParams: { key: string; value: string }[] } {
-  const moduleParams: Record<string, unknown> = {};
-  const extraParams: { key: string; value: string }[] = [];
-  if (!argsJson) return { moduleParams, extraParams };
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(argsJson);
-  } catch {
-    extraParams.push({ key: '', value: argsJson });
-    return { moduleParams, extraParams };
-  }
-
-  const moduleDef = moduleName ? getModuleDefinition(moduleName) : undefined;
-  const knownParams = new Set(moduleDef?.params.map((p) => p.name) ?? []);
-
-  for (const [k, v] of Object.entries(parsed)) {
-    if (knownParams.has(k)) {
-      moduleParams[k] = v;
-    } else {
-      extraParams.push({ key: k, value: String(v) });
-    }
-  }
-  return { moduleParams, extraParams };
 }
 
 export default function RoleHandlers({ roleId }: RoleHandlersProps) {
@@ -71,11 +50,12 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingHandler, setEditingHandler] = useState<Handler | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
-  const [previewYaml, setPreviewYaml] = useState<string>('');
+  const [previewYaml, setPreviewYaml] = useState<string>("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [form] = Form.useForm();
   const [notifyingTasksMap, setNotifyingTasksMap] = useState<Record<number, Task[]>>({});
   const [expandedHandlerIds, setExpandedHandlerIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchHandlers = useCallback(async () => {
     setLoading(true);
@@ -118,25 +98,29 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
 
   const handleDelete = async (id: number) => {
     await deleteHandler(id);
-    message.success('已删除');
+    message.success("已删除");
     fetchHandlers();
   };
 
   const handlePreviewAll = () => {
     if (handlers.length === 0) {
-      message.info('暂无 Handler');
+      message.info("暂无 Handler");
       return;
     }
-    const yaml = handlers.map((h) => taskToYaml({
-      name: h.name,
-      module: h.module,
-      args: h.args,
-      whenCondition: h.whenCondition,
-      register: h.register,
-      become: h.become,
-      becomeUser: h.becomeUser,
-      ignoreErrors: h.ignoreErrors,
-    })).join('\n\n');
+    const yaml = handlers
+      .map((h) =>
+        taskToYaml({
+          name: h.name,
+          module: h.module,
+          args: h.args,
+          whenCondition: h.whenCondition,
+          register: h.register,
+          become: h.become,
+          becomeUser: h.becomeUser,
+          ignoreErrors: h.ignoreErrors,
+        })
+      )
+      .join("\n\n");
     setPreviewYaml(yaml);
     setPreviewOpen(true);
   };
@@ -158,16 +142,18 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   };
 
   const handlePreviewHandler = (handler: Handler) => {
-    setPreviewYaml(taskToYaml({
-      name: handler.name,
-      module: handler.module,
-      args: handler.args,
-      whenCondition: handler.whenCondition,
-      register: handler.register,
-      become: handler.become,
-      becomeUser: handler.becomeUser,
-      ignoreErrors: handler.ignoreErrors,
-    }));
+    setPreviewYaml(
+      taskToYaml({
+        name: handler.name,
+        module: handler.module,
+        args: handler.args,
+        whenCondition: handler.whenCondition,
+        register: handler.register,
+        become: handler.become,
+        becomeUser: handler.becomeUser,
+        ignoreErrors: handler.ignoreErrors,
+      })
+    );
     setPreviewOpen(true);
   };
 
@@ -184,86 +170,91 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         become: values.become,
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors,
-      }),
+      })
     );
     setPreviewOpen(true);
   };
 
   const handleCopyYaml = async () => {
     await navigator.clipboard.writeText(previewYaml);
-    message.success('已复制');
+    message.success("已复制");
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
 
-    const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
-    if (moduleDef?.validate) {
-      const errors = moduleDef.validate(values.moduleParams || {});
-      if (Object.keys(errors).length > 0) {
-        const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
-          name: ['moduleParams', field],
-          errors: [msg],
-        }));
-        form.setFields(fieldErrors);
-        return;
+      const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
+      if (moduleDef?.validate) {
+        const errors = moduleDef.validate(values.moduleParams || {});
+        if (Object.keys(errors).length > 0) {
+          const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
+            name: ["moduleParams", field],
+            errors: [msg],
+          }));
+          form.setFields(fieldErrors);
+          return;
+        }
       }
-    }
 
-    const args = buildArgsJson(values.moduleParams, values.extraParams);
+      const args = buildArgsJson(values.moduleParams, values.extraParams);
 
-    if (editingHandler) {
-      const data: UpdateHandlerRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        register: values.register,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      await updateHandler(editingHandler.id, data);
-      message.success('已更新');
-    } else {
-      const data: CreateHandlerRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        register: values.register,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      await createHandler(roleId, data);
-      message.success('已创建');
+      if (editingHandler) {
+        const data: UpdateHandlerRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          register: values.register,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
+        };
+        await updateHandler(editingHandler.id, data);
+        message.success("已更新");
+      } else {
+        const data: CreateHandlerRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          register: values.register,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
+        };
+        await createHandler(roleId, data);
+        message.success("已创建");
+      }
+      setModalOpen(false);
+      fetchHandlers();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchHandlers();
   };
 
   const columns = [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: '模块',
-      dataIndex: 'module',
-      key: 'module',
+      title: "模块",
+      dataIndex: "module",
+      key: "module",
       width: 120,
     },
     {
-      title: 'When',
-      dataIndex: 'whenCondition',
-      key: 'whenCondition',
-      render: (val: string) => val || '-',
+      title: "When",
+      dataIndex: "whenCondition",
+      key: "whenCondition",
+      render: (val: string) => val || "-",
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 150,
       render: (_: unknown, record: Handler) => (
         <Space size="small">
@@ -289,7 +280,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button icon={<EyeOutlined />} onClick={handlePreviewAll}>
           预览全部 YAML
         </Button>
@@ -311,14 +302,15 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
           expandedRowRender: (record) => {
             const tasks = notifyingTasksMap[record.id];
             if (!tasks) return <span>加载中...</span>;
-            if (tasks.length === 0) return <span style={{ color: '#999' }}>没有 Task 通知此 Handler</span>;
+            if (tasks.length === 0)
+              return <span style={{ color: "#999" }}>没有 Task 通知此 Handler</span>;
             return (
               <Table
                 dataSource={tasks}
                 columns={[
-                  { title: '名称', dataIndex: 'name', key: 'name' },
-                  { title: '模块', dataIndex: 'module', key: 'module', width: 120 },
-                  { title: '顺序', dataIndex: 'taskOrder', key: 'taskOrder', width: 70 },
+                  { title: "名称", dataIndex: "name", key: "name" },
+                  { title: "模块", dataIndex: "module", key: "module", width: 120 },
+                  { title: "顺序", dataIndex: "taskOrder", key: "taskOrder", width: 70 },
                 ]}
                 rowKey="id"
                 pagination={false}
@@ -329,29 +321,31 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         }}
       />
       <Modal
-        title={editingHandler ? '编辑 Handler' : '创建 Handler'}
+        title={editingHandler ? "编辑 Handler" : "创建 Handler"}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         width={800}
         destroyOnClose
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
               预览 YAML
             </Button>
             <Space>
               <Button onClick={() => setModalOpen(false)}>取消</Button>
-              <Button type="primary" onClick={handleSubmit}>确定</Button>
+              <Button type="primary" onClick={handleSubmit} loading={saving}>
+                确定
+              </Button>
             </Space>
           </div>
         }
       >
         <Form form={form} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Form.Item
               name="name"
               label="名称"
-              rules={[{ required: true, message: '请输入 Handler 名称' }]}
+              rules={[{ required: true, message: "请输入 Handler 名称" }]}
             >
               <Input placeholder="例如: Restart nginx" />
             </Form.Item>
@@ -359,7 +353,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
           <Form.Item
             name="module"
             label="模块"
-            rules={[{ required: true, message: '请选择 Ansible 模块' }]}
+            rules={[{ required: true, message: "请选择 Ansible 模块" }]}
           >
             <ModuleSelect
               onChange={(val) => {
@@ -368,7 +362,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
               }}
             />
           </Form.Item>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <ModuleParamsGrid moduleName={selectedModule} />
           </div>
           <ExtraParamsInput />
@@ -378,18 +372,18 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
             expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
             items={[
               {
-                key: 'advanced',
+                key: "advanced",
                 forceRender: true,
-                label: '高级选项',
+                label: "高级选项",
                 children: (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
                     <Form.Item
                       name="whenCondition"
                       label={
                         <span>
                           When 条件
                           <Tooltip title="Handler 执行的前置条件表达式">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                           </Tooltip>
                         </span>
                       }
@@ -402,7 +396,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
                         <span>
                           Register
                           <Tooltip title="将 Handler 输出保存到变量中，供其他任务使用">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                           </Tooltip>
                         </span>
                       }
@@ -415,7 +409,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
                         <span>
                           提权 (become)
                           <Tooltip title="是否使用提权（sudo）执行此 Handler">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                           </Tooltip>
                         </span>
                       }
@@ -429,7 +423,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
                         <span>
                           提权用户 (become_user)
                           <Tooltip title="提权后切换到的用户，默认 root">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                           </Tooltip>
                         </span>
                       }
@@ -442,7 +436,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
                         <span>
                           忽略错误 (ignore_errors)
                           <Tooltip title="任务失败时是否继续执行后续任务">
-                            <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                            <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                           </Tooltip>
                         </span>
                       }
@@ -471,12 +465,12 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
       >
         <pre
           style={{
-            background: '#f5f5f5',
+            background: "#f5f5f5",
             padding: 16,
             borderRadius: 6,
             fontSize: 13,
             lineHeight: 1.6,
-            overflow: 'auto',
+            overflow: "auto",
             maxHeight: 400,
           }}
         >

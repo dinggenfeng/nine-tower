@@ -1,4 +1,4 @@
-import request from './request';
+import request from "./request";
 import type {
   HostGroup,
   Host,
@@ -6,24 +6,19 @@ import type {
   UpdateHostGroupRequest,
   CreateHostRequest,
   UpdateHostRequest,
-} from '../types/entity/Host';
+} from "../types/entity/Host";
 
 // HostGroup APIs
 export async function createHostGroup(
   projectId: number,
   data: CreateHostGroupRequest
 ): Promise<HostGroup> {
-  const res = await request.post<HostGroup>(
-    `/projects/${projectId}/host-groups`,
-    data
-  );
+  const res = await request.post<HostGroup>(`/projects/${projectId}/host-groups`, data);
   return res.data;
 }
 
 export async function getHostGroups(projectId: number): Promise<HostGroup[]> {
-  const res = await request.get<HostGroup[]>(
-    `/projects/${projectId}/host-groups`
-  );
+  const res = await request.get<HostGroup[]>(`/projects/${projectId}/host-groups`);
   return res.data;
 }
 
@@ -45,21 +40,13 @@ export async function deleteHostGroup(id: number): Promise<void> {
 }
 
 // Host APIs
-export async function createHost(
-  hostGroupId: number,
-  data: CreateHostRequest
-): Promise<Host> {
-  const res = await request.post<Host>(
-    `/host-groups/${hostGroupId}/hosts`,
-    data
-  );
+export async function createHost(hostGroupId: number, data: CreateHostRequest): Promise<Host> {
+  const res = await request.post<Host>(`/host-groups/${hostGroupId}/hosts`, data);
   return res.data;
 }
 
 export async function getHosts(hostGroupId: number): Promise<Host[]> {
-  const res = await request.get<Host[]>(
-    `/host-groups/${hostGroupId}/hosts`
-  );
+  const res = await request.get<Host[]>(`/host-groups/${hostGroupId}/hosts`);
   return res.data;
 }
 
@@ -68,10 +55,7 @@ export async function getHost(id: number): Promise<Host> {
   return res.data;
 }
 
-export async function updateHost(
-  id: number,
-  data: UpdateHostRequest
-): Promise<Host> {
+export async function updateHost(id: number, data: UpdateHostRequest): Promise<Host> {
   const res = await request.put<Host>(`/hosts/${id}`, data);
   return res.data;
 }

@@ -1,4 +1,4 @@
-import request from './request';
+import request from "./request";
 import type {
   RoleVariable,
   CreateRoleVariableRequest,
@@ -6,7 +6,7 @@ import type {
   RoleDefaultVariable,
   CreateRoleDefaultVariableRequest,
   UpdateRoleDefaultVariableRequest,
-} from '../types/entity/RoleVariable';
+} from "../types/entity/RoleVariable";
 
 // Role Variable APIs
 export async function createRoleVariable(
@@ -39,10 +39,7 @@ export async function createRoleDefault(
   roleId: number,
   data: CreateRoleDefaultVariableRequest
 ): Promise<RoleDefaultVariable> {
-  const res = await request.post<RoleDefaultVariable>(
-    `/roles/${roleId}/defaults`,
-    data
-  );
+  const res = await request.post<RoleDefaultVariable>(`/roles/${roleId}/defaults`, data);
   return res.data;
 }
 

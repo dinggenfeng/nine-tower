@@ -4,6 +4,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import javax.crypto.SecretKey;
@@ -19,8 +20,16 @@ public class JwtTokenProvider {
   @Value("${app.jwt.expiration-ms}")
   private long jwtExpirationMs;
 
-  private SecretKey key() {
-    return Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
+  private final AuditLogService auditLogService;
+  private SecretKey signingKey;
+
+  public JwtTokenProvider(AuditLogService auditLogService) {
+    this.auditLogService = auditLogService;
+  }
+
+  @PostConstruct
+  void init() {
+    this.signingKey = Keys.hmacShaKeyFor(jwtSecret.getBytes(StandardCharsets.UTF_8));
   }
 
   public String generateToken(Long userId) {
@@ -30,21 +39,22 @@ public class JwtTokenProvider {
         .subject(String.valueOf(userId))
         .issuedAt(now)
         .expiration(expiry)
-        .signWith(key())
+        .signWith(signingKey)
         .compact();
   }
 
   public Long getUserIdFromToken(String token) {
     Claims claims =
-        Jwts.parser().verifyWith(key()).build().parseSignedClaims(token).getPayload();
+        Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token).getPayload();
     return Long.valueOf(claims.getSubject());
   }
 
   public boolean validateToken(String token) {
     try {
-      Jwts.parser().verifyWith(key()).build().parseSignedClaims(token);
+      Jwts.parser().verifyWith(signingKey).build().parseSignedClaims(token);
       return true;
     } catch (JwtException | IllegalArgumentException e) {
+      auditLogService.logTokenValidationFailure(e.getMessage());
       return false;
     }
   }

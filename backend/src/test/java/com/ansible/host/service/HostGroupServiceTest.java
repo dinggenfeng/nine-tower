@@ -11,6 +11,7 @@ import com.ansible.host.dto.HostGroupResponse;
 import com.ansible.host.dto.UpdateHostGroupRequest;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +29,7 @@ class HostGroupServiceTest {
 
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
   @InjectMocks private HostGroupService hostGroupService;
 
   private HostGroup testHostGroup;
@@ -120,6 +122,7 @@ class HostGroupServiceTest {
     hostGroupService.deleteHostGroup(1L, 10L);
 
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
+    verify(cleanupService).cleanupHostGroupResources(1L);
     verify(hostGroupRepository).delete(testHostGroup);
   }
 }

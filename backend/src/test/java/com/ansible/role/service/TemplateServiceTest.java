@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.project.entity.ProjectMember;
 import com.ansible.role.dto.CreateTemplateRequest;
 import com.ansible.role.dto.TemplateResponse;
 import com.ansible.role.dto.UpdateTemplateRequest;
@@ -274,6 +275,8 @@ class TemplateServiceTest {
   @Test
   void getTemplateName_success() {
     when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+    when(roleRepository.findById(testTemplate.getRoleId())).thenReturn(Optional.of(testRole));
+    when(accessChecker.checkMembership(testRole.getProjectId(), 10L)).thenReturn(new ProjectMember());
 
     String name = templateService.getTemplateName(1L, 10L);
 
@@ -287,5 +290,16 @@ class TemplateServiceTest {
     assertThatThrownBy(() -> templateService.getTemplateName(99L, 10L))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Template not found");
+  }
+
+  @Test
+  void getTemplateName_withoutMembership_throwsSecurityException() {
+    when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+    when(roleRepository.findById(testTemplate.getRoleId())).thenReturn(Optional.of(testRole));
+    when(accessChecker.checkMembership(testRole.getProjectId(), 2L))
+        .thenThrow(new SecurityException("Not a member of this project"));
+
+    assertThatThrownBy(() -> templateService.getTemplateName(1L, 2L))
+        .isInstanceOf(SecurityException.class);
   }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Button,
   Table,
@@ -14,47 +14,35 @@ import {
   Tree,
   Card,
   Typography,
-} from 'antd';
+} from "antd";
 import {
   PlusOutlined,
   TableOutlined,
   ApartmentOutlined,
   CheckCircleOutlined,
   WarningOutlined,
-} from '@ant-design/icons';
-import { useParams } from 'react-router-dom';
-import type {
-  Variable,
-  VariableScope,
-  CreateVariableRequest,
-} from '../../types/entity/Variable';
-import type { ReactNode } from 'react';
-import {
-  listVariables,
-  createVariable,
-  updateVariable,
-  deleteVariable,
-} from '../../api/variable';
-import { listEnvironments } from '../../api/environment';
-import { getHostGroups } from '../../api/host';
-import { getRoles } from '../../api/role';
-import { getRoleVariables, getRoleDefaults } from '../../api/roleVariable';
-import type { Environment } from '../../types/entity/Environment';
-import type { HostGroup } from '../../types/entity/Host';
-import type { Role } from '../../types/entity/Role';
-import type { RoleVariable, RoleDefaultVariable } from '../../types/entity/RoleVariable';
-import {
-  resolveVariablePriority,
-  type VariableScopeKind,
-} from '../../utils/variablePriority';
+} from "@ant-design/icons";
+import { useParams } from "react-router-dom";
+import type { Variable, VariableScope, CreateVariableRequest } from "../../types/entity/Variable";
+import type { ReactNode } from "react";
+import { listVariables, createVariable, updateVariable, deleteVariable } from "../../api/variable";
+import { listEnvironments } from "../../api/environment";
+import { getHostGroups } from "../../api/host";
+import { getRoles } from "../../api/role";
+import { getRoleVariables, getRoleDefaults } from "../../api/roleVariable";
+import type { Environment } from "../../types/entity/Environment";
+import type { HostGroup } from "../../types/entity/Host";
+import type { Role } from "../../types/entity/Role";
+import type { RoleVariable, RoleDefaultVariable } from "../../types/entity/RoleVariable";
+import { resolveVariablePriority, type VariableScopeKind } from "../../utils/variablePriority";
 
 const scopeLabels: Record<VariableScope, string> = {
-  PROJECT: '项目级',
-  HOSTGROUP: '主机组级',
-  ENVIRONMENT: '环境级',
+  PROJECT: "项目级",
+  HOSTGROUP: "主机组级",
+  ENVIRONMENT: "环境级",
 };
 
-type ViewMode = 'table' | 'tree';
+type ViewMode = "table" | "tree";
 
 interface TreeVariableNode {
   key: string;
@@ -69,16 +57,17 @@ export default function VariableManager() {
 
   const [variables, setVariables] = useState<Variable[]>([]);
   const [loading, setLoading] = useState(false);
-  const [scope, setScope] = useState<VariableScope>('PROJECT');
+  const [scope, setScope] = useState<VariableScope>("PROJECT");
   const [scopeId, setScopeId] = useState<number | undefined>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<Variable | null>(null);
+  const [saving, setSaving] = useState(false);
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [form] = Form.useForm();
 
   // Tree view state
-  const [viewMode, setViewMode] = useState<ViewMode>('table');
+  const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [treeData, setTreeData] = useState<TreeVariableNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
 
@@ -93,7 +82,7 @@ export default function VariableManager() {
     setLoading(true);
     try {
       // For PROJECT scope, pass pid as scopeId to filter by project
-      const data = await listVariables(pid, scope, scope === 'PROJECT' ? pid : scopeId);
+      const data = await listVariables(pid, scope, scope === "PROJECT" ? pid : scopeId);
       setVariables(data);
     } finally {
       setLoading(false);
@@ -101,7 +90,7 @@ export default function VariableManager() {
   }, [pid, scope, scopeId]);
 
   useEffect(() => {
-    if (viewMode === 'table') {
+    if (viewMode === "table") {
       fetchVariables();
     }
   }, [fetchVariables, viewMode]);
@@ -112,9 +101,9 @@ export default function VariableManager() {
     setTreeLoading(true);
     try {
       const [projectVars, hostgroupVars, envVars, roles] = await Promise.all([
-        listVariables(pid, 'PROJECT').catch(() => [] as Variable[]),
-        listVariables(pid, 'HOSTGROUP').catch(() => [] as Variable[]),
-        listVariables(pid, 'ENVIRONMENT').catch(() => [] as Variable[]),
+        listVariables(pid, "PROJECT").catch(() => [] as Variable[]),
+        listVariables(pid, "HOSTGROUP").catch(() => [] as Variable[]),
+        listVariables(pid, "ENVIRONMENT").catch(() => [] as Variable[]),
         getRoles(pid).catch(() => [] as Role[]),
       ]);
 
@@ -122,12 +111,12 @@ export default function VariableManager() {
       const roleVarPromises = roles.map((role) =>
         getRoleVariables(role.id)
           .then((vars) => ({ roleId: role.id, vars }))
-          .catch(() => ({ roleId: role.id, vars: [] as RoleVariable[] })),
+          .catch(() => ({ roleId: role.id, vars: [] as RoleVariable[] }))
       );
       const roleDefaultPromises = roles.map((role) =>
         getRoleDefaults(role.id)
           .then((defaults) => ({ roleId: role.id, defaults }))
-          .catch(() => ({ roleId: role.id, defaults: [] as RoleDefaultVariable[] })),
+          .catch(() => ({ roleId: role.id, defaults: [] as RoleDefaultVariable[] }))
       );
 
       const [roleVarResults, roleDefaultResults] = await Promise.all([
@@ -150,24 +139,24 @@ export default function VariableManager() {
       });
 
       const scopeNameMap: Record<VariableScopeKind, string> = {
-        ENVIRONMENT: '环境级',
-        HOSTGROUP: '主机组级',
-        PROJECT: '项目级',
-        ROLE_VARS: 'Role 级',
-        ROLE_DEFAULTS: 'Role 默认',
+        ENVIRONMENT: "环境级",
+        HOSTGROUP: "主机组级",
+        PROJECT: "项目级",
+        ROLE_VARS: "Role 级",
+        ROLE_DEFAULTS: "Role 默认",
       };
 
       const buildTitle = (
         key: string,
         value: string,
-        currentScope: VariableScopeKind,
+        currentScope: VariableScopeKind
       ): React.ReactNode => {
         if (!duplicateKeys.has(key)) return `${key} = ${value}`;
         const winner = winningScope.get(key);
         if (winner === currentScope) {
           return (
             <span>
-              {key} = {value}{' '}
+              {key} = {value}{" "}
               <Typography.Text type="success" style={{ fontSize: 12 }}>
                 <CheckCircleOutlined /> 生效中
               </Typography.Text>
@@ -176,7 +165,7 @@ export default function VariableManager() {
         }
         return (
           <span>
-            {key} = {value}{' '}
+            {key} = {value}{" "}
             <Typography.Text type="warning" style={{ fontSize: 12 }}>
               <WarningOutlined /> 被{scopeNameMap[winner!]}覆盖
             </Typography.Text>
@@ -215,17 +204,17 @@ export default function VariableManager() {
           title: `${envName}/ (${vars.length})`,
           children: vars.map((v) => ({
             key: `env-var-${v.id}`,
-            title: buildTitle(v.key, v.value, 'ENVIRONMENT'),
+            title: buildTitle(v.key, v.value, "ENVIRONMENT"),
           })),
         });
       });
       nodes.push({
-        key: 'scope-ENVIRONMENT',
+        key: "scope-ENVIRONMENT",
         title: `环境级变量 (${envVars.length})`,
         children:
           envChildren.length > 0
             ? envChildren
-            : [{ key: 'env-empty', title: '(无)', selectable: false }],
+            : [{ key: "env-empty", title: "(无)", selectable: false }],
       });
 
       // HostGroup scope
@@ -237,31 +226,31 @@ export default function VariableManager() {
           title: `${hgName}/ (${vars.length})`,
           children: vars.map((v) => ({
             key: `hg-var-${v.id}`,
-            title: buildTitle(v.key, v.value, 'HOSTGROUP'),
+            title: buildTitle(v.key, v.value, "HOSTGROUP"),
           })),
         });
       });
       nodes.push({
-        key: 'scope-HOSTGROUP',
+        key: "scope-HOSTGROUP",
         title: `主机组级变量 (${hostgroupVars.length})`,
         children:
           hgChildren.length > 0
             ? hgChildren
-            : [{ key: 'hg-empty', title: '(无)', selectable: false }],
+            : [{ key: "hg-empty", title: "(无)", selectable: false }],
       });
 
       // Project scope
       const projectChildren: TreeVariableNode[] = projectVars.map((v) => ({
         key: `project-var-${v.id}`,
-        title: buildTitle(v.key, v.value, 'PROJECT'),
+        title: buildTitle(v.key, v.value, "PROJECT"),
       }));
       nodes.push({
-        key: 'scope-PROJECT',
+        key: "scope-PROJECT",
         title: `项目级变量 (${projectVars.length})`,
         children:
           projectChildren.length > 0
             ? projectChildren
-            : [{ key: 'project-empty', title: '(无)', selectable: false }],
+            : [{ key: "project-empty", title: "(无)", selectable: false }],
       });
 
       // Role vars
@@ -274,22 +263,19 @@ export default function VariableManager() {
             title: `${role.name}/ (${vars.length})`,
             children: vars.map((v) => ({
               key: `role-var-${v.id}`,
-              title: buildTitle(v.key, v.value, 'ROLE_VARS'),
+              title: buildTitle(v.key, v.value, "ROLE_VARS"),
             })),
           });
         }
       });
-      const totalRoleVars = roleVarResults.reduce(
-        (sum, r) => sum + r.vars.length,
-        0,
-      );
+      const totalRoleVars = roleVarResults.reduce((sum, r) => sum + r.vars.length, 0);
       nodes.push({
-        key: 'scope-ROLE_VARS',
+        key: "scope-ROLE_VARS",
         title: `Role 级变量 (${totalRoleVars})`,
         children:
           roleVarsChildren.length > 0
             ? roleVarsChildren
-            : [{ key: 'role-vars-empty', title: '(无)', selectable: false }],
+            : [{ key: "role-vars-empty", title: "(无)", selectable: false }],
       });
 
       // Role defaults
@@ -302,25 +288,22 @@ export default function VariableManager() {
             title: `${role.name}/ (${defaults.length})`,
             children: defaults.map((d) => ({
               key: `role-default-${d.id}`,
-              title: buildTitle(d.key, d.value, 'ROLE_DEFAULTS'),
+              title: buildTitle(d.key, d.value, "ROLE_DEFAULTS"),
             })),
           });
         }
       });
-      const totalRoleDefaults = roleDefaultResults.reduce(
-        (sum, r) => sum + r.defaults.length,
-        0,
-      );
+      const totalRoleDefaults = roleDefaultResults.reduce((sum, r) => sum + r.defaults.length, 0);
       nodes.push({
-        key: 'scope-ROLE_DEFAULTS',
+        key: "scope-ROLE_DEFAULTS",
         title: `Role 默认变量 (${totalRoleDefaults})`,
         children:
           roleDefaultsChildren.length > 0
             ? roleDefaultsChildren
             : [
                 {
-                  key: 'role-defaults-empty',
-                  title: '(无)',
+                  key: "role-defaults-empty",
+                  title: "(无)",
                   selectable: false,
                 },
               ],
@@ -333,7 +316,7 @@ export default function VariableManager() {
   }, [pid, hostGroups, environments]);
 
   useEffect(() => {
-    if (viewMode === 'tree') {
+    if (viewMode === "tree") {
       fetchTreeData();
     }
   }, [viewMode, fetchTreeData]);
@@ -357,35 +340,40 @@ export default function VariableManager() {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingVar) {
-      await updateVariable(editingVar.id, {
-        key: values.key,
-        value: values.value,
-      });
-      message.success('更新成功');
-    } else {
-      const data: CreateVariableRequest = {
-        scope: values.scope,
-        scopeId: values.scopeId ?? pid,
-        key: values.key,
-        value: values.value,
-      };
-      await createVariable(pid, data);
-      message.success('创建成功');
-    }
-    setModalOpen(false);
-    if (viewMode === 'table') {
-      fetchVariables();
-    } else {
-      fetchTreeData();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingVar) {
+        await updateVariable(editingVar.id, {
+          key: values.key,
+          value: values.value,
+        });
+        message.success("更新成功");
+      } else {
+        const data: CreateVariableRequest = {
+          scope: values.scope,
+          scopeId: values.scopeId ?? pid,
+          key: values.key,
+          value: values.value,
+        };
+        await createVariable(pid, data);
+        message.success("创建成功");
+      }
+      setModalOpen(false);
+      if (viewMode === "table") {
+        fetchVariables();
+      } else {
+        fetchTreeData();
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
   const handleDelete = async (varId: number) => {
     await deleteVariable(varId);
-    message.success('删除成功');
-    if (viewMode === 'table') {
+    message.success("删除成功");
+    if (viewMode === "table") {
       fetchVariables();
     } else {
       fetchTreeData();
@@ -393,32 +381,23 @@ export default function VariableManager() {
   };
 
   const scopeOptions = (): { label: string; value: number }[] => {
-    if (scope === 'HOSTGROUP')
-      return hostGroups.map((h) => ({ label: h.name, value: h.id }));
-    if (scope === 'ENVIRONMENT')
-      return environments.map((e) => ({ label: e.name, value: e.id }));
+    if (scope === "HOSTGROUP") return hostGroups.map((h) => ({ label: h.name, value: h.id }));
+    if (scope === "ENVIRONMENT") return environments.map((e) => ({ label: e.name, value: e.id }));
     return [];
   };
 
   const columns = [
-    { title: 'Key', dataIndex: 'key', key: 'key' },
-    { title: 'Value', dataIndex: 'value', key: 'value' },
+    { title: "Key", dataIndex: "key", key: "key" },
+    { title: "Value", dataIndex: "value", key: "value" },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: Variable) => (
         <Space>
-          <Button
-            type="link"
-            size="small"
-            onClick={() => handleEdit(record)}
-          >
+          <Button type="link" size="small" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm
-            title="确定删除？"
-            onConfirm={() => handleDelete(record.id)}
-          >
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger>
               删除
             </Button>
@@ -428,57 +407,36 @@ export default function VariableManager() {
     },
   ];
 
-  const defaultExpandedKeys = useMemo(
-    () => treeData.map((n) => n.key),
-    [treeData],
-  );
+  const defaultExpandedKeys = useMemo(() => treeData.map((n) => n.key), [treeData]);
 
   return (
     <div>
       {/* Variable Priority Info Card */}
-      <Card
-        size="small"
-        style={{ marginBottom: 16 }}
-        title="变量优先级说明"
-      >
-        <Typography.Text type="secondary">
-          变量优先级（从高到低）：
-        </Typography.Text>
-        <ol style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+      <Card size="small" style={{ marginBottom: 16 }} title="变量优先级说明">
+        <Typography.Text type="secondary">变量优先级（从高到低）：</Typography.Text>
+        <ol style={{ margin: "4px 0 0", paddingLeft: 20 }}>
           <li>
             <Typography.Text strong>环境级变量</Typography.Text>
             <Typography.Text type="secondary">
-              {' '}
+              {" "}
               — 最高优先级，适用于特定环境（如 production）
             </Typography.Text>
           </li>
           <li>
             <Typography.Text strong>主机组级变量</Typography.Text>
-            <Typography.Text type="secondary">
-              {' '}
-              — 适用于特定主机组
-            </Typography.Text>
+            <Typography.Text type="secondary"> — 适用于特定主机组</Typography.Text>
           </li>
           <li>
             <Typography.Text strong>项目级变量</Typography.Text>
-            <Typography.Text type="secondary">
-              {' '}
-              — 适用于整个项目的全局变量
-            </Typography.Text>
+            <Typography.Text type="secondary"> — 适用于整个项目的全局变量</Typography.Text>
           </li>
           <li>
             <Typography.Text strong>Role 级变量（vars/）</Typography.Text>
-            <Typography.Text type="secondary">
-              {' '}
-              — Role 内部变量
-            </Typography.Text>
+            <Typography.Text type="secondary"> — Role 内部变量</Typography.Text>
           </li>
           <li>
             <Typography.Text strong>Role 默认变量（defaults/）</Typography.Text>
-            <Typography.Text type="secondary">
-              {' '}
-              — 最低优先级
-            </Typography.Text>
+            <Typography.Text type="secondary"> — 最低优先级</Typography.Text>
           </li>
         </ol>
       </Card>
@@ -487,9 +445,9 @@ export default function VariableManager() {
       <div
         style={{
           marginBottom: 16,
-          display: 'flex',
+          display: "flex",
           gap: 12,
-          alignItems: 'center',
+          alignItems: "center",
         }}
       >
         <Segmented
@@ -497,18 +455,18 @@ export default function VariableManager() {
           onChange={(val) => setViewMode(val as ViewMode)}
           options={[
             {
-              label: '表格视图',
-              value: 'table',
+              label: "表格视图",
+              value: "table",
               icon: <TableOutlined />,
             },
             {
-              label: '树形视图',
-              value: 'tree',
+              label: "树形视图",
+              value: "tree",
               icon: <ApartmentOutlined />,
             },
           ]}
         />
-        {viewMode === 'table' && (
+        {viewMode === "table" && (
           <>
             <Select
               value={scope}
@@ -519,7 +477,7 @@ export default function VariableManager() {
                 value: k,
               }))}
             />
-            {scope !== 'PROJECT' && (
+            {scope !== "PROJECT" && (
               <Select
                 value={scopeId}
                 onChange={setScopeId}
@@ -536,22 +494,17 @@ export default function VariableManager() {
       </div>
 
       {/* Table View */}
-      {viewMode === 'table' && (
+      {viewMode === "table" && (
         <>
           {variables.length === 0 && !loading && (
             <Empty description="暂无变量" style={{ marginTop: 40 }} />
           )}
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={variables}
-            loading={loading}
-          />
+          <Table rowKey="id" columns={columns} dataSource={variables} loading={loading} />
         </>
       )}
 
       {/* Tree View */}
-      {viewMode === 'tree' && (
+      {viewMode === "tree" && (
         <>
           {treeData.length === 0 && !treeLoading && (
             <Empty description="暂无变量" style={{ marginTop: 40 }} />
@@ -566,10 +519,11 @@ export default function VariableManager() {
       )}
 
       <Modal
-        title={editingVar ? '编辑变量' : '新建变量'}
+        title={editingVar ? "编辑变量" : "新建变量"}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           {!editingVar && (
@@ -577,7 +531,7 @@ export default function VariableManager() {
               <Form.Item
                 name="scope"
                 label="作用域"
-                rules={[{ required: true, message: '请选择作用域' }]}
+                rules={[{ required: true, message: "请选择作用域" }]}
               >
                 <Select
                   options={Object.entries(scopeLabels).map(([k, v]) => ({
@@ -586,22 +540,18 @@ export default function VariableManager() {
                   }))}
                 />
               </Form.Item>
-              {form.getFieldValue('scope') !== 'PROJECT' && (
+              {form.getFieldValue("scope") !== "PROJECT" && (
                 <Form.Item
                   name="scopeId"
                   label="关联对象"
-                  rules={[{ required: true, message: '请选择关联对象' }]}
+                  rules={[{ required: true, message: "请选择关联对象" }]}
                 >
                   <Select options={scopeOptions()} />
                 </Form.Item>
               )}
             </>
           )}
-          <Form.Item
-            name="key"
-            label="Key"
-            rules={[{ required: true, message: '请输入变量名' }]}
-          >
+          <Form.Item name="key" label="Key" rules={[{ required: true, message: "请输入变量名" }]}>
             <Input maxLength={100} placeholder="变量名，如 APP_PORT" />
           </Form.Item>
           <Form.Item name="value" label="Value">

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.dto.CreateTagRequest;
 import com.ansible.tag.dto.TagResponse;
@@ -26,6 +27,7 @@ class TagServiceTest {
 
   @Mock private TagRepository tagRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
 
   @InjectMocks private TagService tagService;
 
@@ -103,6 +105,7 @@ class TagServiceTest {
 
     tagService.deleteTag(1L, 100L);
 
+    verify(cleanupService).cleanupTagResources(1L);
     verify(tagRepository).delete(tag);
   }
 

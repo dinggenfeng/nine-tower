@@ -5,6 +5,7 @@ import com.ansible.role.dto.RoleResponse;
 import com.ansible.role.dto.UpdateRoleRequest;
 import com.ansible.role.entity.Role;
 import com.ansible.role.repository.RoleRepository;
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class RoleService {
 
   private final RoleRepository roleRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
   @Transactional
   public RoleResponse createRole(Long projectId, CreateRoleRequest request, Long currentUserId) {
@@ -73,6 +75,7 @@ public class RoleService {
             .findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), role.getCreatedBy(), currentUserId);
+    cleanupService.cleanupRoleResources(roleId);
     roleRepository.delete(role);
   }
 }

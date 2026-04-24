@@ -1,18 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
-import {
-  Button,
-  Table,
-  Modal,
-  Form,
-  Input,
-  message,
-  Popconfirm,
-  Space,
-} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import { useParams } from 'react-router-dom';
-import type { Tag } from '../../types/entity/Tag';
-import { listTags, createTag, updateTag, deleteTag } from '../../api/tag';
+import { useEffect, useState, useCallback } from "react";
+import { Button, Table, Modal, Form, Input, message, Popconfirm, Space } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useParams } from "react-router-dom";
+import type { Tag } from "../../types/entity/Tag";
+import { listTags, createTag, updateTag, deleteTag } from "../../api/tag";
 
 export default function TagManager() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -22,6 +13,7 @@ export default function TagManager() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<{ name: string }>();
 
   const fetchTags = useCallback(async () => {
@@ -53,37 +45,39 @@ export default function TagManager() {
 
   const handleDelete = async (tagId: number) => {
     await deleteTag(tagId);
-    message.success('删除成功');
+    message.success("删除成功");
     fetchTags();
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingTag) {
-      await updateTag(editingTag.id, values);
-      message.success('更新成功');
-    } else {
-      await createTag(pid, values);
-      message.success('创建成功');
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingTag) {
+        await updateTag(editingTag.id, values);
+        message.success("更新成功");
+      } else {
+        await createTag(pid, values);
+        message.success("创建成功");
+      }
+      setModalOpen(false);
+      fetchTags();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchTags();
   };
 
   const columns = [
-    { title: '标签名称', dataIndex: 'name', key: 'name' },
+    { title: "标签名称", dataIndex: "name", key: "name" },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       render: (_: unknown, record: Tag) => (
         <Space>
           <Button type="link" size="small" onClick={() => handleEdit(record)}>
             编辑
           </Button>
-          <Popconfirm
-            title="确定删除？"
-            onConfirm={() => handleDelete(record.id)}
-          >
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(record.id)}>
             <Button type="link" size="small" danger>
               删除
             </Button>
@@ -100,23 +94,19 @@ export default function TagManager() {
           新建标签
         </Button>
       </div>
-      <Table
-        rowKey="id"
-        columns={columns}
-        dataSource={tags}
-        loading={loading}
-      />
+      <Table rowKey="id" columns={columns} dataSource={tags} loading={loading} />
       <Modal
-        title={editingTag ? '编辑标签' : '新建标签'}
+        title={editingTag ? "编辑标签" : "新建标签"}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
             label="标签名称"
-            rules={[{ required: true, message: '请输入标签名称' }]}
+            rules={[{ required: true, message: "请输入标签名称" }]}
           >
             <Input maxLength={100} placeholder="例如: web, db, production" />
           </Form.Item>

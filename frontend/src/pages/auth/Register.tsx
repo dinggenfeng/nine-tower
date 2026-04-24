@@ -1,9 +1,9 @@
-import { LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons';
-import { Button, Form, Input, message } from 'antd';
-import { Link, useNavigate } from 'react-router-dom';
-import { authApi, RegisterPayload } from '../../api/auth';
-import { useAuthStore } from '../../stores/authStore';
-import styles from './Login.module.css';
+import { LockOutlined, MailOutlined, UserOutlined } from "@ant-design/icons";
+import { Button, Form, Input, message } from "antd";
+import { Link, useNavigate } from "react-router-dom";
+import { authApi, RegisterPayload } from "../../api/auth";
+import { useAuthStore } from "../../stores/authStore";
+import styles from "./Login.module.css";
 
 export default function Register() {
   const navigate = useNavigate();
@@ -12,13 +12,13 @@ export default function Register() {
 
   const onFinish = async (values: RegisterPayload) => {
     try {
-      const res = await authApi.register(values);
-      login(res.data.token, res.data.user);
-      message.success('注册成功');
-      navigate('/projects');
+      const { token, user } = await authApi.register(values);
+      login(token, user);
+      message.success("注册成功");
+      navigate("/projects");
     } catch (err: unknown) {
       const error = err as { message?: string };
-      message.error(error?.message ?? '注册失败');
+      message.error(error?.message ?? "注册失败");
     }
   };
 
@@ -28,9 +28,7 @@ export default function Register() {
         <div className={styles.brandContent}>
           <div className={styles.brandLabel}>Ansible</div>
           <div className={styles.brandTitle}>Playbook Studio</div>
-          <div className={styles.brandDescription}>
-            可视化开发和管理你的 Ansible Playbook
-          </div>
+          <div className={styles.brandDescription}>可视化开发和管理你的 Ansible Playbook</div>
           <div className={styles.brandTags}>
             <span className={styles.brandTag}>项目管理</span>
             <span className={styles.brandTag}>主机管理</span>
@@ -47,9 +45,9 @@ export default function Register() {
             <Form.Item
               name="username"
               rules={[
-                { required: true, message: '请输入用户名' },
-                { min: 3, message: '用户名至少3个字符' },
-                { max: 50, message: '用户名最多50个字符' },
+                { required: true, message: "请输入用户名" },
+                { min: 3, message: "用户名至少3个字符" },
+                { max: 50, message: "用户名最多50个字符" },
               ]}
             >
               <Input prefix={<UserOutlined />} placeholder="用户名" />
@@ -57,8 +55,8 @@ export default function Register() {
             <Form.Item
               name="email"
               rules={[
-                { required: true, message: '请输入邮箱' },
-                { type: 'email', message: '请输入有效的邮箱' },
+                { required: true, message: "请输入邮箱" },
+                { type: "email", message: "请输入有效的邮箱" },
               ]}
             >
               <Input prefix={<MailOutlined />} placeholder="邮箱" />
@@ -66,8 +64,8 @@ export default function Register() {
             <Form.Item
               name="password"
               rules={[
-                { required: true, message: '请输入密码' },
-                { min: 8, message: '密码至少8个字符' },
+                { required: true, message: "请输入密码" },
+                { min: 8, message: "密码至少8个字符" },
               ]}
             >
               <Input.Password prefix={<LockOutlined />} placeholder="密码" />

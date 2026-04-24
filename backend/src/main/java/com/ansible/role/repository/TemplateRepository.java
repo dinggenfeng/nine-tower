@@ -9,4 +9,6 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
   List<Template> findAllByRoleIdOrderByParentDirAscNameAsc(Long roleId);
 
   boolean existsByRoleIdAndParentDirAndName(Long roleId, String parentDir, String name);
+
+  void deleteByRoleId(Long roleId);
 }

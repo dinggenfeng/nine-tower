@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { Project } from '../types/entity/Project';
+import { create } from "zustand";
+import type { Project } from "../types/entity/Project";
 
 interface ProjectState {
   currentProject: Project | null;

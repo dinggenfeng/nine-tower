@@ -1,4 +1,4 @@
-import request from './request';
+import request from "./request";
 import type {
   Project,
   ProjectMember,
@@ -6,15 +6,15 @@ import type {
   UpdateProjectRequest,
   AddMemberRequest,
   UpdateMemberRoleRequest,
-} from '../types/entity/Project';
+} from "../types/entity/Project";
 
 export async function createProject(data: CreateProjectRequest): Promise<Project> {
-  const res = await request.post<Project>('/projects', data);
+  const res = await request.post<Project>("/projects", data);
   return res.data;
 }
 
 export async function getMyProjects(): Promise<Project[]> {
-  const res = await request.get<Project[]>('/projects');
+  const res = await request.get<Project[]>("/projects");
   return res.data;
 }
 
@@ -51,9 +51,6 @@ export async function updateMemberRole(
   userId: number,
   data: UpdateMemberRoleRequest
 ): Promise<ProjectMember> {
-  const res = await request.put<ProjectMember>(
-    `/projects/${projectId}/members/${userId}`,
-    data
-  );
+  const res = await request.put<ProjectMember>(`/projects/${projectId}/members/${userId}`, data);
   return res.data;
 }

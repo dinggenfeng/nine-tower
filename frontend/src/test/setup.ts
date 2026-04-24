@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom";
 
 // Ant Design components use window.matchMedia internally
-Object.defineProperty(window, 'matchMedia', {
+Object.defineProperty(window, "matchMedia", {
   writable: true,
   value: (query: string) => ({
     matches: false,

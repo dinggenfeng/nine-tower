@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import type { User } from '../types/entity/User';
-import { authApi } from '../api/auth';
+import { create } from "zustand";
+import type { User } from "../types/entity/User";
+import { authApi } from "../api/auth";
 
 interface AuthState {
   user: User | null;
@@ -15,17 +15,17 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  token: localStorage.getItem("token"),
+  isAuthenticated: !!localStorage.getItem("token"),
   loading: false,
 
   login: (token: string, user: User) => {
-    localStorage.setItem('token', token);
+    localStorage.setItem("token", token);
     set({ token, user, isAuthenticated: true });
   },
 
   logout: () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem("token");
     set({ token: null, user: null, isAuthenticated: false });
   },
 
@@ -34,13 +34,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!token || user) return;
     set({ loading: true });
     try {
-      const res = await authApi.me();
+      const user = await authApi.me();
       if (!get().user) {
-        set({ user: res.data, loading: false });
+        set({ user, loading: false });
       }
     } catch {
       if (!get().user) {
-        localStorage.removeItem('token');
+        localStorage.removeItem("token");
         set({ token: null, user: null, isAuthenticated: false, loading: false });
       }
     }

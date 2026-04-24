@@ -34,6 +34,7 @@ public class UserService {
   }
 
   @Transactional
+  @SuppressWarnings("PMD.CyclomaticComplexity")
   public UserResponse updateUser(Long userId, UpdateUserRequest request, Long currentUserId) {
     if (!userId.equals(currentUserId)) {
       throw new SecurityException("You can only modify your own account");

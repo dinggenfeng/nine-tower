@@ -1,31 +1,15 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
-import {
-  Table,
-  Button,
-  Modal,
-  Form,
-  Select,
-  message,
-  Popconfirm,
-} from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
-import { useParams } from 'react-router-dom';
-import type {
-  ProjectMember,
-  AddMemberRequest,
-} from '../../types/entity/Project';
-import {
-  getMembers,
-  addMember,
-  removeMember,
-  updateMemberRole,
-} from '../../api/project';
-import { userApi } from '../../api/user';
-import type { User } from '../../types/entity/User';
-import { useProjectStore } from '../../stores/projectStore';
-import { useAuthStore } from '../../stores/authStore';
-import { colors } from '../../theme';
-import PageHeader from '../../components/PageHeader';
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Table, Button, Modal, Form, Select, message, Popconfirm } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
+import { useParams } from "react-router-dom";
+import type { ProjectMember, AddMemberRequest } from "../../types/entity/Project";
+import { getMembers, addMember, removeMember, updateMemberRole } from "../../api/project";
+import { userApi } from "../../api/user";
+import type { User } from "../../types/entity/User";
+import { useProjectStore } from "../../stores/projectStore";
+import { useAuthStore } from "../../stores/authStore";
+import { colors } from "../../theme";
+import PageHeader from "../../components/PageHeader";
 
 export default function MemberManagement() {
   const { id } = useParams<{ id: string }>();
@@ -33,14 +17,15 @@ export default function MemberManagement() {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [form] = Form.useForm<AddMemberRequest>();
   const [userOptions, setUserOptions] = useState<User[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { currentProject } = useProjectStore();
-  const isAdmin = currentProject?.myRole === 'PROJECT_ADMIN';
+  const isAdmin = currentProject?.myRole === "PROJECT_ADMIN";
   const currentUser = useAuthStore((s) => s.user);
-  const adminCount = members.filter((m) => m.role === 'PROJECT_ADMIN').length;
+  const adminCount = members.filter((m) => m.role === "PROJECT_ADMIN").length;
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
@@ -56,21 +41,23 @@ export default function MemberManagement() {
   }, [fetchMembers]);
 
   const handleAdd = async () => {
+    setAdding(true);
     try {
       const values = await form.validateFields();
       await addMember(projectId, values);
-      message.success('成员添加成功');
+      message.success("成员添加成功");
       setAddModalOpen(false);
       form.resetFields();
       fetchMembers();
     } catch (error: unknown) {
-      if (error && typeof error === 'object' && 'errorFields' in error) return;
+      if (error && typeof error === "object" && "errorFields" in error) return;
       const msg =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ||
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (error as { message?: string })?.message ||
-        '添加失败';
+        "添加失败";
       message.error(msg);
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -83,8 +70,8 @@ export default function MemberManagement() {
     searchTimer.current = setTimeout(async () => {
       setUserSearchLoading(true);
       try {
-        const res = await userApi.searchUsers(keyword);
-        setUserOptions(res.data.content);
+        const result = await userApi.searchUsers(keyword);
+        setUserOptions(result.content);
       } finally {
         setUserSearchLoading(false);
       }
@@ -93,75 +80,60 @@ export default function MemberManagement() {
 
   const handleRemove = async (userId: number) => {
     const target = members.find((m) => m.userId === userId);
-    if (target?.role === 'PROJECT_ADMIN' && adminCount <= 1) {
-      message.warning('该成员是最后一个管理员，无法移除');
+    if (target?.role === "PROJECT_ADMIN" && adminCount <= 1) {
+      message.warning("该成员是最后一个管理员，无法移除");
       return;
     }
     try {
       await removeMember(projectId, userId);
-      message.success('成员已移除');
+      message.success("成员已移除");
       fetchMembers();
     } catch (error: unknown) {
       const msg =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ||
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (error as { message?: string })?.message ||
-        '移除失败';
+        "移除失败";
       message.error(msg);
     }
   };
 
-  const handleRoleChange = async (
-    userId: number,
-    role: 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
-  ) => {
+  const handleRoleChange = async (userId: number, role: "PROJECT_ADMIN" | "PROJECT_MEMBER") => {
     const target = members.find((m) => m.userId === userId);
-    if (
-      target?.role === 'PROJECT_ADMIN' &&
-      role !== 'PROJECT_ADMIN' &&
-      adminCount <= 1
-    ) {
-      message.warning('该成员是最后一个管理员，无法降级');
+    if (target?.role === "PROJECT_ADMIN" && role !== "PROJECT_ADMIN" && adminCount <= 1) {
+      message.warning("该成员是最后一个管理员，无法降级");
       return;
     }
     try {
       await updateMemberRole(projectId, userId, { role });
-      message.success('角色更新成功');
+      message.success("角色更新成功");
       fetchMembers();
     } catch (error: unknown) {
       const msg =
-        (error as { response?: { data?: { message?: string } } })?.response?.data
-          ?.message ||
+        (error as { response?: { data?: { message?: string } } })?.response?.data?.message ||
         (error as { message?: string })?.message ||
-        '角色更新失败';
+        "角色更新失败";
       message.error(msg);
     }
   };
 
   const columns = [
-    { title: '用户名', dataIndex: 'username', key: 'username' },
-    { title: '邮箱', dataIndex: 'email', key: 'email' },
+    { title: "用户名", dataIndex: "username", key: "username" },
+    { title: "邮箱", dataIndex: "email", key: "email" },
     {
-      title: '角色',
-      dataIndex: 'role',
-      key: 'role',
+      title: "角色",
+      dataIndex: "role",
+      key: "role",
       render: (role: string, record: ProjectMember) => {
         const isSelf = record.userId === currentUser?.id;
-        const roleLabel = role === 'PROJECT_ADMIN' ? '管理员' : '成员';
+        const roleLabel = role === "PROJECT_ADMIN" ? "管理员" : "成员";
         if (!isAdmin || isSelf) {
           return (
             <span
               style={{
-                background:
-                  role === 'PROJECT_ADMIN'
-                    ? colors.tagAdminBg
-                    : colors.tagMemberBg,
-                color:
-                  role === 'PROJECT_ADMIN'
-                    ? colors.tagAdminColor
-                    : colors.tagMemberColor,
+                background: role === "PROJECT_ADMIN" ? colors.tagAdminBg : colors.tagMemberBg,
+                color: role === "PROJECT_ADMIN" ? colors.tagAdminColor : colors.tagMemberColor,
                 fontSize: 12,
-                padding: '2px 8px',
+                padding: "2px 8px",
                 borderRadius: 4,
                 fontWeight: 500,
               }}
@@ -174,14 +146,11 @@ export default function MemberManagement() {
           <Select
             value={role}
             onChange={(value) =>
-              handleRoleChange(
-                record.userId,
-                value as 'PROJECT_ADMIN' | 'PROJECT_MEMBER',
-              )
+              handleRoleChange(record.userId, value as "PROJECT_ADMIN" | "PROJECT_MEMBER")
             }
             options={[
-              { value: 'PROJECT_ADMIN', label: '管理员' },
-              { value: 'PROJECT_MEMBER', label: '成员' },
+              { value: "PROJECT_ADMIN", label: "管理员" },
+              { value: "PROJECT_MEMBER", label: "成员" },
             ]}
             style={{ width: 120 }}
           />
@@ -189,23 +158,20 @@ export default function MemberManagement() {
       },
     },
     {
-      title: '加入时间',
-      dataIndex: 'joinedAt',
-      key: 'joinedAt',
+      title: "加入时间",
+      dataIndex: "joinedAt",
+      key: "joinedAt",
       render: (date: string) => new Date(date).toLocaleDateString(),
     },
     ...(isAdmin
       ? [
           {
-            title: '操作',
-            key: 'action',
+            title: "操作",
+            key: "action",
             render: (_: unknown, record: ProjectMember) => {
               if (record.userId === currentUser?.id) return null;
               return (
-                <Popconfirm
-                  title="确认移除此成员？"
-                  onConfirm={() => handleRemove(record.userId)}
-                >
+                <Popconfirm title="确认移除此成员？" onConfirm={() => handleRemove(record.userId)}>
                   <Button type="link" danger size="small">
                     移除
                   </Button>
@@ -224,11 +190,7 @@ export default function MemberManagement() {
         description="管理项目成员和权限"
         action={
           isAdmin ? (
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setAddModalOpen(true)}
-            >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setAddModalOpen(true)}>
               添加成员
             </Button>
           ) : undefined
@@ -251,12 +213,13 @@ export default function MemberManagement() {
           setAddModalOpen(false);
           form.resetFields();
         }}
+        confirmLoading={adding}
       >
         <Form form={form} layout="vertical">
           <Form.Item
             name="userId"
             label="选择用户"
-            rules={[{ required: true, message: '请选择用户' }]}
+            rules={[{ required: true, message: "请选择用户" }]}
           >
             <Select
               showSearch
@@ -273,15 +236,11 @@ export default function MemberManagement() {
               ))}
             </Select>
           </Form.Item>
-          <Form.Item
-            name="role"
-            label="角色"
-            rules={[{ required: true, message: '请选择角色' }]}
-          >
+          <Form.Item name="role" label="角色" rules={[{ required: true, message: "请选择角色" }]}>
             <Select
               options={[
-                { value: 'PROJECT_ADMIN', label: '管理员' },
-                { value: 'PROJECT_MEMBER', label: '成员' },
+                { value: "PROJECT_ADMIN", label: "管理员" },
+                { value: "PROJECT_MEMBER", label: "成员" },
               ]}
             />
           </Form.Item>

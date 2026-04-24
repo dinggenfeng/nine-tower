@@ -92,10 +92,10 @@ class PlaybookServiceTest {
     p.setName("deploy.yml");
     p.setCreatedBy(100L);
     when(playbookRepository.findByProjectIdOrderByIdAsc(1L)).thenReturn(List.of(p));
-    when(playbookRoleRepository.findByPlaybookIdOrderByOrderIndexAsc(1L)).thenReturn(List.of());
-    when(playbookHostGroupRepository.findByPlaybookId(1L)).thenReturn(List.of());
-    when(playbookTagRepository.findByPlaybookId(1L)).thenReturn(List.of());
-    when(playbookEnvironmentRepository.findByPlaybookId(1L)).thenReturn(List.of());
+    when(playbookRoleRepository.findByPlaybookIdIn(List.of(1L))).thenReturn(List.of());
+    when(playbookHostGroupRepository.findByPlaybookIdIn(List.of(1L))).thenReturn(List.of());
+    when(playbookTagRepository.findByPlaybookIdIn(List.of(1L))).thenReturn(List.of());
+    when(playbookEnvironmentRepository.findByPlaybookIdIn(List.of(1L))).thenReturn(List.of());
 
     List<PlaybookResponse> list = playbookService.listPlaybooks(1L, 100L);
     assertThat(list).hasSize(1);

@@ -11,6 +11,7 @@ import com.ansible.role.dto.RoleResponse;
 import com.ansible.role.dto.UpdateRoleRequest;
 import com.ansible.role.entity.Role;
 import com.ansible.role.repository.RoleRepository;
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -28,6 +29,7 @@ class RoleServiceTest {
 
   @Mock private RoleRepository roleRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
   @InjectMocks private RoleService roleService;
 
   private Role testRole;
@@ -97,6 +99,7 @@ class RoleServiceTest {
     roleService.deleteRole(1L, 10L);
 
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
+    verify(cleanupService).cleanupRoleResources(1L);
     verify(roleRepository).delete(testRole);
   }
 }
