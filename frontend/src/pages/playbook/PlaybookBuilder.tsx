@@ -132,9 +132,13 @@ export default function PlaybookBuilder() {
     fetchData();
   };
 
-  const handleCopyYaml = () => {
-    navigator.clipboard.writeText(yamlPreview);
-    message.success("已复制到剪贴板");
+  const handleCopyYaml = async () => {
+    try {
+      await navigator.clipboard.writeText(yamlPreview);
+      message.success("已复制到剪贴板");
+    } catch {
+      message.error("复制失败");
+    }
   };
 
   const handleSaveExtraVars = async () => {

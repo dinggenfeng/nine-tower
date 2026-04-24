@@ -222,9 +222,13 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   };
 
   const handleDelete = async (id: number) => {
-    await deleteTask(id);
-    message.success("已删除");
-    fetchData();
+    try {
+      await deleteTask(id);
+      message.success("已删除");
+      fetchData();
+    } catch {
+      message.error("删除失败");
+    }
   };
 
   const handleMoveTask = async (currentIndex: number, direction: "up" | "down") => {
@@ -324,109 +328,120 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   };
 
   const handleCopyYaml = async () => {
-    await navigator.clipboard.writeText(previewYaml);
-    message.success("已复制");
+    try {
+      await navigator.clipboard.writeText(previewYaml);
+      message.success("已复制");
+    } catch {
+      message.error("复制失败");
+    }
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    try {
+      const values = await form.validateFields();
 
-    // Run module-level custom validation
-    const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
-    if (moduleDef?.validate) {
-      const errors = moduleDef.validate(values.moduleParams || {});
-      if (Object.keys(errors).length > 0) {
-        // Set field errors on moduleParams fields
-        const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
-          name: ["moduleParams", field],
-          errors: [msg],
-        }));
-        form.setFields(fieldErrors);
-        return;
+      // Run module-level custom validation
+      const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
+      if (moduleDef?.validate) {
+        const errors = moduleDef.validate(values.moduleParams || {});
+        if (Object.keys(errors).length > 0) {
+          // Set field errors on moduleParams fields
+          const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
+            name: ["moduleParams", field],
+            errors: [msg],
+          }));
+          form.setFields(fieldErrors);
+          return;
+        }
       }
-    }
 
-    const args = buildArgsJson(values.moduleParams, values.extraParams);
-    const loopValue =
-      loopMode === "list"
-        ? loopItems.length > 0
-          ? JSON.stringify(loopItems)
-          : undefined
-        : values.loop;
+      const args = buildArgsJson(values.moduleParams, values.extraParams);
+      const loopValue =
+        loopMode === "list"
+          ? loopItems.length > 0
+            ? JSON.stringify(loopItems)
+            : undefined
+          : values.loop;
 
-    if (editingTask) {
-      let data: UpdateTaskRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        loop: loopValue,
-        until: values.until,
-        register: values.register,
-        notify: values.notify,
-        taskOrder: values.taskOrder,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      if (values.module === "block" && blockChildren.length > 0) {
-        // For block, we include blockChildren and strip out the irrelevant fields
-        data = {
-          ...data,
-          blockChildren,
+      if (editingTask) {
+        let data: UpdateTaskRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          loop: loopValue,
+          until: values.until,
+          register: values.register,
+          notify: values.notify,
+          taskOrder: values.taskOrder,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
         };
-        // Remove fields that don't apply to block module level
-        delete data.args;
-        delete data.loop;
-        delete data.until;
-        delete data.register;
-        delete data.notify;
-      }
-      await updateTask(editingTask.id, data);
-      // Update tags association
-      if (tagIds.length > 0) {
-        await updateTaskTags(editingTask.id, tagIds);
+        if (values.module === "block" && blockChildren.length > 0) {
+          // For block, we include blockChildren and strip out the irrelevant fields
+          data = {
+            ...data,
+            blockChildren,
+          };
+          // Remove fields that don't apply to block module level
+          delete data.args;
+          delete data.loop;
+          delete data.until;
+          delete data.register;
+          delete data.notify;
+        }
+        await updateTask(editingTask.id, data);
+        // Update tags association
+        if (tagIds.length > 0) {
+          await updateTaskTags(editingTask.id, tagIds);
+        } else {
+          await updateTaskTags(editingTask.id, []);
+        }
+        message.success("已更新");
       } else {
-        await updateTaskTags(editingTask.id, []);
-      }
-      message.success("已更新");
-    } else {
-      let data: CreateTaskRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        loop: loopValue,
-        until: values.until,
-        register: values.register,
-        notify: values.notify,
-        taskOrder: values.taskOrder,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      if (values.module === "block" && blockChildren.length > 0) {
-        // For block, we include blockChildren and strip out the irrelevant fields
-        data = {
-          ...data,
-          blockChildren,
+        let data: CreateTaskRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          loop: loopValue,
+          until: values.until,
+          register: values.register,
+          notify: values.notify,
+          taskOrder: values.taskOrder,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
         };
-        // Remove fields that don't apply to block module level
-        delete data.args;
-        delete data.loop;
-        delete data.until;
-        delete data.register;
-        delete data.notify;
+        if (values.module === "block" && blockChildren.length > 0) {
+          // For block, we include blockChildren and strip out the irrelevant fields
+          data = {
+            ...data,
+            blockChildren,
+          };
+          // Remove fields that don't apply to block module level
+          delete data.args;
+          delete data.loop;
+          delete data.until;
+          delete data.register;
+          delete data.notify;
+        }
+        const created = await createTask(roleId, data);
+        // Update tags association for new task
+        if (tagIds.length > 0) {
+          await updateTaskTags(created.id, tagIds);
+        }
+        message.success("已创建");
       }
-      const created = await createTask(roleId, data);
-      // Update tags association for new task
-      if (tagIds.length > 0) {
-        await updateTaskTags(created.id, tagIds);
+      setModalOpen(false);
+      fetchData();
+    } catch (error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
+        return; // form validation error, already shown by antd
       }
-      message.success("已创建");
+      message.error("操作失败");
     }
-    setModalOpen(false);
-    fetchData();
   };
 
   const columns = [

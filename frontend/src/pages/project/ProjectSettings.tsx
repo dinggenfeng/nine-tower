@@ -25,22 +25,30 @@ export default function ProjectSettings() {
   }, [currentProject, form]);
 
   const handleUpdate = async () => {
-    const values = await form.validateFields();
-    setLoading(true);
     try {
+      const values = await form.validateFields();
+      setLoading(true);
       const updated = await updateProject(Number(id), values);
       setCurrentProject(updated);
       message.success("项目更新成功");
+    } catch (error) {
+      if (error && typeof error === "object" && "errorFields" in error) {
+        return;
+      }
+      message.error("更新失败");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = () => {
-    deleteProject(Number(id)).then(() => {
+  const handleDelete = async () => {
+    try {
+      await deleteProject(Number(id));
       message.success("项目已删除");
       navigate("/projects");
-    });
+    } catch {
+      message.error("删除失败");
+    }
   };
 
   if (currentProject?.myRole !== "PROJECT_ADMIN") {
