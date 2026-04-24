@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -15,7 +16,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final int MAX_REQUESTS_PER_MINUTE = 10;
-  private final ConcurrentHashMap<String, RequestCounter> counters = new ConcurrentHashMap<>();
+  private static final String LOGIN_PATH = "/api/auth/login";
+  private static final String REGISTER_PATH = "/api/auth/register";
+
+  private final ConcurrentMap<String, RequestCounter> counters = new ConcurrentHashMap<>();
   private final Environment environment;
 
   public RateLimitFilter(Environment environment) {
@@ -32,7 +36,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     String uri = request.getRequestURI();
-    if (!uri.equals("/api/auth/login") && !uri.equals("/api/auth/register")) {
+    if (!LOGIN_PATH.equals(uri) && !REGISTER_PATH.equals(uri)) {
       filterChain.doFilter(request, response);
       return;
     }
@@ -49,13 +53,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  private static class RequestCounter {
+  @SuppressWarnings("PMD.AvoidUsingVolatile")
+  private static final class RequestCounter {
+    private static final long WINDOW_MS = 60_000L;
     private final AtomicInteger count = new AtomicInteger(0);
     private volatile long windowStart = System.currentTimeMillis();
 
     boolean isOverLimit() {
       long now = System.currentTimeMillis();
-      if (now - windowStart > 60000) {
+      if (now - windowStart > WINDOW_MS) {
         count.set(0);
         windowStart = now;
       }

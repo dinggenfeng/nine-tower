@@ -6,18 +6,18 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class AuditLogService {
-  private static final Logger log = LoggerFactory.getLogger(AuditLogService.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AuditLogService.class);
 
   public void logLoginFailure(String username, String reason) {
-    log.warn("Login failed for user '{}': {}", username, reason);
+    LOG.warn("Login failed for user '{}': {}", username, reason);
   }
 
   public void logTokenValidationFailure(String reason) {
-    log.warn("Token validation failed: {}", reason);
+    LOG.warn("Token validation failed: {}", reason);
   }
 
   public void logAccessDenied(Long userId, String resource, Long resourceId) {
-    log.warn(
+    LOG.warn(
         "Access denied: userId={}, resource={}, resourceId={}", userId, resource, resourceId);
   }
 }
