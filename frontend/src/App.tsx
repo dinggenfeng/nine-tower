@@ -1,20 +1,24 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { lazy, Suspense } from "react";
+import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import MainLayout from "./components/Layout/MainLayout";
 import ProjectLayout from "./components/Layout/ProjectLayout";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import ProjectList from "./pages/project/ProjectList";
-import ProjectSettings from "./pages/project/ProjectSettings";
-import MemberManagement from "./pages/project/MemberManagement";
-import HostGroupManager from "./pages/host/HostGroupManager";
-import RoleList from "./pages/role/RoleList";
-import RoleDetail from "./pages/role/RoleDetail";
-import TagManager from "./pages/tag/TagManager";
-import EnvironmentManager from "./pages/environment/EnvironmentManager";
-import VariableManager from "./pages/variable/VariableManager";
-import PlaybookList from "./pages/playbook/PlaybookList";
-import PlaybookBuilder from "./pages/playbook/PlaybookBuilder";
 import { useAuthStore } from "./stores/authStore";
+import { setNavigate } from "./api/navigate";
+import { Spin } from "antd";
+
+const Login = lazy(() => import("./pages/auth/Login"));
+const Register = lazy(() => import("./pages/auth/Register"));
+const ProjectList = lazy(() => import("./pages/project/ProjectList"));
+const ProjectSettings = lazy(() => import("./pages/project/ProjectSettings"));
+const MemberManagement = lazy(() => import("./pages/project/MemberManagement"));
+const HostGroupManager = lazy(() => import("./pages/host/HostGroupManager"));
+const RoleList = lazy(() => import("./pages/role/RoleList"));
+const RoleDetail = lazy(() => import("./pages/role/RoleDetail"));
+const TagManager = lazy(() => import("./pages/tag/TagManager"));
+const EnvironmentManager = lazy(() => import("./pages/environment/EnvironmentManager"));
+const VariableManager = lazy(() => import("./pages/variable/VariableManager"));
+const PlaybookList = lazy(() => import("./pages/playbook/PlaybookList"));
+const PlaybookBuilder = lazy(() => import("./pages/playbook/PlaybookBuilder"));
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -24,35 +28,48 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-export default function App() {
+function PageLoader() {
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route
-        path="/"
-        element={
-          <RequireAuth>
-            <MainLayout />
-          </RequireAuth>
-        }
-      >
-        <Route index element={<Navigate to="/projects" replace />} />
-        <Route path="projects" element={<ProjectList />} />
-        <Route path="projects/:id" element={<ProjectLayout />}>
-          <Route path="settings" element={<ProjectSettings />} />
-          <Route path="members" element={<MemberManagement />} />
-          <Route path="host-groups" element={<HostGroupManager />} />
-          <Route path="roles" element={<RoleList />} />
-          <Route path="roles/:roleId" element={<RoleDetail />} />
-          <Route path="tags" element={<TagManager />} />
-          <Route path="environments" element={<EnvironmentManager />} />
-          <Route path="variables" element={<VariableManager />} />
-          <Route path="playbooks" element={<PlaybookList />} />
-          <Route path="playbooks/:pbId" element={<PlaybookBuilder />} />
+    <div style={{ display: "flex", justifyContent: "center", padding: "100px 0" }}>
+      <Spin size="large" />
+    </div>
+  );
+}
+
+export default function App() {
+  const navigate = useNavigate();
+  setNavigate(navigate);
+
+  return (
+    <Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <MainLayout />
+            </RequireAuth>
+          }
+        >
+          <Route index element={<Navigate to="/projects" replace />} />
+          <Route path="projects" element={<ProjectList />} />
+          <Route path="projects/:id" element={<ProjectLayout />}>
+            <Route path="settings" element={<ProjectSettings />} />
+            <Route path="members" element={<MemberManagement />} />
+            <Route path="host-groups" element={<HostGroupManager />} />
+            <Route path="roles" element={<RoleList />} />
+            <Route path="roles/:roleId" element={<RoleDetail />} />
+            <Route path="tags" element={<TagManager />} />
+            <Route path="environments" element={<EnvironmentManager />} />
+            <Route path="variables" element={<VariableManager />} />
+            <Route path="playbooks" element={<PlaybookList />} />
+            <Route path="playbooks/:pbId" element={<PlaybookBuilder />} />
+          </Route>
         </Route>
-      </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

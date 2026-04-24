@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getNavigate } from "./navigate";
 
 const request = axios.create({
   baseURL: "/api",
@@ -18,7 +19,12 @@ request.interceptors.response.use(
   (error) => {
     if (error.response?.status === 403 || error.response?.status === 401) {
       localStorage.removeItem("token");
-      window.location.href = "/login";
+      const navigate = getNavigate();
+      if (navigate) {
+        navigate("/login", { replace: true });
+      } else {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error.response?.data ?? error);
   }
