@@ -62,9 +62,7 @@ export default function ProjectLayout() {
   // Derive currentKey by matching path segments against known nav keys
   // Path structure: /projects/:id/:navKey/...
   const currentKey =
-    pathSegments.length >= 3 && allNavKeys.has(pathSegments[2])
-      ? pathSegments[2]
-      : "roles";
+    pathSegments.length >= 3 && allNavKeys.has(pathSegments[2]) ? pathSegments[2] : "roles";
 
   return (
     <Layout style={{ minHeight: "100%" }}>
@@ -81,7 +79,9 @@ export default function ProjectLayout() {
                   role="button"
                   tabIndex={0}
                   onClick={() => navigate(`/projects/${id}/${item.key}`)}
-                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/${item.key}`); }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/${item.key}`);
+                  }}
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -98,7 +98,9 @@ export default function ProjectLayout() {
             role="button"
             tabIndex={0}
             onClick={() => navigate("/projects")}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/projects"); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") navigate("/projects");
+            }}
           >
             项目
           </span>
@@ -108,7 +110,9 @@ export default function ProjectLayout() {
             role="button"
             tabIndex={0}
             onClick={() => navigate(`/projects/${id}/roles`)}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/roles`); }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/roles`);
+            }}
           >
             {currentProject?.name || "..."}
           </span>

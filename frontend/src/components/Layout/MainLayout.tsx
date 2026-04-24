@@ -133,7 +133,9 @@ export default function MainLayout() {
           role="button"
           tabIndex={0}
           onClick={() => navigate("/projects")}
-          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/projects"); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") navigate("/projects");
+          }}
         >
           <ProjectOutlined className={styles.logoIcon} />
           <span className={styles.logoText}>Ansible Playbook Studio</span>

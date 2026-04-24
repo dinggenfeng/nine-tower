@@ -39,7 +39,8 @@ export async function downloadTemplate(id: number): Promise<void> {
   });
   if (!resp.ok) throw new Error("下载失败");
   const blob = await resp.blob();
-  const filename = resp.headers.get("Content-Disposition")?.match(/filename="(.+?)"/)?.[1] ?? "template";
+  const filename =
+    resp.headers.get("Content-Disposition")?.match(/filename="(.+?)"/)?.[1] ?? "template";
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;

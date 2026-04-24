@@ -9,13 +9,7 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import type { RoleFile, CreateFileRequest } from "../../types/entity/RoleFile";
-import {
-  getFiles,
-  createFile,
-  updateFile,
-  deleteFile,
-  downloadFile,
-} from "../../api/roleFile";
+import { getFiles, createFile, updateFile, deleteFile, downloadFile } from "../../api/roleFile";
 
 interface RoleFilesProps {
   roleId: number;

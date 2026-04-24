@@ -148,7 +148,9 @@ export default function ProjectList() {
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(`/projects/${project.id}/roles`)}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${project.id}/roles`); }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") navigate(`/projects/${project.id}/roles`);
+                }}
               >
                 <div className={styles.cardTop}>
                   <div className={styles.avatar} style={getAvatarStyle(project.name)}>
