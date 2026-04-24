@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -15,11 +16,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final int MAX_REQUESTS_PER_MINUTE = 10;
   private final ConcurrentHashMap<String, RequestCounter> counters = new ConcurrentHashMap<>();
+  private final Environment environment;
+
+  public RateLimitFilter(Environment environment) {
+    this.environment = environment;
+  }
 
   @Override
   protected void doFilterInternal(
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
+    if (environment.matchesProfiles("test")) {
+      filterChain.doFilter(request, response);
+      return;
+    }
+
     String uri = request.getRequestURI();
     if (!uri.equals("/api/auth/login") && !uri.equals("/api/auth/register")) {
       filterChain.doFilter(request, response);

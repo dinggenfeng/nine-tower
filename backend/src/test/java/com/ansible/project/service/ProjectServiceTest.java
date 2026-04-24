@@ -73,9 +73,8 @@ class ProjectServiceTest {
 
   @Test
   void getMyProjects_returns_user_projects() {
-    when(projectRepository.findAllByMemberUserId(10L)).thenReturn(List.of(testProject));
-    when(projectMemberRepository.findByProjectIdAndUserId(1L, 10L))
-        .thenReturn(Optional.of(adminMember));
+    when(projectMemberRepository.findByUserId(10L)).thenReturn(List.of(adminMember));
+    when(projectRepository.findAllById(List.of(1L))).thenReturn(List.of(testProject));
 
     List<ProjectResponse> projects = projectService.getMyProjects(10L);
 

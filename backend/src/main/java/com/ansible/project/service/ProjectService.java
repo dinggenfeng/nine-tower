@@ -9,7 +9,10 @@ import com.ansible.project.entity.ProjectMember;
 import com.ansible.project.repository.ProjectMemberRepository;
 import com.ansible.project.repository.ProjectRepository;
 import com.ansible.security.ProjectAccessChecker;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,17 +46,16 @@ public class ProjectService {
 
   @Transactional(readOnly = true)
   public List<ProjectResponse> getMyProjects(Long currentUserId) {
-    List<Project> projects = projectRepository.findAllByMemberUserId(currentUserId);
+    List<ProjectMember> memberships = projectMemberRepository.findByUserId(currentUserId);
+    Map<Long, ProjectRole> roleMap = memberships.stream()
+        .collect(Collectors.toMap(ProjectMember::getProjectId, ProjectMember::getRole));
+    List<Long> projectIds = new ArrayList<>(roleMap.keySet());
+    if (projectIds.isEmpty()) {
+      return List.of();
+    }
+    List<Project> projects = projectRepository.findAllById(projectIds);
     return projects.stream()
-        .map(
-            p -> {
-              ProjectRole role =
-                  projectMemberRepository
-                      .findByProjectIdAndUserId(p.getId(), currentUserId)
-                      .map(ProjectMember::getRole)
-                      .orElse(null);
-              return new ProjectResponse(p, role);
-            })
+        .map(p -> new ProjectResponse(p, roleMap.get(p.getId())))
         .toList();
   }
 

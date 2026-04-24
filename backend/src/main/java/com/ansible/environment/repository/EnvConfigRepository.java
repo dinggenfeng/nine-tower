@@ -14,4 +14,6 @@ public interface EnvConfigRepository extends JpaRepository<EnvConfig, Long> {
       Long environmentId, String configKey, Long id);
 
   void deleteByEnvironmentId(Long environmentId);
+
+  List<EnvConfig> findByEnvironmentIdInOrderByEnvironmentIdAscConfigKeyAsc(List<Long> environmentIds);
 }

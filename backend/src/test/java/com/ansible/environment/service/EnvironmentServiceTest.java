@@ -89,7 +89,7 @@ class EnvironmentServiceTest {
 
     when(environmentRepository.findByProjectIdOrderByIdAsc(10L))
         .thenReturn(List.of(testEnv, env2));
-    when(envConfigRepository.findByEnvironmentIdOrderByConfigKeyAsc(anyLong()))
+    when(envConfigRepository.findByEnvironmentIdInOrderByEnvironmentIdAscConfigKeyAsc(List.of(1L, 2L)))
         .thenReturn(List.of());
 
     List<EnvironmentResponse> list = environmentService.listEnvironments(10L, 100L);

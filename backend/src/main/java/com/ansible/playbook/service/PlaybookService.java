@@ -76,8 +76,38 @@ public class PlaybookService {
   @Transactional(readOnly = true)
   public List<PlaybookResponse> listPlaybooks(Long projectId, Long userId) {
     accessChecker.checkMembership(projectId, userId);
-    return playbookRepository.findByProjectIdOrderByIdAsc(projectId).stream()
-        .map(this::toResponse)
+    List<Playbook> playbooks = playbookRepository.findByProjectIdOrderByIdAsc(projectId);
+    if (playbooks.isEmpty()) {
+      return List.of();
+    }
+    List<Long> playbookIds = playbooks.stream().map(Playbook::getId).toList();
+
+    Map<Long, List<Long>> roleIdsMap = playbookRoleRepository.findByPlaybookIdIn(playbookIds)
+        .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookRole::getPlaybookId,
+            java.util.stream.Collectors.mapping(PlaybookRole::getRoleId,
+                java.util.stream.Collectors.toList())));
+    Map<Long, List<Long>> hostGroupIdsMap = playbookHostGroupRepository.findByPlaybookIdIn(playbookIds)
+        .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookHostGroup::getPlaybookId,
+            java.util.stream.Collectors.mapping(PlaybookHostGroup::getHostGroupId,
+                java.util.stream.Collectors.toList())));
+    Map<Long, List<Long>> tagIdsMap = playbookTagRepository.findByPlaybookIdIn(playbookIds)
+        .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookTag::getPlaybookId,
+            java.util.stream.Collectors.mapping(PlaybookTag::getTagId,
+                java.util.stream.Collectors.toList())));
+    Map<Long, List<Long>> envIdsMap = playbookEnvironmentRepository.findByPlaybookIdIn(playbookIds)
+        .stream().collect(java.util.stream.Collectors.groupingBy(PlaybookEnvironment::getPlaybookId,
+            java.util.stream.Collectors.mapping(PlaybookEnvironment::getEnvironmentId,
+                java.util.stream.Collectors.toList())));
+
+    return playbooks.stream()
+        .map(p -> new PlaybookResponse(
+            p.getId(), p.getProjectId(), p.getName(), p.getDescription(),
+            p.getExtraVars(),
+            roleIdsMap.getOrDefault(p.getId(), List.of()),
+            hostGroupIdsMap.getOrDefault(p.getId(), List.of()),
+            tagIdsMap.getOrDefault(p.getId(), List.of()),
+            envIdsMap.getOrDefault(p.getId(), List.of()),
+            p.getCreatedAt(), p.getUpdatedAt()))
         .toList();
   }
 
