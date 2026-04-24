@@ -43,6 +43,7 @@ export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<CreateProjectRequest>();
   const navigate = useNavigate();
 
@@ -61,12 +62,17 @@ export default function ProjectList() {
   }, []);
 
   const handleCreate = async () => {
-    const values = await form.validateFields();
-    await createProject(values);
-    message.success("项目创建成功");
-    setCreateModalOpen(false);
-    form.resetFields();
-    fetchProjects();
+    setCreating(true);
+    try {
+      const values = await form.validateFields();
+      await createProject(values);
+      message.success("项目创建成功");
+      setCreateModalOpen(false);
+      form.resetFields();
+      fetchProjects();
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleDelete = (id: number) => {
@@ -139,7 +145,10 @@ export default function ProjectList() {
                 key={project.id}
                 className={`${styles.card} ${styles.cardAnimated}`}
                 style={{ animationDelay: `${index * 0.05}s` }}
+                role="button"
+                tabIndex={0}
                 onClick={() => navigate(`/projects/${project.id}/roles`)}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${project.id}/roles`); }}
               >
                 <div className={styles.cardTop}>
                   <div className={styles.avatar} style={getAvatarStyle(project.name)}>
@@ -186,6 +195,7 @@ export default function ProjectList() {
           setCreateModalOpen(false);
           form.resetFields();
         }}
+        confirmLoading={creating}
       >
         <Form form={form} layout="vertical">
           <Form.Item
