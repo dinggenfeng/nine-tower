@@ -32,6 +32,7 @@ class ProjectServiceTest {
   @Mock private ProjectRepository projectRepository;
   @Mock private ProjectMemberRepository projectMemberRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
 
   @InjectMocks private ProjectService projectService;
 
@@ -124,6 +125,7 @@ class ProjectServiceTest {
     projectService.deleteProject(1L, 10L);
 
     verify(accessChecker).checkAdmin(1L, 10L);
+    verify(cleanupService).cleanupProject(1L);
     verify(projectMemberRepository).deleteByProjectId(1L);
     verify(projectRepository).delete(testProject);
   }

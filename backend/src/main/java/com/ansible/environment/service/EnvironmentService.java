@@ -1,5 +1,6 @@
 package com.ansible.environment.service;
 
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.environment.dto.CreateEnvironmentRequest;
 import com.ansible.environment.dto.EnvConfigRequest;
@@ -22,6 +23,7 @@ public class EnvironmentService {
   private final EnvironmentRepository environmentRepository;
   private final EnvConfigRepository envConfigRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
   @Transactional
   public EnvironmentResponse createEnvironment(
@@ -90,7 +92,7 @@ public class EnvironmentService {
             .findById(envId)
             .orElseThrow(() -> new IllegalArgumentException("Environment not found"));
     accessChecker.checkOwnerOrAdmin(env.getProjectId(), env.getCreatedBy(), userId);
-    envConfigRepository.deleteByEnvironmentId(envId);
+    cleanupService.cleanupEnvironmentResources(envId);
     environmentRepository.delete(env);
   }
 

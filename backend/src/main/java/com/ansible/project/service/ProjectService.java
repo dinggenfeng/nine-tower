@@ -22,6 +22,7 @@ public class ProjectService {
   private final ProjectRepository projectRepository;
   private final ProjectMemberRepository projectMemberRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
   @Transactional
   public ProjectResponse createProject(CreateProjectRequest request, Long currentUserId) {
@@ -92,6 +93,7 @@ public class ProjectService {
         projectRepository
             .findById(projectId)
             .orElseThrow(() -> new IllegalArgumentException("Project not found"));
+    cleanupService.cleanupProject(projectId);
     projectMemberRepository.deleteByProjectId(projectId);
     projectRepository.delete(project);
   }

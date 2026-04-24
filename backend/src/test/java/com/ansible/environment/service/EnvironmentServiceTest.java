@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.environment.dto.CreateEnvironmentRequest;
 import com.ansible.environment.dto.EnvConfigRequest;
@@ -34,6 +35,7 @@ class EnvironmentServiceTest {
   @Mock private EnvironmentRepository environmentRepository;
   @Mock private EnvConfigRepository envConfigRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private ProjectCleanupService cleanupService;
   @InjectMocks private EnvironmentService environmentService;
 
   private Environment testEnv;
@@ -167,7 +169,7 @@ class EnvironmentServiceTest {
 
     environmentService.deleteEnvironment(1L, 100L);
 
-    verify(envConfigRepository).deleteByEnvironmentId(1L);
+    verify(cleanupService).cleanupEnvironmentResources(1L);
     verify(environmentRepository).delete(testEnv);
   }
 

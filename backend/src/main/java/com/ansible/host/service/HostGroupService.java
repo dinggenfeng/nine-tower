@@ -5,6 +5,7 @@ import com.ansible.host.dto.HostGroupResponse;
 import com.ansible.host.dto.UpdateHostGroupRequest;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ public class HostGroupService {
 
   private final HostGroupRepository hostGroupRepository;
   private final ProjectAccessChecker accessChecker;
+  private final ProjectCleanupService cleanupService;
 
   @Transactional
   public HostGroupResponse createHostGroup(Long projectId, CreateHostGroupRequest request, Long currentUserId) {
@@ -80,6 +82,7 @@ public class HostGroupService {
             .findById(hostGroupId)
             .orElseThrow(() -> new IllegalArgumentException("Host group not found"));
     accessChecker.checkOwnerOrAdmin(hostGroup.getProjectId(), hostGroup.getCreatedBy(), currentUserId);
+    cleanupService.cleanupHostGroupResources(hostGroupId);
     hostGroupRepository.delete(hostGroup);
   }
 }

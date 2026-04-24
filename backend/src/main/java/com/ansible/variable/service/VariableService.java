@@ -1,8 +1,6 @@
 package com.ansible.variable.service;
 
-import com.ansible.environment.entity.Environment;
 import com.ansible.environment.repository.EnvironmentRepository;
-import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.CreateVariableRequest;
