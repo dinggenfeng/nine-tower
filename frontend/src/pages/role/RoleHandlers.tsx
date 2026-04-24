@@ -38,62 +38,10 @@ import ModuleSelect from "../../components/role/ModuleSelect";
 import { ModuleParamsGrid, ExtraParamsInput } from "../../components/role/ModuleParamsForm";
 import { getModuleDefinition } from "../../constants/ansibleModules";
 import { taskToYaml } from "../../utils/taskToYaml";
+import { buildArgsJson, parseArgsToForm } from "../../utils/argsParser";
 
 interface RoleHandlersProps {
   roleId: number;
-}
-
-/** Merge moduleParams + extraParams into a JSON string for the args field */
-function buildArgsJson(
-  moduleParams: Record<string, unknown> | undefined,
-  extraParams: { key: string; value: string }[] | undefined
-): string {
-  const result: Record<string, unknown> = {};
-  if (moduleParams) {
-    for (const [k, v] of Object.entries(moduleParams)) {
-      if (v !== undefined && v !== "" && v !== null) {
-        result[k] = v;
-      }
-    }
-  }
-  if (extraParams) {
-    for (const item of extraParams) {
-      if (item.key) {
-        result[item.key] = item.value;
-      }
-    }
-  }
-  return Object.keys(result).length > 0 ? JSON.stringify(result) : "";
-}
-
-/** Parse args JSON string into moduleParams + extraParams for form population */
-function parseArgsToForm(
-  argsJson: string | undefined,
-  moduleName: string | undefined
-): { moduleParams: Record<string, unknown>; extraParams: { key: string; value: string }[] } {
-  const moduleParams: Record<string, unknown> = {};
-  const extraParams: { key: string; value: string }[] = [];
-  if (!argsJson) return { moduleParams, extraParams };
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(argsJson);
-  } catch {
-    extraParams.push({ key: "", value: argsJson });
-    return { moduleParams, extraParams };
-  }
-
-  const moduleDef = moduleName ? getModuleDefinition(moduleName) : undefined;
-  const knownParams = new Set(moduleDef?.params.map((p) => p.name) ?? []);
-
-  for (const [k, v] of Object.entries(parsed)) {
-    if (knownParams.has(k)) {
-      moduleParams[k] = v;
-    } else {
-      extraParams.push({ key: k, value: String(v) });
-    }
-  }
-  return { moduleParams, extraParams };
 }
 
 export default function RoleHandlers({ roleId }: RoleHandlersProps) {
