@@ -13,6 +13,7 @@ export default function TagManager() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<{ name: string }>();
 
   const fetchTags = useCallback(async () => {
@@ -49,16 +50,21 @@ export default function TagManager() {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingTag) {
-      await updateTag(editingTag.id, values);
-      message.success("更新成功");
-    } else {
-      await createTag(pid, values);
-      message.success("创建成功");
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingTag) {
+        await updateTag(editingTag.id, values);
+        message.success("更新成功");
+      } else {
+        await createTag(pid, values);
+        message.success("创建成功");
+      }
+      setModalOpen(false);
+      fetchTags();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchTags();
   };
 
   const columns = [
@@ -94,6 +100,7 @@ export default function TagManager() {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           <Form.Item

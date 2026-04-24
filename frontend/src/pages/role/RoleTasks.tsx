@@ -71,6 +71,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [loopMode, setLoopMode] = useState<"expression" | "list">("expression");
   const [loopItems, setLoopItems] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -285,6 +286,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   };
 
   const handleSubmit = async () => {
+    setSaving(true);
     try {
       const values = await form.validateFields();
 
@@ -389,6 +391,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         return; // form validation error, already shown by antd
       }
       message.error("操作失败");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -487,7 +491,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
             </Button>
             <Space>
               <Button onClick={() => setModalOpen(false)}>取消</Button>
-              <Button type="primary" onClick={handleSubmit}>
+              <Button type="primary" onClick={handleSubmit} loading={saving}>
                 确定
               </Button>
             </Space>

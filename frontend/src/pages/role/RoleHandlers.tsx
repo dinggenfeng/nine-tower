@@ -55,6 +55,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   const [form] = Form.useForm();
   const [notifyingTasksMap, setNotifyingTasksMap] = useState<Record<number, Task[]>>({});
   const [expandedHandlerIds, setExpandedHandlerIds] = useState<number[]>([]);
+  const [saving, setSaving] = useState(false);
 
   const fetchHandlers = useCallback(async () => {
     setLoading(true);
@@ -180,52 +181,57 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
 
-    const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
-    if (moduleDef?.validate) {
-      const errors = moduleDef.validate(values.moduleParams || {});
-      if (Object.keys(errors).length > 0) {
-        const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
-          name: ["moduleParams", field],
-          errors: [msg],
-        }));
-        form.setFields(fieldErrors);
-        return;
+      const moduleDef = values.module ? getModuleDefinition(values.module) : undefined;
+      if (moduleDef?.validate) {
+        const errors = moduleDef.validate(values.moduleParams || {});
+        if (Object.keys(errors).length > 0) {
+          const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
+            name: ["moduleParams", field],
+            errors: [msg],
+          }));
+          form.setFields(fieldErrors);
+          return;
+        }
       }
-    }
 
-    const args = buildArgsJson(values.moduleParams, values.extraParams);
+      const args = buildArgsJson(values.moduleParams, values.extraParams);
 
-    if (editingHandler) {
-      const data: UpdateHandlerRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        register: values.register,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      await updateHandler(editingHandler.id, data);
-      message.success("已更新");
-    } else {
-      const data: CreateHandlerRequest = {
-        name: values.name,
-        module: values.module,
-        args: args || undefined,
-        whenCondition: values.whenCondition,
-        register: values.register,
-        become: values.become || false,
-        becomeUser: values.becomeUser,
-        ignoreErrors: values.ignoreErrors || false,
-      };
-      await createHandler(roleId, data);
-      message.success("已创建");
+      if (editingHandler) {
+        const data: UpdateHandlerRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          register: values.register,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
+        };
+        await updateHandler(editingHandler.id, data);
+        message.success("已更新");
+      } else {
+        const data: CreateHandlerRequest = {
+          name: values.name,
+          module: values.module,
+          args: args || undefined,
+          whenCondition: values.whenCondition,
+          register: values.register,
+          become: values.become || false,
+          becomeUser: values.becomeUser,
+          ignoreErrors: values.ignoreErrors || false,
+        };
+        await createHandler(roleId, data);
+        message.success("已创建");
+      }
+      setModalOpen(false);
+      fetchHandlers();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchHandlers();
   };
 
   const columns = [
@@ -327,7 +333,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
             </Button>
             <Space>
               <Button onClick={() => setModalOpen(false)}>取消</Button>
-              <Button type="primary" onClick={handleSubmit}>
+              <Button type="primary" onClick={handleSubmit} loading={saving}>
                 确定
               </Button>
             </Space>

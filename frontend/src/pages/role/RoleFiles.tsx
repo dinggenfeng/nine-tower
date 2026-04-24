@@ -27,6 +27,8 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<RoleFile | null>(null);
   const [creatingDir, setCreatingDir] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [createForm] = Form.useForm();
   const [editForm] = Form.useForm();
 
@@ -51,6 +53,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
   };
 
   const handleCreateSubmit = async () => {
+    setCreating(true);
     try {
       const values = await createForm.validateFields();
       const data: CreateFileRequest = {
@@ -67,6 +70,8 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
       if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -80,6 +85,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
   };
 
   const handleEditSubmit = async () => {
+    setSaving(true);
     try {
       const values = await editForm.validateFields();
       if (!selectedFile) return;
@@ -94,6 +100,8 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
       if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -195,6 +203,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
         open={createModalOpen}
         onOk={handleCreateSubmit}
         onCancel={() => setCreateModalOpen(false)}
+        confirmLoading={creating}
       >
         <Form form={createForm} layout="vertical">
           <Form.Item name="parentDir" hidden>
@@ -216,6 +225,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
         open={editModalOpen}
         onOk={handleEditSubmit}
         onCancel={() => setEditModalOpen(false)}
+        confirmLoading={saving}
         width={640}
       >
         <Form form={editForm} layout="vertical">

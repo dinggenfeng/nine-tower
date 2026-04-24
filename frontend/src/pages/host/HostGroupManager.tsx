@@ -49,6 +49,8 @@ export default function HostGroupManager() {
   const [editingHost, setEditingHost] = useState<Host | null>(null);
   const [hgForm] = Form.useForm<CreateHostGroupRequest>();
   const [hostForm] = Form.useForm<CreateHostRequest>();
+  const [hgSaving, setHgSaving] = useState(false);
+  const [hostSaving, setHostSaving] = useState(false);
 
   const fetchHostGroups = useCallback(async () => {
     setLoading(true);
@@ -79,23 +81,33 @@ export default function HostGroupManager() {
   };
 
   const handleCreateHg = async () => {
-    const values = await hgForm.validateFields();
-    await createHostGroup(pid, values);
-    message.success("主机组创建成功");
-    setHgModalOpen(false);
-    hgForm.resetFields();
-    fetchHostGroups();
+    setHgSaving(true);
+    try {
+      const values = await hgForm.validateFields();
+      await createHostGroup(pid, values);
+      message.success("主机组创建成功");
+      setHgModalOpen(false);
+      hgForm.resetFields();
+      fetchHostGroups();
+    } finally {
+      setHgSaving(false);
+    }
   };
 
   const handleUpdateHg = async () => {
     if (!editingHg) return;
-    const values = await hgForm.validateFields();
-    await updateHostGroup(editingHg.id, values);
-    message.success("主机组更新成功");
-    setHgModalOpen(false);
-    setEditingHg(null);
-    hgForm.resetFields();
-    fetchHostGroups();
+    setHgSaving(true);
+    try {
+      const values = await hgForm.validateFields();
+      await updateHostGroup(editingHg.id, values);
+      message.success("主机组更新成功");
+      setHgModalOpen(false);
+      setEditingHg(null);
+      hgForm.resetFields();
+      fetchHostGroups();
+    } finally {
+      setHgSaving(false);
+    }
   };
 
   const handleDeleteHg = async (hgId: number) => {
@@ -121,23 +133,33 @@ export default function HostGroupManager() {
 
   const handleCreateHost = async () => {
     if (!selectedHostGroup) return;
-    const values = await hostForm.validateFields();
-    await createHost(selectedHostGroup.id, values);
-    message.success("主机创建成功");
-    setHostModalOpen(false);
-    hostForm.resetFields();
-    fetchHosts(selectedHostGroup.id);
+    setHostSaving(true);
+    try {
+      const values = await hostForm.validateFields();
+      await createHost(selectedHostGroup.id, values);
+      message.success("主机创建成功");
+      setHostModalOpen(false);
+      hostForm.resetFields();
+      fetchHosts(selectedHostGroup.id);
+    } finally {
+      setHostSaving(false);
+    }
   };
 
   const handleUpdateHost = async () => {
     if (!editingHost) return;
-    const values = await hostForm.validateFields();
-    await updateHost(editingHost.id, values);
-    message.success("主机更新成功");
-    setHostModalOpen(false);
-    setEditingHost(null);
-    hostForm.resetFields();
-    if (selectedHostGroup) fetchHosts(selectedHostGroup.id);
+    setHostSaving(true);
+    try {
+      const values = await hostForm.validateFields();
+      await updateHost(editingHost.id, values);
+      message.success("主机更新成功");
+      setHostModalOpen(false);
+      setEditingHost(null);
+      hostForm.resetFields();
+      if (selectedHostGroup) fetchHosts(selectedHostGroup.id);
+    } finally {
+      setHostSaving(false);
+    }
   };
 
   const handleDeleteHost = async (hostId: number) => {
@@ -314,6 +336,7 @@ export default function HostGroupManager() {
           setHgModalOpen(false);
           hgForm.resetFields();
         }}
+        confirmLoading={hgSaving}
       >
         <Form form={hgForm} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
@@ -334,6 +357,7 @@ export default function HostGroupManager() {
           setHostModalOpen(false);
           hostForm.resetFields();
         }}
+        confirmLoading={hostSaving}
       >
         <Form form={hostForm} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>

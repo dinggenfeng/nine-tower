@@ -37,6 +37,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   const [contentTemplate, setContentTemplate] = useState<Template | null>(null);
   const [contentValue, setContentValue] = useState("");
   const [saving, setSaving] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -70,6 +71,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   };
 
   const handleSubmit = async () => {
+    setSubmitting(true);
     try {
       const values = await form.validateFields();
       if (editingTemplate) {
@@ -95,6 +97,8 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
       if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -297,6 +301,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={submitting}
       >
         <Form form={form} layout="vertical">
           <Form.Item

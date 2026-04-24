@@ -15,6 +15,7 @@ export default function RoleList() {
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<Role | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<CreateRoleRequest>();
 
   const fetchRoles = useCallback(async () => {
@@ -31,23 +32,33 @@ export default function RoleList() {
   }, [fetchRoles]);
 
   const handleCreate = async () => {
-    const values = await form.validateFields();
-    await createRole(pid, values);
-    message.success("Role 创建成功");
-    setModalOpen(false);
-    form.resetFields();
-    fetchRoles();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      await createRole(pid, values);
+      message.success("Role 创建成功");
+      setModalOpen(false);
+      form.resetFields();
+      fetchRoles();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleUpdate = async () => {
     if (!editingRole) return;
-    const values = await form.validateFields();
-    await updateRole(editingRole.id, values);
-    message.success("Role 更新成功");
-    setModalOpen(false);
-    setEditingRole(null);
-    form.resetFields();
-    fetchRoles();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      await updateRole(editingRole.id, values);
+      message.success("Role 更新成功");
+      setModalOpen(false);
+      setEditingRole(null);
+      form.resetFields();
+      fetchRoles();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (roleId: number) => {
@@ -130,6 +141,7 @@ export default function RoleList() {
           setModalOpen(false);
           form.resetFields();
         }}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>

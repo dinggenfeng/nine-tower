@@ -61,6 +61,7 @@ export default function VariableManager() {
   const [scopeId, setScopeId] = useState<number | undefined>();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<Variable | null>(null);
+  const [saving, setSaving] = useState(false);
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
   const [form] = Form.useForm();
@@ -339,28 +340,33 @@ export default function VariableManager() {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingVar) {
-      await updateVariable(editingVar.id, {
-        key: values.key,
-        value: values.value,
-      });
-      message.success("更新成功");
-    } else {
-      const data: CreateVariableRequest = {
-        scope: values.scope,
-        scopeId: values.scopeId ?? pid,
-        key: values.key,
-        value: values.value,
-      };
-      await createVariable(pid, data);
-      message.success("创建成功");
-    }
-    setModalOpen(false);
-    if (viewMode === "table") {
-      fetchVariables();
-    } else {
-      fetchTreeData();
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingVar) {
+        await updateVariable(editingVar.id, {
+          key: values.key,
+          value: values.value,
+        });
+        message.success("更新成功");
+      } else {
+        const data: CreateVariableRequest = {
+          scope: values.scope,
+          scopeId: values.scopeId ?? pid,
+          key: values.key,
+          value: values.value,
+        };
+        await createVariable(pid, data);
+        message.success("创建成功");
+      }
+      setModalOpen(false);
+      if (viewMode === "table") {
+        fetchVariables();
+      } else {
+        fetchTreeData();
+      }
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -517,6 +523,7 @@ export default function VariableManager() {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           {!editingVar && (

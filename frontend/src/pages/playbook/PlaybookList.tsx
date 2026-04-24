@@ -12,6 +12,7 @@ export default function PlaybookList() {
   const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
   const [form] = Form.useForm<{ name: string; description: string }>();
 
   const fetchPlaybooks = useCallback(async () => {
@@ -30,12 +31,17 @@ export default function PlaybookList() {
   }, [fetchPlaybooks]);
 
   const handleCreate = async () => {
-    const values = await form.validateFields();
-    await createPlaybook(pid, values);
-    message.success("创建成功");
-    setModalOpen(false);
-    form.resetFields();
-    fetchPlaybooks();
+    setCreating(true);
+    try {
+      const values = await form.validateFields();
+      await createPlaybook(pid, values);
+      message.success("创建成功");
+      setModalOpen(false);
+      form.resetFields();
+      fetchPlaybooks();
+    } finally {
+      setCreating(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -96,6 +102,7 @@ export default function PlaybookList() {
         open={modalOpen}
         onOk={handleCreate}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={creating}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>

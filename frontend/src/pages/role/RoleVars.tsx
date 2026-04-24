@@ -22,6 +22,7 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<RoleVariable | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -51,24 +52,29 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
   };
 
   const handleSubmit = async () => {
-    const values = await form.validateFields();
-    if (editingVar) {
-      const data: UpdateRoleVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await updateRoleVariable(editingVar.id, data);
-      message.success("变量已更新");
-    } else {
-      const data: CreateRoleVariableRequest = {
-        key: values.key,
-        value: values.value,
-      };
-      await createRoleVariable(roleId, data);
-      message.success("变量已创建");
+    setSaving(true);
+    try {
+      const values = await form.validateFields();
+      if (editingVar) {
+        const data: UpdateRoleVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await updateRoleVariable(editingVar.id, data);
+        message.success("变量已更新");
+      } else {
+        const data: CreateRoleVariableRequest = {
+          key: values.key,
+          value: values.value,
+        };
+        await createRoleVariable(roleId, data);
+        message.success("变量已创建");
+      }
+      setModalOpen(false);
+      fetchData();
+    } finally {
+      setSaving(false);
     }
-    setModalOpen(false);
-    fetchData();
   };
 
   const handleDelete = async (id: number) => {
@@ -117,6 +123,7 @@ export default function RoleVars({ roleId }: RoleVarsProps) {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="key" label="Key" rules={[{ required: true, message: "请输入变量名" }]}>

@@ -17,6 +17,7 @@ export default function MemberManagement() {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [adding, setAdding] = useState(false);
   const [form] = Form.useForm<AddMemberRequest>();
   const [userOptions, setUserOptions] = useState<User[]>([]);
   const [userSearchLoading, setUserSearchLoading] = useState(false);
@@ -40,6 +41,7 @@ export default function MemberManagement() {
   }, [fetchMembers]);
 
   const handleAdd = async () => {
+    setAdding(true);
     try {
       const values = await form.validateFields();
       await addMember(projectId, values);
@@ -54,6 +56,8 @@ export default function MemberManagement() {
         (error as { message?: string })?.message ||
         "添加失败";
       message.error(msg);
+    } finally {
+      setAdding(false);
     }
   };
 
@@ -209,6 +213,7 @@ export default function MemberManagement() {
           setAddModalOpen(false);
           form.resetFields();
         }}
+        confirmLoading={adding}
       >
         <Form form={form} layout="vertical">
           <Form.Item

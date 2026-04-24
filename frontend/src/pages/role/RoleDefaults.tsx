@@ -22,6 +22,7 @@ export default function RoleDefaults({ roleId }: RoleDefaultsProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingVar, setEditingVar] = useState<RoleDefaultVariable | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -51,6 +52,8 @@ export default function RoleDefaults({ roleId }: RoleDefaultsProps) {
   };
 
   const handleSubmit = async () => {
+    setSaving(true);
+    try {
     const values = await form.validateFields();
     if (editingVar) {
       const data: UpdateRoleDefaultVariableRequest = {
@@ -69,6 +72,9 @@ export default function RoleDefaults({ roleId }: RoleDefaultsProps) {
     }
     setModalOpen(false);
     fetchData();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async (id: number) => {
@@ -117,6 +123,7 @@ export default function RoleDefaults({ roleId }: RoleDefaultsProps) {
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
+        confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
           <Form.Item name="key" label="Key" rules={[{ required: true, message: "请输入变量名" }]}>

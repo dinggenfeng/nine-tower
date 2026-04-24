@@ -46,6 +46,8 @@ export default function EnvironmentManager() {
   const [activeEnvId, setActiveEnvId] = useState<number | null>(null);
   const [envForm] = Form.useForm<CreateEnvironmentRequest>();
   const [configForm] = Form.useForm<EnvConfigRequest>();
+  const [envSaving, setEnvSaving] = useState(false);
+  const [configSaving, setConfigSaving] = useState(false);
 
   const fetchEnvironments = useCallback(async () => {
     if (!pid) return;
@@ -81,20 +83,25 @@ export default function EnvironmentManager() {
   };
 
   const handleEnvSubmit = async () => {
-    const values = await envForm.validateFields();
-    if (editingEnv) {
-      const updateData: UpdateEnvironmentRequest = {
-        name: values.name,
-        description: values.description,
-      };
-      await updateEnvironment(editingEnv.id, updateData);
-      message.success("更新成功");
-    } else {
-      await createEnvironment(pid, values);
-      message.success("创建成功");
+    setEnvSaving(true);
+    try {
+      const values = await envForm.validateFields();
+      if (editingEnv) {
+        const updateData: UpdateEnvironmentRequest = {
+          name: values.name,
+          description: values.description,
+        };
+        await updateEnvironment(editingEnv.id, updateData);
+        message.success("更新成功");
+      } else {
+        await createEnvironment(pid, values);
+        message.success("创建成功");
+      }
+      setEnvModalOpen(false);
+      fetchEnvironments();
+    } finally {
+      setEnvSaving(false);
     }
-    setEnvModalOpen(false);
-    fetchEnvironments();
   };
 
   const handleAddConfig = (envId: number) => {
@@ -115,16 +122,21 @@ export default function EnvironmentManager() {
   };
 
   const handleConfigSubmit = async () => {
-    const values = await configForm.validateFields();
-    if (editingConfig) {
-      await updateConfig(editingConfig.id, values);
-      message.success("配置项已更新");
-    } else {
-      await addConfig(activeEnvId!, values);
-      message.success("配置项已添加");
+    setConfigSaving(true);
+    try {
+      const values = await configForm.validateFields();
+      if (editingConfig) {
+        await updateConfig(editingConfig.id, values);
+        message.success("配置项已更新");
+      } else {
+        await addConfig(activeEnvId!, values);
+        message.success("配置项已添加");
+      }
+      setConfigModalOpen(false);
+      fetchEnvironments();
+    } finally {
+      setConfigSaving(false);
     }
-    setConfigModalOpen(false);
-    fetchEnvironments();
   };
 
   const handleRemoveConfig = async (configId: number) => {
@@ -217,6 +229,7 @@ export default function EnvironmentManager() {
         open={envModalOpen}
         onOk={handleEnvSubmit}
         onCancel={() => setEnvModalOpen(false)}
+        confirmLoading={envSaving}
       >
         <Form form={envForm} layout="vertical">
           <Form.Item
@@ -237,6 +250,7 @@ export default function EnvironmentManager() {
         open={configModalOpen}
         onOk={handleConfigSubmit}
         onCancel={() => setConfigModalOpen(false)}
+        confirmLoading={configSaving}
       >
         <Form form={configForm} layout="vertical">
           <Form.Item
