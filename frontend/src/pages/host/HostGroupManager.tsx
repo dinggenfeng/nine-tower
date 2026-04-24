@@ -5,6 +5,7 @@ import {
   Empty,
   Form,
   Input,
+  InputNumber,
   message,
   Modal,
   Popconfirm,
@@ -367,7 +368,7 @@ export default function HostGroupManager() {
             <Input maxLength={45} placeholder="192.168.1.10" />
           </Form.Item>
           <Form.Item name="port" label="端口" initialValue={22}>
-            <Input type="number" />
+            <InputNumber min={1} max={65535} style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="ansibleUser" label="SSH用户">
             <Input maxLength={100} />
