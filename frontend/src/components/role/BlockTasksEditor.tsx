@@ -5,6 +5,7 @@ import {
   Collapse,
   Form,
   Input,
+  Modal,
   Segmented,
   Select,
   Switch,
@@ -174,6 +175,9 @@ function ChildTaskCard({
   onMoveUp: () => void;
   onMoveDown: () => void;
 }) {
+  const [batchLoopOpen, setBatchLoopOpen] = useState(false);
+  const [batchLoopText, setBatchLoopText] = useState("");
+
   return (
     <Card
       size="small"
@@ -291,21 +295,34 @@ function ChildTaskCard({
                         placeholder="{{ items }}"
                       />
                     ) : (
-                      <Select
-                        mode="tags"
-                        placeholder="输入列表项后按回车添加"
-                        value={data.loopItems}
-                        onChange={(items) => {
-                          onChange({
-                            ...data,
-                            loopItems: items,
-                            loop: items.length > 0 ? JSON.stringify(items) : "",
-                          });
-                        }}
-                        open={data.loopItems.length > 0 ? false : undefined}
-                        tokenSeparators={[","]}
-                        style={{ width: "100%" }}
-                      />
+                      <>
+                        <Select
+                          mode="tags"
+                          placeholder="输入列表项后按回车添加"
+                          value={data.loopItems}
+                          onChange={(items) => {
+                            onChange({
+                              ...data,
+                              loopItems: items,
+                              loop: items.length > 0 ? JSON.stringify(items) : "",
+                            });
+                          }}
+                          open={data.loopItems.length > 0 ? false : undefined}
+                          tokenSeparators={[","]}
+                          style={{ width: "100%" }}
+                        />
+                        <Button
+                          type="link"
+                          size="small"
+                          onClick={() => {
+                            setBatchLoopText("");
+                            setBatchLoopOpen(true);
+                          }}
+                          style={{ padding: 0 }}
+                        >
+                          批量添加
+                        </Button>
+                      </>
                     )}
                   </Space>
                 </Form.Item>
@@ -340,6 +357,34 @@ function ChildTaskCard({
           },
         ]}
       />
+      <Modal
+        title="批量添加列表项"
+        open={batchLoopOpen}
+        onCancel={() => setBatchLoopOpen(false)}
+        onOk={() => {
+          const newItems = batchLoopText
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+          const merged = [...new Set([...data.loopItems, ...newItems])];
+          onChange({
+            ...data,
+            loopItems: merged,
+            loop: merged.length > 0 ? JSON.stringify(merged) : "",
+          });
+          setBatchLoopOpen(false);
+        }}
+        width={480}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Input.TextArea
+          rows={8}
+          value={batchLoopText}
+          onChange={(e) => setBatchLoopText(e.target.value)}
+          placeholder={"每行一个列表项，空行将被忽略\n例如:\nnginx\ngit\ncurl"}
+        />
+      </Modal>
     </Card>
   );
 }

@@ -72,6 +72,8 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [loopItems, setLoopItems] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [saving, setSaving] = useState(false);
+  const [batchLoopOpen, setBatchLoopOpen] = useState(false);
+  const [batchLoopText, setBatchLoopText] = useState("");
   const [form] = Form.useForm();
 
   const fetchData = useCallback(async () => {
@@ -168,6 +170,49 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     } else {
       setBlockChildren([]);
     }
+  };
+
+  const handleCopy = async (task: Task) => {
+    setEditingTask(null);
+    const { moduleParams, extraParams } = parseArgsToForm(task.args, task.module);
+    setSelectedModule(task.module);
+    setBlockChildren([]);
+    setTagIds([]);
+    form.resetFields();
+    form.setFieldsValue({
+      name: task.name ? `${task.name} (副本)` : "",
+      module: task.module,
+      moduleParams,
+      extraParams: extraParams.length > 0 ? extraParams : undefined,
+      whenCondition: task.whenCondition,
+      loop: task.loop,
+      until: task.until,
+      register: task.register,
+      notify: task.notify,
+      taskOrder: task.taskOrder + 1,
+      become: task.become || false,
+      becomeUser: task.becomeUser,
+      ignoreErrors: task.ignoreErrors || false,
+    });
+    if (task.loop) {
+      try {
+        const parsed = JSON.parse(task.loop);
+        if (Array.isArray(parsed)) {
+          setLoopMode("list");
+          setLoopItems(parsed.map(String));
+        } else {
+          setLoopMode("expression");
+          setLoopItems([]);
+        }
+      } catch {
+        setLoopMode("expression");
+        setLoopItems([]);
+      }
+    } else {
+      setLoopMode("expression");
+      setLoopItems([]);
+    }
+    setModalOpen(true);
   };
 
   const handleDelete = async (id: number) => {
@@ -423,7 +468,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     {
       title: "操作",
       key: "action",
-      width: 200,
+      width: 240,
       render: (_: unknown, record: Task, index: number) => (
         <Space size="small">
           <Button
@@ -445,6 +490,12 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handlePreviewTask(record)}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => handleCopy(record)}
           />
           <Button
             type="text"
@@ -672,21 +723,34 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                               <Input placeholder="例如: {{ packages }}" />
                             </Form.Item>
                           ) : (
-                            <Select
-                              mode="tags"
-                              placeholder="输入列表项后按回车添加"
-                              value={loopItems}
-                              onChange={(items) => {
-                                setLoopItems(items);
-                                form.setFieldValue(
-                                  "loop",
-                                  items.length > 0 ? JSON.stringify(items) : ""
-                                );
-                              }}
-                              open={loopItems.length > 0 ? false : undefined}
-                              tokenSeparators={[","]}
-                              style={{ width: "100%" }}
-                            />
+                            <>
+                              <Select
+                                mode="tags"
+                                placeholder="输入列表项后按回车添加"
+                                value={loopItems}
+                                onChange={(items) => {
+                                  setLoopItems(items);
+                                  form.setFieldValue(
+                                    "loop",
+                                    items.length > 0 ? JSON.stringify(items) : ""
+                                  );
+                                }}
+                                open={loopItems.length > 0 ? false : undefined}
+                                tokenSeparators={[","]}
+                                style={{ width: "100%" }}
+                              />
+                              <Button
+                                type="link"
+                                size="small"
+                                onClick={() => {
+                                  setBatchLoopText("");
+                                  setBatchLoopOpen(true);
+                                }}
+                                style={{ padding: 0 }}
+                              >
+                                批量添加
+                              </Button>
+                            </>
                           )}
                         </Space>
                       </Form.Item>
@@ -822,6 +886,31 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         >
           {previewYaml}
         </pre>
+      </Modal>
+      <Modal
+        title="批量添加列表项"
+        open={batchLoopOpen}
+        onCancel={() => setBatchLoopOpen(false)}
+        onOk={() => {
+          const newItems = batchLoopText
+            .split("\n")
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0);
+          const merged = [...new Set([...loopItems, ...newItems])];
+          setLoopItems(merged);
+          form.setFieldValue("loop", merged.length > 0 ? JSON.stringify(merged) : "");
+          setBatchLoopOpen(false);
+        }}
+        width={480}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Input.TextArea
+          rows={8}
+          value={batchLoopText}
+          onChange={(e) => setBatchLoopText(e.target.value)}
+          placeholder={"每行一个列表项，空行将被忽略\n例如:\nnginx\ngit\ncurl"}
+        />
       </Modal>
     </div>
   );

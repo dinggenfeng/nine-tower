@@ -96,6 +96,25 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     setModalOpen(true);
   };
 
+  const handleCopy = (handler: Handler) => {
+    setEditingHandler(null);
+    const { moduleParams, extraParams } = parseArgsToForm(handler.args, handler.module);
+    setSelectedModule(handler.module);
+    form.resetFields();
+    form.setFieldsValue({
+      name: handler.name ? `${handler.name} (副本)` : "",
+      module: handler.module,
+      moduleParams,
+      extraParams: extraParams.length > 0 ? extraParams : undefined,
+      whenCondition: handler.whenCondition,
+      register: handler.register,
+      become: handler.become || false,
+      becomeUser: handler.becomeUser,
+      ignoreErrors: handler.ignoreErrors || false,
+    });
+    setModalOpen(true);
+  };
+
   const handleDelete = async (id: number) => {
     await deleteHandler(id);
     message.success("已删除");
@@ -255,7 +274,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
     {
       title: "操作",
       key: "action",
-      width: 150,
+      width: 200,
       render: (_: unknown, record: Handler) => (
         <Space size="small">
           <Button
@@ -263,6 +282,12 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
             size="small"
             icon={<EyeOutlined />}
             onClick={() => handlePreviewHandler(record)}
+          />
+          <Button
+            type="text"
+            size="small"
+            icon={<CopyOutlined />}
+            onClick={() => handleCopy(record)}
           />
           <Button
             type="text"
