@@ -1,5 +1,9 @@
 package com.ansible.variable.service;
 
+import com.ansible.environment.entity.Environment;
+import com.ansible.environment.repository.EnvironmentRepository;
+import com.ansible.host.entity.HostGroup;
+import com.ansible.host.repository.HostGroupRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.CreateVariableRequest;
 import com.ansible.variable.dto.UpdateVariableRequest;
@@ -18,6 +22,22 @@ public class VariableService {
 
   private final VariableRepository variableRepository;
   private final ProjectAccessChecker accessChecker;
+  private final HostGroupRepository hostGroupRepository;
+  private final EnvironmentRepository environmentRepository;
+
+  private Long resolveProjectId(Variable v) {
+    return switch (v.getScope()) {
+      case PROJECT -> v.getScopeId();
+      case HOSTGROUP -> hostGroupRepository
+          .findById(v.getScopeId())
+          .orElseThrow(() -> new IllegalArgumentException("Host group not found"))
+          .getProjectId();
+      case ENVIRONMENT -> environmentRepository
+          .findById(v.getScopeId())
+          .orElseThrow(() -> new IllegalArgumentException("Environment not found"))
+          .getProjectId();
+    };
+  }
 
   @Transactional
   public VariableResponse createVariable(
@@ -57,7 +77,7 @@ public class VariableService {
         variableRepository
             .findById(varId)
             .orElseThrow(() -> new IllegalArgumentException("Variable not found"));
-    accessChecker.checkMembership(v.getScopeId(), userId);
+    accessChecker.checkMembership(resolveProjectId(v), userId);
     return toResponse(v);
   }
 
@@ -68,7 +88,7 @@ public class VariableService {
         variableRepository
             .findById(varId)
             .orElseThrow(() -> new IllegalArgumentException("Variable not found"));
-    accessChecker.checkOwnerOrAdmin(v.getScopeId(), v.getCreatedBy(), userId);
+    accessChecker.checkOwnerOrAdmin(resolveProjectId(v), v.getCreatedBy(), userId);
     if (!v.getKey().equals(request.key())
         && variableRepository.existsByScopeAndScopeIdAndKeyAndIdNot(
             v.getScope(), v.getScopeId(), request.key(), varId)) {
@@ -86,7 +106,7 @@ public class VariableService {
         variableRepository
             .findById(varId)
             .orElseThrow(() -> new IllegalArgumentException("Variable not found"));
-    accessChecker.checkOwnerOrAdmin(v.getScopeId(), v.getCreatedBy(), userId);
+    accessChecker.checkOwnerOrAdmin(resolveProjectId(v), v.getCreatedBy(), userId);
     variableRepository.delete(v);
   }
 

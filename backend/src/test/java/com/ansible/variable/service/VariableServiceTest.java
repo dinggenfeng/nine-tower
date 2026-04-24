@@ -6,6 +6,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.ansible.environment.entity.Environment;
+import com.ansible.environment.repository.EnvironmentRepository;
+import com.ansible.host.entity.HostGroup;
+import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.project.entity.ProjectMember;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.CreateVariableRequest;
 import com.ansible.variable.dto.VariableResponse;
@@ -29,6 +34,8 @@ class VariableServiceTest {
 
   @Mock private VariableRepository variableRepository;
   @Mock private ProjectAccessChecker accessChecker;
+  @Mock private HostGroupRepository hostGroupRepository;
+  @Mock private EnvironmentRepository environmentRepository;
 
   @InjectMocks private VariableService variableService;
 
@@ -186,5 +193,92 @@ class VariableServiceTest {
     assertThatThrownBy(() -> variableService.deleteVariable(99L, 100L))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessage("Variable not found");
+  }
+
+  @Test
+  void getVariable_hostGroupScope_resolvesProjectId() {
+    Variable var = new Variable();
+    ReflectionTestUtils.setField(var, "id", 2L);
+    var.setScope(VariableScope.HOSTGROUP);
+    var.setScopeId(10L);
+    var.setKey("key1");
+    var.setValue("val1");
+    var.setCreatedBy(100L);
+    when(variableRepository.findById(2L)).thenReturn(Optional.of(var));
+
+    HostGroup hg = new HostGroup();
+    hg.setProjectId(200L);
+    when(hostGroupRepository.findById(10L)).thenReturn(Optional.of(hg));
+
+    ProjectMember member = new ProjectMember();
+    when(accessChecker.checkMembership(200L, 50L)).thenReturn(member);
+
+    variableService.getVariable(2L, 50L);
+
+    verify(accessChecker).checkMembership(200L, 50L);
+  }
+
+  @Test
+  void getVariable_environmentScope_resolvesProjectId() {
+    Variable var = new Variable();
+    ReflectionTestUtils.setField(var, "id", 3L);
+    var.setScope(VariableScope.ENVIRONMENT);
+    var.setScopeId(20L);
+    var.setKey("key2");
+    var.setValue("val2");
+    var.setCreatedBy(100L);
+    when(variableRepository.findById(3L)).thenReturn(Optional.of(var));
+
+    Environment env = new Environment();
+    env.setProjectId(300L);
+    when(environmentRepository.findById(20L)).thenReturn(Optional.of(env));
+
+    ProjectMember member = new ProjectMember();
+    when(accessChecker.checkMembership(300L, 50L)).thenReturn(member);
+
+    variableService.getVariable(3L, 50L);
+
+    verify(accessChecker).checkMembership(300L, 50L);
+  }
+
+  @Test
+  void updateVariable_hostGroupScope_resolvesProjectId() {
+    Variable var = new Variable();
+    ReflectionTestUtils.setField(var, "id", 2L);
+    var.setScope(VariableScope.HOSTGROUP);
+    var.setScopeId(10L);
+    var.setKey("key1");
+    var.setValue("val1");
+    var.setCreatedBy(50L);
+    when(variableRepository.findById(2L)).thenReturn(Optional.of(var));
+
+    HostGroup hg = new HostGroup();
+    hg.setProjectId(200L);
+    when(hostGroupRepository.findById(10L)).thenReturn(Optional.of(hg));
+    when(variableRepository.save(any(Variable.class))).thenReturn(var);
+
+    variableService.updateVariable(2L, new UpdateVariableRequest("newkey", "newval"), 50L);
+
+    verify(accessChecker).checkOwnerOrAdmin(200L, 50L, 50L);
+  }
+
+  @Test
+  void deleteVariable_environmentScope_resolvesProjectId() {
+    Variable var = new Variable();
+    ReflectionTestUtils.setField(var, "id", 3L);
+    var.setScope(VariableScope.ENVIRONMENT);
+    var.setScopeId(20L);
+    var.setKey("key2");
+    var.setValue("val2");
+    var.setCreatedBy(50L);
+    when(variableRepository.findById(3L)).thenReturn(Optional.of(var));
+
+    Environment env = new Environment();
+    env.setProjectId(300L);
+    when(environmentRepository.findById(20L)).thenReturn(Optional.of(env));
+
+    variableService.deleteVariable(3L, 50L);
+
+    verify(accessChecker).checkOwnerOrAdmin(300L, 50L, 50L);
   }
 }
