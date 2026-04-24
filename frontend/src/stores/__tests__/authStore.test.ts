@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import type { User } from "../../types/entity/User";
 import { useAuthStore } from "../authStore";
 import * as authApi from "../../api/auth";
 
@@ -7,6 +8,10 @@ vi.mock("../../api/auth", () => ({
     me: vi.fn(),
   },
 }));
+
+function makeUser(overrides: Partial<User> = {}): User {
+  return { id: 1, username: "test", email: "t@t", ...overrides } as User;
+}
 
 describe("useAuthStore", () => {
   beforeEach(() => {
@@ -21,7 +26,7 @@ describe("useAuthStore", () => {
   });
 
   it("login sets token, user, and isAuthenticated", () => {
-    useAuthStore.getState().login("tok123", { id: 1, username: "alice", email: "a@b" } as any);
+    useAuthStore.getState().login("tok123", makeUser({ id: 1, username: "alice" }));
     const state = useAuthStore.getState();
     expect(state.token).toBe("tok123");
     expect(state.user?.username).toBe("alice");
@@ -30,7 +35,7 @@ describe("useAuthStore", () => {
   });
 
   it("logout clears all state and localStorage", () => {
-    useAuthStore.getState().login("tok123", { id: 1, username: "alice" } as any);
+    useAuthStore.getState().login("tok123", makeUser({ id: 1, username: "alice" }));
     useAuthStore.getState().logout();
     const state = useAuthStore.getState();
     expect(state.token).toBeNull();
@@ -42,7 +47,7 @@ describe("useAuthStore", () => {
   it("fetchUser fetches and sets user when token exists but user is null", async () => {
     localStorage.setItem("token", "tok123");
     useAuthStore.setState({ token: "tok123", isAuthenticated: true });
-    vi.mocked(authApi.authApi.me).mockResolvedValue({ id: 1, username: "bob" } as any);
+    vi.mocked(authApi.authApi.me).mockResolvedValue(makeUser({ id: 1, username: "bob" }));
     await useAuthStore.getState().fetchUser();
     expect(useAuthStore.getState().user?.username).toBe("bob");
     expect(useAuthStore.getState().loading).toBe(false);
@@ -50,7 +55,7 @@ describe("useAuthStore", () => {
 
   it("fetchUser skips API call if user already exists", async () => {
     localStorage.setItem("token", "tok");
-    useAuthStore.setState({ token: "tok", user: { id: 1 } as any });
+    useAuthStore.setState({ token: "tok", user: makeUser({ id: 1 }) });
     await useAuthStore.getState().fetchUser();
     expect(authApi.authApi.me).not.toHaveBeenCalled();
   });
@@ -66,7 +71,7 @@ describe("useAuthStore", () => {
   });
 
   it("setUser updates user in state", () => {
-    useAuthStore.getState().setUser({ id: 2, username: "carol" } as any);
+    useAuthStore.getState().setUser(makeUser({ id: 2, username: "carol" }));
     expect(useAuthStore.getState().user?.username).toBe("carol");
   });
 });
