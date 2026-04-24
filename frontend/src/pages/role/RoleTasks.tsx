@@ -1,17 +1,57 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Button, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Switch, Table, Tag, message, Collapse, Tooltip } from 'antd';
-import { PlusOutlined, EditOutlined, DeleteOutlined, DownOutlined, QuestionCircleOutlined, EyeOutlined, CopyOutlined, ArrowUpOutlined, ArrowDownOutlined } from '@ant-design/icons';
-import type { Task, CreateTaskRequest, UpdateTaskRequest, BlockChildRequest, BlockSection } from '../../types/entity/Task';
-import type { Handler } from '../../types/entity/Task';
-import { createTask, getTasks, updateTask, deleteTask, updateTaskTags, getTaskTags, reorderTasks } from '../../api/task';
-import { getHandlers } from '../../api/handler';
-import ModuleSelect from '../../components/role/ModuleSelect';
-import { ModuleParamsGrid, ExtraParamsInput } from '../../components/role/ModuleParamsForm';
-import { getModuleDefinition } from '../../constants/ansibleModules';
-import { taskToYaml, blockToYaml } from '../../utils/taskToYaml';
-import type { TaskYamlInput } from '../../utils/taskToYaml';
-import BlockTasksEditor from '../../components/role/BlockTasksEditor';
-import TagSelect from '../../components/role/TagSelect';
+import { useCallback, useEffect, useState } from "react";
+import {
+  Button,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Popconfirm,
+  Segmented,
+  Select,
+  Space,
+  Switch,
+  Table,
+  Tag,
+  message,
+  Collapse,
+  Tooltip,
+} from "antd";
+import {
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  DownOutlined,
+  QuestionCircleOutlined,
+  EyeOutlined,
+  CopyOutlined,
+  ArrowUpOutlined,
+  ArrowDownOutlined,
+} from "@ant-design/icons";
+import type {
+  Task,
+  CreateTaskRequest,
+  UpdateTaskRequest,
+  BlockChildRequest,
+  BlockSection,
+} from "../../types/entity/Task";
+import type { Handler } from "../../types/entity/Task";
+import {
+  createTask,
+  getTasks,
+  updateTask,
+  deleteTask,
+  updateTaskTags,
+  getTaskTags,
+  reorderTasks,
+} from "../../api/task";
+import { getHandlers } from "../../api/handler";
+import ModuleSelect from "../../components/role/ModuleSelect";
+import { ModuleParamsGrid, ExtraParamsInput } from "../../components/role/ModuleParamsForm";
+import { getModuleDefinition } from "../../constants/ansibleModules";
+import { taskToYaml, blockToYaml } from "../../utils/taskToYaml";
+import type { TaskYamlInput } from "../../utils/taskToYaml";
+import BlockTasksEditor from "../../components/role/BlockTasksEditor";
+import TagSelect from "../../components/role/TagSelect";
 
 interface RoleTasksProps {
   roleId: number;
@@ -20,12 +60,12 @@ interface RoleTasksProps {
 /** Merge moduleParams + extraParams into a JSON string for the args field */
 function buildArgsJson(
   moduleParams: Record<string, unknown> | undefined,
-  extraParams: { key: string; value: string }[] | undefined,
+  extraParams: { key: string; value: string }[] | undefined
 ): string {
   const result: Record<string, unknown> = {};
   if (moduleParams) {
     for (const [k, v] of Object.entries(moduleParams)) {
-      if (v !== undefined && v !== '' && v !== null) {
+      if (v !== undefined && v !== "" && v !== null) {
         result[k] = v;
       }
     }
@@ -37,13 +77,13 @@ function buildArgsJson(
       }
     }
   }
-  return Object.keys(result).length > 0 ? JSON.stringify(result) : '';
+  return Object.keys(result).length > 0 ? JSON.stringify(result) : "";
 }
 
 /** Parse args JSON string into moduleParams + extraParams for form population */
 function parseArgsToForm(
   argsJson: string | undefined,
-  moduleName: string | undefined,
+  moduleName: string | undefined
 ): { moduleParams: Record<string, unknown>; extraParams: { key: string; value: string }[] } {
   const moduleParams: Record<string, unknown> = {};
   const extraParams: { key: string; value: string }[] = [];
@@ -53,7 +93,7 @@ function parseArgsToForm(
   try {
     parsed = JSON.parse(argsJson);
   } catch {
-    extraParams.push({ key: '', value: argsJson });
+    extraParams.push({ key: "", value: argsJson });
     return { moduleParams, extraParams };
   }
 
@@ -77,10 +117,10 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [selectedModule, setSelectedModule] = useState<string | undefined>(undefined);
-  const [previewYaml, setPreviewYaml] = useState<string>('');
+  const [previewYaml, setPreviewYaml] = useState<string>("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [blockChildren, setBlockChildren] = useState<BlockChildRequest[]>([]);
-  const [loopMode, setLoopMode] = useState<'expression' | 'list'>('expression');
+  const [loopMode, setLoopMode] = useState<"expression" | "list">("expression");
   const [loopItems, setLoopItems] = useState<string[]>([]);
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [form] = Form.useForm();
@@ -88,10 +128,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [taskList, handlerList] = await Promise.all([
-        getTasks(roleId),
-        getHandlers(roleId),
-      ]);
+      const [taskList, handlerList] = await Promise.all([getTasks(roleId), getHandlers(roleId)]);
       setTasks(taskList);
       setHandlers(handlerList);
     } finally {
@@ -107,11 +144,11 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     setEditingTask(null);
     setSelectedModule(undefined);
     setBlockChildren([]);
-    setLoopMode('expression');
+    setLoopMode("expression");
     setLoopItems([]);
     setTagIds([]);
     form.resetFields();
-    form.setFieldValue('taskOrder', tasks.length + 1);
+    form.setFieldValue("taskOrder", tasks.length + 1);
     setModalOpen(true);
   };
 
@@ -146,37 +183,39 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       try {
         const parsed = JSON.parse(task.loop);
         if (Array.isArray(parsed)) {
-          setLoopMode('list');
+          setLoopMode("list");
           setLoopItems(parsed.map(String));
         } else {
-          setLoopMode('expression');
+          setLoopMode("expression");
           setLoopItems([]);
         }
       } catch {
-        setLoopMode('expression');
+        setLoopMode("expression");
         setLoopItems([]);
       }
     } else {
-      setLoopMode('expression');
+      setLoopMode("expression");
       setLoopItems([]);
     }
     setModalOpen(true);
-    if (task.module === 'block' && task.children && task.children.length > 0) {
-      setBlockChildren(task.children.map((c) => ({
-        section: (c.blockSection || 'BLOCK') as BlockSection,
-        name: c.name,
-        module: c.module,
-        args: c.args,
-        whenCondition: c.whenCondition || '',
-        loop: c.loop || '',
-        until: c.until || '',
-        register: c.register || '',
-        notify: c.notify || [],
-        taskOrder: c.taskOrder || 0,
-        become: c.become || false,
-        becomeUser: c.becomeUser || '',
-        ignoreErrors: c.ignoreErrors || false,
-      })));
+    if (task.module === "block" && task.children && task.children.length > 0) {
+      setBlockChildren(
+        task.children.map((c) => ({
+          section: (c.blockSection || "BLOCK") as BlockSection,
+          name: c.name,
+          module: c.module,
+          args: c.args,
+          whenCondition: c.whenCondition || "",
+          loop: c.loop || "",
+          until: c.until || "",
+          register: c.register || "",
+          notify: c.notify || [],
+          taskOrder: c.taskOrder || 0,
+          become: c.become || false,
+          becomeUser: c.becomeUser || "",
+          ignoreErrors: c.ignoreErrors || false,
+        }))
+      );
     } else {
       setBlockChildren([]);
     }
@@ -184,25 +223,28 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   const handleDelete = async (id: number) => {
     await deleteTask(id);
-    message.success('已删除');
+    message.success("已删除");
     fetchData();
   };
 
-  const handleMoveTask = async (currentIndex: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  const handleMoveTask = async (currentIndex: number, direction: "up" | "down") => {
+    const newIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
     if (newIndex < 0 || newIndex >= tasks.length) return;
     const newTasks = [...tasks];
     [newTasks[currentIndex], newTasks[newIndex]] = [newTasks[newIndex], newTasks[currentIndex]];
     setTasks(newTasks);
     try {
-      await reorderTasks(roleId, newTasks.map((t) => t.id));
+      await reorderTasks(
+        roleId,
+        newTasks.map((t) => t.id)
+      );
     } catch {
       fetchData();
     }
   };
 
   const handlePreviewTask = (task: Task) => {
-    if (task.module === 'block' && task.children && task.children.length > 0) {
+    if (task.module === "block" && task.children && task.children.length > 0) {
       setPreviewYaml(blockToYaml(task as TaskYamlInput & { children: TaskYamlInput[] }));
     } else {
       setPreviewYaml(taskToYaml(task as unknown as TaskYamlInput));
@@ -212,22 +254,24 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   const handlePreviewAll = () => {
     if (tasks.length === 0) {
-      message.info('暂无 Task');
+      message.info("暂无 Task");
       return;
     }
-    const yaml = tasks.map((t) => {
-      if (t.module === 'block' && t.children && t.children.length > 0) {
-        return blockToYaml(t as TaskYamlInput & { children: TaskYamlInput[] });
-      }
-      return taskToYaml(t as unknown as TaskYamlInput);
-    }).join('\n\n');
+    const yaml = tasks
+      .map((t) => {
+        if (t.module === "block" && t.children && t.children.length > 0) {
+          return blockToYaml(t as TaskYamlInput & { children: TaskYamlInput[] });
+        }
+        return taskToYaml(t as unknown as TaskYamlInput);
+      })
+      .join("\n\n");
     setPreviewYaml(yaml);
     setPreviewOpen(true);
   };
 
   const handlePreviewForm = () => {
     const values = form.getFieldsValue();
-    if (values.module === 'block') {
+    if (values.module === "block") {
       // Build a task object with children for blockToYaml
       const taskWithChildren: TaskYamlInput & { children: TaskYamlInput[] } = {
         name: values.name,
@@ -261,16 +305,19 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
           module: values.module,
           args: args || undefined,
           whenCondition: values.whenCondition,
-          loop: loopMode === 'list'
-            ? (loopItems.length > 0 ? JSON.stringify(loopItems) : undefined)
-            : values.loop,
+          loop:
+            loopMode === "list"
+              ? loopItems.length > 0
+                ? JSON.stringify(loopItems)
+                : undefined
+              : values.loop,
           until: values.until,
           register: values.register,
           notify: values.notify,
           become: values.become,
           becomeUser: values.becomeUser,
           ignoreErrors: values.ignoreErrors,
-        }),
+        })
       );
     }
     setPreviewOpen(true);
@@ -278,7 +325,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   const handleCopyYaml = async () => {
     await navigator.clipboard.writeText(previewYaml);
-    message.success('已复制');
+    message.success("已复制");
   };
 
   const handleSubmit = async () => {
@@ -291,7 +338,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       if (Object.keys(errors).length > 0) {
         // Set field errors on moduleParams fields
         const fieldErrors = Object.entries(errors).map(([field, msg]) => ({
-          name: ['moduleParams', field],
+          name: ["moduleParams", field],
           errors: [msg],
         }));
         form.setFields(fieldErrors);
@@ -300,9 +347,12 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
     }
 
     const args = buildArgsJson(values.moduleParams, values.extraParams);
-    const loopValue = loopMode === 'list'
-      ? (loopItems.length > 0 ? JSON.stringify(loopItems) : undefined)
-      : values.loop;
+    const loopValue =
+      loopMode === "list"
+        ? loopItems.length > 0
+          ? JSON.stringify(loopItems)
+          : undefined
+        : values.loop;
 
     if (editingTask) {
       let data: UpdateTaskRequest = {
@@ -319,7 +369,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors || false,
       };
-      if (values.module === 'block' && blockChildren.length > 0) {
+      if (values.module === "block" && blockChildren.length > 0) {
         // For block, we include blockChildren and strip out the irrelevant fields
         data = {
           ...data,
@@ -339,7 +389,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       } else {
         await updateTaskTags(editingTask.id, []);
       }
-      message.success('已更新');
+      message.success("已更新");
     } else {
       let data: CreateTaskRequest = {
         name: values.name,
@@ -355,7 +405,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         becomeUser: values.becomeUser,
         ignoreErrors: values.ignoreErrors || false,
       };
-      if (values.module === 'block' && blockChildren.length > 0) {
+      if (values.module === "block" && blockChildren.length > 0) {
         // For block, we include blockChildren and strip out the irrelevant fields
         data = {
           ...data,
@@ -373,7 +423,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       if (tagIds.length > 0) {
         await updateTaskTags(created.id, tagIds);
       }
-      message.success('已创建');
+      message.success("已创建");
     }
     setModalOpen(false);
     fetchData();
@@ -381,32 +431,31 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   const columns = [
     {
-      title: '顺序',
-      dataIndex: 'taskOrder',
-      key: 'taskOrder',
+      title: "顺序",
+      dataIndex: "taskOrder",
+      key: "taskOrder",
       width: 70,
     },
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: '模块',
-      dataIndex: 'module',
-      key: 'module',
+      title: "模块",
+      dataIndex: "module",
+      key: "module",
       width: 120,
     },
     {
-      title: 'Notify',
-      dataIndex: 'notify',
-      key: 'notify',
-      render: (notify: string[]) =>
-        notify?.map((n) => <Tag key={n}>{n}</Tag>),
+      title: "Notify",
+      dataIndex: "notify",
+      key: "notify",
+      render: (notify: string[]) => notify?.map((n) => <Tag key={n}>{n}</Tag>),
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 200,
       render: (_: unknown, record: Task, index: number) => (
         <Space size="small">
@@ -415,14 +464,14 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
             size="small"
             icon={<ArrowUpOutlined />}
             disabled={index === 0}
-            onClick={() => handleMoveTask(index, 'up')}
+            onClick={() => handleMoveTask(index, "up")}
           />
           <Button
             type="text"
             size="small"
             icon={<ArrowDownOutlined />}
             disabled={index === tasks.length - 1}
-            onClick={() => handleMoveTask(index, 'down')}
+            onClick={() => handleMoveTask(index, "down")}
           />
           <Button
             type="text"
@@ -446,7 +495,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+      <div style={{ marginBottom: 16, display: "flex", justifyContent: "flex-end", gap: 8 }}>
         <Button icon={<EyeOutlined />} onClick={handlePreviewAll}>
           预览全部 YAML
         </Button>
@@ -463,44 +512,46 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         size="middle"
       />
       <Modal
-        title={editingTask ? '编辑 Task' : '创建 Task'}
+        title={editingTask ? "编辑 Task" : "创建 Task"}
         open={modalOpen}
         onCancel={() => setModalOpen(false)}
         width={800}
         destroyOnClose
         footer={
-          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
               预览 YAML
             </Button>
             <Space>
               <Button onClick={() => setModalOpen(false)}>取消</Button>
-              <Button type="primary" onClick={handleSubmit}>确定</Button>
+              <Button type="primary" onClick={handleSubmit}>
+                确定
+              </Button>
             </Space>
           </div>
         }
       >
         <Form form={form} layout="vertical">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
             <Form.Item
               name="name"
               label="名称"
-              rules={[{ required: true, message: '请输入 Task 名称' }]}
+              rules={[{ required: true, message: "请输入 Task 名称" }]}
             >
               <Input placeholder="例如: Install nginx" />
             </Form.Item>
             <Form.Item
               name="taskOrder"
               label="顺序"
-              rules={[{ required: true, message: '请输入顺序' }]}
+              rules={[{ required: true, message: "请输入顺序" }]}
             >
-              <InputNumber min={1} style={{ width: '100%' }} />
+              <InputNumber min={1} style={{ width: "100%" }} />
             </Form.Item>
           </div>
           <Form.Item
             name="module"
             label="模块"
-            rules={[{ required: true, message: '请选择 Ansible 模块' }]}
+            rules={[{ required: true, message: "请选择 Ansible 模块" }]}
           >
             <ModuleSelect
               onChange={(val) => {
@@ -509,7 +560,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
               }}
             />
           </Form.Item>
-          {selectedModule === 'block' ? (
+          {selectedModule === "block" ? (
             <>
               <BlockTasksEditor
                 blockChildren={blockChildren}
@@ -518,31 +569,31 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
             </>
           ) : (
             <>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
                 <ModuleParamsGrid moduleName={selectedModule} />
               </div>
               <ExtraParamsInput />
             </>
           )}
-          {selectedModule === 'block' ? (
+          {selectedModule === "block" ? (
             <Collapse
               ghost
               bordered={false}
               expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
               items={[
                 {
-                  key: 'advanced',
+                  key: "advanced",
                   forceRender: true,
-                  label: '高级选项',
+                  label: "高级选项",
                   children: (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
                       <Form.Item
                         name="whenCondition"
                         label={
                           <span>
                             When 条件
                             <Tooltip title="任务执行的前置条件表达式">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -555,7 +606,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             提权 (become)
                             <Tooltip title="是否使用提权（sudo）执行此任务">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -569,7 +620,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             提权用户 (become_user)
                             <Tooltip title="提权后切换到的用户，默认 root">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -582,7 +633,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             忽略错误 (ignore_errors)
                             <Tooltip title="任务失败时是否继续执行后续任务">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -602,18 +653,18 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
               expandIcon={({ isActive }) => <DownOutlined rotate={isActive ? 90 : 0} />}
               items={[
                 {
-                  key: 'advanced',
+                  key: "advanced",
                   forceRender: true,
-                  label: '高级选项',
+                  label: "高级选项",
                   children: (
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0 16px" }}>
                       <Form.Item
                         name="whenCondition"
                         label={
                           <span>
                             When 条件
                             <Tooltip title="任务执行的前置条件表达式">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -625,31 +676,31 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             Loop
                             <Tooltip title="对列表或字典中的每个元素重复执行任务">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
                       >
-                        <Space direction="vertical" style={{ width: '100%' }} size={4}>
+                        <Space direction="vertical" style={{ width: "100%" }} size={4}>
                           <Segmented
                             size="small"
                             options={[
-                              { label: '表达式', value: 'expression' },
-                              { label: '列表', value: 'list' },
+                              { label: "表达式", value: "expression" },
+                              { label: "列表", value: "list" },
                             ]}
                             value={loopMode}
                             onChange={(val) => {
-                              const mode = val as 'expression' | 'list';
+                              const mode = val as "expression" | "list";
                               setLoopMode(mode);
-                              if (mode === 'expression') {
-                                form.setFieldValue('loop', '');
+                              if (mode === "expression") {
+                                form.setFieldValue("loop", "");
                                 setLoopItems([]);
                               } else {
-                                form.setFieldValue('loop', '[]');
+                                form.setFieldValue("loop", "[]");
                               }
                             }}
                           />
-                          {loopMode === 'expression' ? (
+                          {loopMode === "expression" ? (
                             <Form.Item name="loop" noStyle>
                               <Input placeholder="例如: {{ packages }}" />
                             </Form.Item>
@@ -660,11 +711,14 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                               value={loopItems}
                               onChange={(items) => {
                                 setLoopItems(items);
-                                form.setFieldValue('loop', items.length > 0 ? JSON.stringify(items) : '');
+                                form.setFieldValue(
+                                  "loop",
+                                  items.length > 0 ? JSON.stringify(items) : ""
+                                );
                               }}
                               open={loopItems.length > 0 ? false : undefined}
-                              tokenSeparators={[',']}
-                              style={{ width: '100%' }}
+                              tokenSeparators={[","]}
+                              style={{ width: "100%" }}
                             />
                           )}
                         </Space>
@@ -675,7 +729,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             Until
                             <Tooltip title="重复执行任务直到条件满足（如 result.rc == 0）">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -688,7 +742,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             Register
                             <Tooltip title="将任务输出保存到变量中，供后续任务使用">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -701,7 +755,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             提权 (become)
                             <Tooltip title="是否使用提权（sudo）执行此任务">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -715,7 +769,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             提权用户 (become_user)
                             <Tooltip title="提权后切换到的用户，默认 root">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -728,7 +782,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             忽略错误 (ignore_errors)
                             <Tooltip title="任务失败时是否继续执行后续任务">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
@@ -742,11 +796,11 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             Notify (Handler)
                             <Tooltip title="任务成功执行后通知指定的 Handler 运行">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
-                        style={{ gridColumn: '1 / -1' }}
+                        style={{ gridColumn: "1 / -1" }}
                       >
                         <Select
                           mode="multiple"
@@ -760,11 +814,11 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
                           <span>
                             Tags
                             <Tooltip title="为任务关联标签，便于分类和筛选">
-                              <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                              <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                             </Tooltip>
                           </span>
                         }
-                        style={{ gridColumn: '1 / -1' }}
+                        style={{ gridColumn: "1 / -1" }}
                       >
                         <TagSelect value={tagIds} onChange={setTagIds} />
                       </Form.Item>
@@ -790,12 +844,12 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
       >
         <pre
           style={{
-            background: '#f5f5f5',
+            background: "#f5f5f5",
             padding: 16,
             borderRadius: 6,
             fontSize: 13,
             lineHeight: 1.6,
-            overflow: 'auto',
+            overflow: "auto",
             maxHeight: 400,
           }}
         >

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from "react";
 import {
   Button,
   Checkbox,
@@ -12,19 +12,15 @@ import {
   Table,
   Tag,
   Tooltip,
-} from 'antd';
-import {
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-} from '@ant-design/icons';
-import { useParams } from 'react-router-dom';
+} from "antd";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { useParams } from "react-router-dom";
 import type {
   HostGroup,
   Host,
   CreateHostGroupRequest,
   CreateHostRequest,
-} from '../../types/entity/Host';
+} from "../../types/entity/Host";
 import {
   createHostGroup,
   deleteHostGroup,
@@ -34,8 +30,8 @@ import {
   deleteHost,
   getHosts,
   updateHost,
-} from '../../api/host';
-import styles from './HostGroupManager.module.css';
+} from "../../api/host";
+import styles from "./HostGroupManager.module.css";
 
 const { TextArea } = Input;
 
@@ -85,7 +81,7 @@ export default function HostGroupManager() {
   const handleCreateHg = async () => {
     const values = await hgForm.validateFields();
     await createHostGroup(pid, values);
-    message.success('主机组创建成功');
+    message.success("主机组创建成功");
     setHgModalOpen(false);
     hgForm.resetFields();
     fetchHostGroups();
@@ -95,7 +91,7 @@ export default function HostGroupManager() {
     if (!editingHg) return;
     const values = await hgForm.validateFields();
     await updateHostGroup(editingHg.id, values);
-    message.success('主机组更新成功');
+    message.success("主机组更新成功");
     setHgModalOpen(false);
     setEditingHg(null);
     hgForm.resetFields();
@@ -104,7 +100,7 @@ export default function HostGroupManager() {
 
   const handleDeleteHg = async (hgId: number) => {
     await deleteHostGroup(hgId);
-    message.success('主机组已删除');
+    message.success("主机组已删除");
     if (selectedHostGroup?.id === hgId) {
       setSelectedHostGroup(null);
       setHosts([]);
@@ -127,7 +123,7 @@ export default function HostGroupManager() {
     if (!selectedHostGroup) return;
     const values = await hostForm.validateFields();
     await createHost(selectedHostGroup.id, values);
-    message.success('主机创建成功');
+    message.success("主机创建成功");
     setHostModalOpen(false);
     hostForm.resetFields();
     fetchHosts(selectedHostGroup.id);
@@ -137,7 +133,7 @@ export default function HostGroupManager() {
     if (!editingHost) return;
     const values = await hostForm.validateFields();
     await updateHost(editingHost.id, values);
-    message.success('主机更新成功');
+    message.success("主机更新成功");
     setHostModalOpen(false);
     setEditingHost(null);
     hostForm.resetFields();
@@ -146,7 +142,7 @@ export default function HostGroupManager() {
 
   const handleDeleteHost = async (hostId: number) => {
     await deleteHost(hostId);
-    message.success('主机已删除');
+    message.success("主机已删除");
     if (selectedHostGroup) fetchHosts(selectedHostGroup.id);
   };
 
@@ -169,30 +165,28 @@ export default function HostGroupManager() {
 
   const hostColumns = [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
       render: (name: string) => <span style={{ fontWeight: 500 }}>{name}</span>,
     },
     {
-      title: 'IP',
-      dataIndex: 'ip',
-      key: 'ip',
+      title: "IP",
+      dataIndex: "ip",
+      key: "ip",
       render: (ip: string) => <span className={styles.ipCell}>{ip}</span>,
     },
-    { title: '端口', dataIndex: 'port', key: 'port' },
-    { title: 'SSH用户', dataIndex: 'ansibleUser', key: 'ansibleUser' },
+    { title: "端口", dataIndex: "port", key: "port" },
+    { title: "SSH用户", dataIndex: "ansibleUser", key: "ansibleUser" },
     {
-      title: '提权',
-      dataIndex: 'ansibleBecome',
-      key: 'ansibleBecome',
-      render: (v: boolean) => (
-        <Tag color={v ? 'green' : 'default'}>{v ? '是' : '否'}</Tag>
-      ),
+      title: "提权",
+      dataIndex: "ansibleBecome",
+      key: "ansibleBecome",
+      render: (v: boolean) => <Tag color={v ? "green" : "default"}>{v ? "是" : "否"}</Tag>,
     },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 100,
       render: (_: unknown, record: Host) => (
         <Space>
@@ -204,16 +198,8 @@ export default function HostGroupManager() {
               onClick={() => openHostModal(record)}
             />
           </Tooltip>
-          <Popconfirm
-            title="确认删除此主机？"
-            onConfirm={() => handleDeleteHost(record.id)}
-          >
-            <Button
-              type="text"
-              size="small"
-              danger
-              icon={<DeleteOutlined />}
-            />
+          <Popconfirm title="确认删除此主机？" onConfirm={() => handleDeleteHost(record.id)}>
+            <Button type="text" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
       ),
@@ -247,35 +233,27 @@ export default function HostGroupManager() {
             return (
               <div
                 key={hg.id}
-                className={`${styles.groupItem} ${isActive ? styles.groupItemActive : ''}`}
+                className={`${styles.groupItem} ${isActive ? styles.groupItemActive : ""}`}
                 onClick={() => handleSelectHostGroup(hg)}
               >
                 <div>
                   <div className={styles.groupName}>{hg.name}</div>
-                  <div className={styles.groupCount}>
-                    {hg.description || '无描述'}
-                  </div>
+                  <div className={styles.groupCount}>{hg.description || "无描述"}</div>
                 </div>
-                <Space
-                  className={styles.groupActions}
-                  onClick={(e) => e.stopPropagation()}
-                >
+                <Space className={styles.groupActions} onClick={(e) => e.stopPropagation()}>
                   <Button
                     type="text"
                     size="small"
                     icon={<EditOutlined />}
                     onClick={() => openHgModal(hg)}
-                    style={{ color: 'inherit' }}
+                    style={{ color: "inherit" }}
                   />
-                  <Popconfirm
-                    title="确认删除此主机组？"
-                    onConfirm={() => handleDeleteHg(hg.id)}
-                  >
+                  <Popconfirm title="确认删除此主机组？" onConfirm={() => handleDeleteHg(hg.id)}>
                     <Button
                       type="text"
                       size="small"
                       icon={<DeleteOutlined />}
-                      style={{ color: 'inherit' }}
+                      style={{ color: "inherit" }}
                     />
                   </Popconfirm>
                 </Space>
@@ -290,12 +268,10 @@ export default function HostGroupManager() {
         <div className={styles.rightHeader}>
           <div>
             <span className={styles.rightTitle}>
-              {selectedHostGroup ? selectedHostGroup.name : '请选择主机组'}
+              {selectedHostGroup ? selectedHostGroup.name : "请选择主机组"}
             </span>
             {selectedHostGroup && (
-              <span className={styles.rightSubtitle}>
-                {hosts.length} 台主机
-              </span>
+              <span className={styles.rightSubtitle}>{hosts.length} 台主机</span>
             )}
           </div>
           {selectedHostGroup && (
@@ -309,7 +285,7 @@ export default function HostGroupManager() {
             </Button>
           )}
         </div>
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ flex: 1, overflow: "auto" }}>
           {selectedHostGroup ? (
             <Table
               columns={hostColumns}
@@ -319,25 +295,19 @@ export default function HostGroupManager() {
               pagination={false}
               locale={{
                 emptyText: (
-                  <Empty
-                    description="该主机组下暂无主机"
-                    image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  />
+                  <Empty description="该主机组下暂无主机" image={Empty.PRESENTED_IMAGE_SIMPLE} />
                 ),
               }}
             />
           ) : (
-            <Empty
-              description="请从左侧选择一个主机组"
-              style={{ marginTop: 80 }}
-            />
+            <Empty description="请从左侧选择一个主机组" style={{ marginTop: 80 }} />
           )}
         </div>
       </div>
 
       {/* HostGroup Modal */}
       <Modal
-        title={editingHg ? '编辑主机组' : '新建主机组'}
+        title={editingHg ? "编辑主机组" : "新建主机组"}
         open={hgModalOpen}
         onOk={editingHg ? handleUpdateHg : handleCreateHg}
         onCancel={() => {
@@ -346,11 +316,7 @@ export default function HostGroupManager() {
         }}
       >
         <Form form={hgForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
             <Input maxLength={100} />
           </Form.Item>
           <Form.Item name="description" label="描述">
@@ -361,7 +327,7 @@ export default function HostGroupManager() {
 
       {/* Host Modal */}
       <Modal
-        title={editingHost ? '编辑主机' : '新建主机'}
+        title={editingHost ? "编辑主机" : "新建主机"}
         open={hostModalOpen}
         onOk={editingHost ? handleUpdateHost : handleCreateHost}
         onCancel={() => {
@@ -370,18 +336,10 @@ export default function HostGroupManager() {
         }}
       >
         <Form form={hostForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
             <Input maxLength={100} />
           </Form.Item>
-          <Form.Item
-            name="ip"
-            label="IP"
-            rules={[{ required: true, message: '请输入IP' }]}
-          >
+          <Form.Item name="ip" label="IP" rules={[{ required: true, message: "请输入IP" }]}>
             <Input maxLength={45} placeholder="192.168.1.10" />
           </Form.Item>
           <Form.Item name="port" label="端口" initialValue={22}>
@@ -393,12 +351,7 @@ export default function HostGroupManager() {
           <Form.Item name="ansibleSshPass" label="SSH密码（加密存储）">
             <Input.Password maxLength={500} placeholder="留空则不更新" />
           </Form.Item>
-          <Form.Item
-            name="ansibleBecome"
-            label="提权"
-            valuePropName="checked"
-            initialValue={false}
-          >
+          <Form.Item name="ansibleBecome" label="提权" valuePropName="checked" initialValue={false}>
             <Checkbox />
           </Form.Item>
         </Form>

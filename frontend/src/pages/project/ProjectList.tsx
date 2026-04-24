@@ -1,14 +1,5 @@
-import { useEffect, useState } from 'react';
-import {
-  Button,
-  Modal,
-  Form,
-  Input,
-  message,
-  Dropdown,
-  Spin,
-  type MenuProps,
-} from 'antd';
+import { useEffect, useState } from "react";
+import { Button, Modal, Form, Input, message, Dropdown, Spin, type MenuProps } from "antd";
 import {
   PlusOutlined,
   DeleteOutlined,
@@ -16,25 +7,25 @@ import {
   MoreOutlined,
   FolderOutlined,
   ClockCircleOutlined,
-} from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
-import type { Project, CreateProjectRequest } from '../../types/entity/Project';
-import { getMyProjects, createProject, deleteProject } from '../../api/project';
-import styles from './ProjectList.module.css';
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import type { Project, CreateProjectRequest } from "../../types/entity/Project";
+import { getMyProjects, createProject, deleteProject } from "../../api/project";
+import styles from "./ProjectList.module.css";
 
 const { TextArea } = Input;
 
 const avatarGradients = [
-  'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-  'linear-gradient(135deg, #6366f1, #4f46e5)',
-  'linear-gradient(135deg, #8b5cf6, #7c3aed)',
-  'linear-gradient(135deg, #06b6d4, #0891b2)',
-  'linear-gradient(135deg, #10b981, #059669)',
-  'linear-gradient(135deg, #f59e0b, #d97706)',
-  'linear-gradient(135deg, #ef4444, #dc2626)',
-  'linear-gradient(135deg, #ec4899, #db2777)',
-  'linear-gradient(135deg, #64748b, #475569)',
-  'linear-gradient(135deg, #0ea5e9, #0284c7)',
+  "linear-gradient(135deg, #3b82f6, #1d4ed8)",
+  "linear-gradient(135deg, #6366f1, #4f46e5)",
+  "linear-gradient(135deg, #8b5cf6, #7c3aed)",
+  "linear-gradient(135deg, #06b6d4, #0891b2)",
+  "linear-gradient(135deg, #10b981, #059669)",
+  "linear-gradient(135deg, #f59e0b, #d97706)",
+  "linear-gradient(135deg, #ef4444, #dc2626)",
+  "linear-gradient(135deg, #ec4899, #db2777)",
+  "linear-gradient(135deg, #64748b, #475569)",
+  "linear-gradient(135deg, #0ea5e9, #0284c7)",
 ];
 
 function getAvatarStyle(name: string) {
@@ -43,9 +34,9 @@ function getAvatarStyle(name: string) {
 }
 
 function formatDate(dateStr: string) {
-  if (!dateStr) return '';
+  if (!dateStr) return "";
   const d = new Date(dateStr);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export default function ProjectList() {
@@ -72,7 +63,7 @@ export default function ProjectList() {
   const handleCreate = async () => {
     const values = await form.validateFields();
     await createProject(values);
-    message.success('项目创建成功');
+    message.success("项目创建成功");
     setCreateModalOpen(false);
     form.resetFields();
     fetchProjects();
@@ -80,11 +71,11 @@ export default function ProjectList() {
 
   const handleDelete = (id: number) => {
     Modal.confirm({
-      title: '确认删除项目？',
-      content: '此操作无法撤销。',
+      title: "确认删除项目？",
+      content: "此操作无法撤销。",
       onOk: async () => {
         await deleteProject(id);
-        message.success('项目已删除');
+        message.success("项目已删除");
         fetchProjects();
       },
     });
@@ -97,17 +88,13 @@ export default function ProjectList() {
           <h2 className={styles.title}>我的项目</h2>
           <span className={styles.count}>共 {projects.length} 个项目</span>
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setCreateModalOpen(true)}
-        >
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalOpen(true)}>
           新建项目
         </Button>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '80px 0' }}>
+        <div style={{ textAlign: "center", padding: "80px 0" }}>
           <Spin size="large" />
         </div>
       ) : projects.length === 0 ? (
@@ -117,33 +104,29 @@ export default function ProjectList() {
           </div>
           <div className={styles.emptyTitle}>暂无项目</div>
           <div className={styles.emptyDesc}>创建你的第一个 Ansible Playbook 项目</div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setCreateModalOpen(true)}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreateModalOpen(true)}>
             创建第一个项目
           </Button>
         </div>
       ) : (
         <div className={styles.grid}>
           {projects.map((project, index) => {
-            const isAdmin = project.myRole === 'PROJECT_ADMIN';
-            const initial = project.name[0]?.toUpperCase() || 'P';
+            const isAdmin = project.myRole === "PROJECT_ADMIN";
+            const initial = project.name[0]?.toUpperCase() || "P";
 
-            const menuItems: MenuProps['items'] = [
+            const menuItems: MenuProps["items"] = [
               ...(isAdmin
                 ? [
                     {
-                      key: 'settings',
+                      key: "settings",
                       icon: <SettingOutlined />,
-                      label: '项目设置',
+                      label: "项目设置",
                       onClick: () => navigate(`/projects/${project.id}/settings`),
                     },
                     {
-                      key: 'delete',
+                      key: "delete",
                       icon: <DeleteOutlined />,
-                      label: '删除项目',
+                      label: "删除项目",
                       danger: true,
                       onClick: () => handleDelete(project.id),
                     },
@@ -166,13 +149,13 @@ export default function ProjectList() {
                     <span
                       className={`${styles.roleBadge} ${isAdmin ? styles.roleAdmin : styles.roleMember}`}
                     >
-                      {isAdmin ? '管理员' : '成员'}
+                      {isAdmin ? "管理员" : "成员"}
                     </span>
                     {menuItems.length > 0 && (
                       <div onClick={(e) => e.stopPropagation()}>
                         <Dropdown
                           menu={{ items: menuItems }}
-                          trigger={['click']}
+                          trigger={["click"]}
                           placement="bottomRight"
                         >
                           <span className={styles.menuBtn}>
@@ -184,9 +167,7 @@ export default function ProjectList() {
                   </div>
                 </div>
                 <h3 className={styles.cardName}>{project.name}</h3>
-                <div className={styles.cardDesc}>
-                  {project.description || '暂无描述'}
-                </div>
+                <div className={styles.cardDesc}>{project.description || "暂无描述"}</div>
                 <div className={styles.cardFooter}>
                   <ClockCircleOutlined style={{ fontSize: 12 }} />
                   <span style={{ marginLeft: 4 }}>{formatDate(project.createdAt)}</span>
@@ -210,7 +191,7 @@ export default function ProjectList() {
           <Form.Item
             name="name"
             label="项目名称"
-            rules={[{ required: true, message: '请输入项目名称' }]}
+            rules={[{ required: true, message: "请输入项目名称" }]}
           >
             <Input maxLength={100} />
           </Form.Item>

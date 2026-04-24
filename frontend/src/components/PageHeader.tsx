@@ -1,5 +1,5 @@
-import { Typography } from 'antd';
-import type { ReactNode } from 'react';
+import { Typography } from "antd";
+import type { ReactNode } from "react";
 
 interface PageHeaderProps {
   title: string;
@@ -11,12 +11,12 @@ export default function PageHeader({ title, description, action }: PageHeaderPro
   return (
     <div
       style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
         marginBottom: 20,
         paddingBottom: 16,
-        borderBottom: '1px solid #f1f5f9',
+        borderBottom: "1px solid #f1f5f9",
       }}
     >
       <div>
@@ -24,7 +24,7 @@ export default function PageHeader({ title, description, action }: PageHeaderPro
           {title}
         </Typography.Title>
         {description && (
-          <Typography.Text type="secondary" style={{ marginTop: 4, display: 'block' }}>
+          <Typography.Text type="secondary" style={{ marginTop: 4, display: "block" }}>
             {description}
           </Typography.Text>
         )}

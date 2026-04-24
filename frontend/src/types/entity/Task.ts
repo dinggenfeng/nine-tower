@@ -1,4 +1,4 @@
-export type BlockSection = 'BLOCK' | 'RESCUE' | 'ALWAYS';
+export type BlockSection = "BLOCK" | "RESCUE" | "ALWAYS";
 
 export interface Task {
   id: number;

@@ -1,15 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Card,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Space,
-  Tree,
-  message,
-} from 'antd';
+import { useCallback, useEffect, useState } from "react";
+import { Button, Card, Form, Input, Modal, Popconfirm, Space, Tree, message } from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -18,14 +8,14 @@ import {
   ArrowLeftOutlined,
   FolderOutlined,
   DownloadOutlined,
-} from '@ant-design/icons';
-import CodeMirror from '@uiw/react-codemirror';
-import { yaml } from '@codemirror/lang-yaml';
+} from "@ant-design/icons";
+import CodeMirror from "@uiw/react-codemirror";
+import { yaml } from "@codemirror/lang-yaml";
 import type {
   Template,
   CreateTemplateRequest,
   UpdateTemplateRequest,
-} from '../../types/entity/Template';
+} from "../../types/entity/Template";
 import {
   createTemplate,
   getTemplates,
@@ -33,7 +23,7 @@ import {
   updateTemplate,
   deleteTemplate,
   getTemplateDownloadUrl,
-} from '../../api/template';
+} from "../../api/template";
 
 interface RoleTemplatesProps {
   roleId: number;
@@ -45,7 +35,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [contentTemplate, setContentTemplate] = useState<Template | null>(null);
-  const [contentValue, setContentValue] = useState('');
+  const [contentValue, setContentValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm();
 
@@ -89,7 +79,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           targetPath: values.targetPath,
         };
         await updateTemplate(editingTemplate.id, data);
-        message.success('模板已更新');
+        message.success("模板已更新");
       } else {
         const data: CreateTemplateRequest = {
           name: values.name,
@@ -97,12 +87,12 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           targetPath: values.targetPath,
         };
         await createTemplate(roleId, data);
-        message.success('模板已创建');
+        message.success("模板已创建");
       }
       setModalOpen(false);
       fetchData();
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
+      if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
     }
@@ -110,20 +100,20 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
 
   const handleDelete = async (id: number) => {
     await deleteTemplate(id);
-    message.success('模板已删除');
+    message.success("模板已删除");
     fetchData();
   };
 
   const handleEditContent = async (record: Template) => {
     const detail = await getTemplate(record.id);
     setContentTemplate(detail);
-    setContentValue(detail.content || '');
+    setContentValue(detail.content || "");
   };
 
   const handleDownload = (record: Template) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     const url = `${getTemplateDownloadUrl(record.id)}?token=${token}`;
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   const handleSaveContent = async () => {
@@ -131,11 +121,11 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     setSaving(true);
     try {
       await updateTemplate(contentTemplate.id, { content: contentValue });
-      message.success('模板内容已保存');
+      message.success("模板内容已保存");
       setContentTemplate(null);
       fetchData();
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
+      if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
     } finally {
@@ -147,12 +137,19 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   if (contentTemplate) {
     return (
       <div>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            marginBottom: 16,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <Button
             type="text"
             icon={<ArrowLeftOutlined />}
             onClick={() => setContentTemplate(null)}
-            style={{ color: '#64748b', padding: '4px 8px' }}
+            style={{ color: "#64748b", padding: "4px 8px" }}
           >
             返回模板列表
           </Button>
@@ -164,14 +161,17 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           title={
             <Space>
               <FileTextOutlined />
-              <span>{contentTemplate.parentDir ? `${contentTemplate.parentDir}/` : ''}{contentTemplate.name}</span>
+              <span>
+                {contentTemplate.parentDir ? `${contentTemplate.parentDir}/` : ""}
+                {contentTemplate.name}
+              </span>
             </Space>
           }
           size="small"
           style={{ marginBottom: 16 }}
         >
-          <span style={{ color: '#64748b' }}>
-            目标路径: {contentTemplate.targetPath || '未设置'}
+          <span style={{ color: "#64748b" }}>
+            目标路径: {contentTemplate.targetPath || "未设置"}
           </span>
         </Card>
         <CodeMirror
@@ -203,9 +203,9 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     const rootNodes: AntTreeNode[] = [];
 
     for (const t of templates) {
-      const parts = t.parentDir ? t.parentDir.split('/').filter(Boolean) : [];
+      const parts = t.parentDir ? t.parentDir.split("/").filter(Boolean) : [];
       let currentLevel = rootNodes;
-      let pathSoFar = '';
+      let pathSoFar = "";
 
       // Create directory nodes for each path segment
       for (const part of parts) {
@@ -263,10 +263,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
                 handleDownload(t);
               }}
             />
-            <Popconfirm
-              title="确定删除？"
-              onConfirm={() => handleDelete(t.id)}
-            >
+            <Popconfirm title="确定删除？" onConfirm={() => handleDelete(t.id)}>
               <Button
                 type="link"
                 size="small"
@@ -292,16 +289,9 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           添加模板
         </Button>
       </div>
-      {loading ? (
-        <span>加载中...</span>
-      ) : (
-        <Tree
-          treeData={antTreeData}
-          defaultExpandAll
-        />
-      )}
+      {loading ? <span>加载中...</span> : <Tree treeData={antTreeData} defaultExpandAll />}
       <Modal
-        title={editingTemplate ? '编辑模板' : '添加模板'}
+        title={editingTemplate ? "编辑模板" : "添加模板"}
         open={modalOpen}
         onOk={handleSubmit}
         onCancel={() => setModalOpen(false)}
@@ -310,7 +300,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           <Form.Item
             name="name"
             label="文件名"
-            rules={[{ required: true, message: '请输入模板文件名' }]}
+            rules={[{ required: true, message: "请输入模板文件名" }]}
           >
             <Input placeholder="例如: nginx.conf.j2" />
           </Form.Item>

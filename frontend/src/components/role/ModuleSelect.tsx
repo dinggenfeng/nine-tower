@@ -1,6 +1,6 @@
-import { Select, Typography, Button } from 'antd';
-import { LinkOutlined } from '@ant-design/icons';
-import { ANSIBLE_MODULES } from '../../constants/ansibleModules';
+import { Select, Typography, Button } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
+import { ANSIBLE_MODULES } from "../../constants/ansibleModules";
 
 const { Text } = Typography;
 
@@ -25,9 +25,9 @@ export default function ModuleSelect({ value, onChange, filterModule }: ModuleSe
         <Select.Option key={mod.name} value={mod.name} label={mod.label}>
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
             }}
           >
             <div>
@@ -42,7 +42,7 @@ export default function ModuleSelect({ value, onChange, filterModule }: ModuleSe
               icon={<LinkOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                window.open(mod.docUrl, '_blank', 'noopener,noreferrer');
+                window.open(mod.docUrl, "_blank", "noopener,noreferrer");
               }}
               title="查看文档"
             />

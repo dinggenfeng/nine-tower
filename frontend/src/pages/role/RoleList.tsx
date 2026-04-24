@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Button, Form, Input, message, Modal, Popconfirm, Space, Table } from 'antd';
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
-import type { Role, CreateRoleRequest } from '../../types/entity/Role';
-import { createRole, deleteRole, getRoles, updateRole } from '../../api/role';
-import PageHeader from '../../components/PageHeader';
+import { useEffect, useState, useCallback } from "react";
+import { Button, Form, Input, message, Modal, Popconfirm, Space, Table } from "antd";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { useNavigate, useParams } from "react-router-dom";
+import type { Role, CreateRoleRequest } from "../../types/entity/Role";
+import { createRole, deleteRole, getRoles, updateRole } from "../../api/role";
+import PageHeader from "../../components/PageHeader";
 
 export default function RoleList() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -33,7 +33,7 @@ export default function RoleList() {
   const handleCreate = async () => {
     const values = await form.validateFields();
     await createRole(pid, values);
-    message.success('Role 创建成功');
+    message.success("Role 创建成功");
     setModalOpen(false);
     form.resetFields();
     fetchRoles();
@@ -43,7 +43,7 @@ export default function RoleList() {
     if (!editingRole) return;
     const values = await form.validateFields();
     await updateRole(editingRole.id, values);
-    message.success('Role 更新成功');
+    message.success("Role 更新成功");
     setModalOpen(false);
     setEditingRole(null);
     form.resetFields();
@@ -52,7 +52,7 @@ export default function RoleList() {
 
   const handleDelete = async (roleId: number) => {
     await deleteRole(roleId);
-    message.success('Role 已删除');
+    message.success("Role 已删除");
     fetchRoles();
   };
 
@@ -69,22 +69,22 @@ export default function RoleList() {
 
   const columns = [
     {
-      title: '名称',
-      dataIndex: 'name',
-      key: 'name',
+      title: "名称",
+      dataIndex: "name",
+      key: "name",
       render: (name: string, record: Role) => (
         <a
           onClick={() => navigate(`/projects/${pid}/roles/${record.id}`)}
-          style={{ color: '#3b82f6', fontWeight: 500 }}
+          style={{ color: "#3b82f6", fontWeight: 500 }}
         >
           {name}
         </a>
       ),
     },
-    { title: '描述', dataIndex: 'description', key: 'description' },
+    { title: "描述", dataIndex: "description", key: "description" },
     {
-      title: '操作',
-      key: 'action',
+      title: "操作",
+      key: "action",
       width: 120,
       render: (_: unknown, record: Role) => (
         <Space>
@@ -94,10 +94,7 @@ export default function RoleList() {
             icon={<EditOutlined />}
             onClick={() => openModal(record)}
           />
-          <Popconfirm
-            title="确认删除此 Role？"
-            onConfirm={() => handleDelete(record.id)}
-          >
+          <Popconfirm title="确认删除此 Role？" onConfirm={() => handleDelete(record.id)}>
             <Button type="text" size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -111,11 +108,7 @@ export default function RoleList() {
         title="Roles"
         description="管理 Ansible Roles"
         action={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => openModal()}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => openModal()}>
             新建 Role
           </Button>
         }
@@ -130,7 +123,7 @@ export default function RoleList() {
       />
 
       <Modal
-        title={editingRole ? '编辑 Role' : '新建 Role'}
+        title={editingRole ? "编辑 Role" : "新建 Role"}
         open={modalOpen}
         onOk={editingRole ? handleUpdate : handleCreate}
         onCancel={() => {
@@ -139,11 +132,7 @@ export default function RoleList() {
         }}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
             <Input maxLength={100} />
           </Form.Item>
           <Form.Item name="description" label="描述">

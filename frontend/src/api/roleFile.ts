@@ -1,19 +1,10 @@
-import request from './request';
-import type {
-  RoleFile,
-  CreateFileRequest,
-  UpdateFileRequest,
-} from '../types/entity/RoleFile';
+import request from "./request";
+import type { RoleFile, CreateFileRequest, UpdateFileRequest } from "../types/entity/RoleFile";
 
-export async function createFile(
-  roleId: number,
-  data: CreateFileRequest
-): Promise<RoleFile> {
-  const res = await request.post<RoleFile>(
-    `/roles/${roleId}/files`,
-    data,
-    { params: data.textContent ? { textContent: data.textContent } : undefined }
-  );
+export async function createFile(roleId: number, data: CreateFileRequest): Promise<RoleFile> {
+  const res = await request.post<RoleFile>(`/roles/${roleId}/files`, data, {
+    params: data.textContent ? { textContent: data.textContent } : undefined,
+  });
   return res.data;
 }
 
@@ -27,10 +18,7 @@ export async function getFile(id: number): Promise<RoleFile> {
   return res.data;
 }
 
-export async function updateFile(
-  id: number,
-  data: UpdateFileRequest
-): Promise<RoleFile> {
+export async function updateFile(id: number, data: UpdateFileRequest): Promise<RoleFile> {
   const res = await request.put<RoleFile>(`/files/${id}`, data);
   return res.data;
 }

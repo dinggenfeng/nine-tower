@@ -1,7 +1,7 @@
-import { Form, Input, Select, Switch, Button, Tooltip } from 'antd';
-import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from '@ant-design/icons';
-import type { ModuleDefinition } from '../../constants/ansibleModules';
-import { getModuleDefinition } from '../../constants/ansibleModules';
+import { Form, Input, Select, Switch, Button, Tooltip } from "antd";
+import { PlusOutlined, MinusCircleOutlined, QuestionCircleOutlined } from "@ant-design/icons";
+import type { ModuleDefinition } from "../../constants/ansibleModules";
+import { getModuleDefinition } from "../../constants/ansibleModules";
 
 interface ModuleParamsFormProps {
   moduleName: string | undefined;
@@ -20,34 +20,32 @@ export function ModuleParamsGrid({ moduleName }: ModuleParamsFormProps) {
       {moduleDef.params.map((param) => (
         <Form.Item
           key={param.name}
-          name={['moduleParams', param.name]}
+          name={["moduleParams", param.name]}
           label={
             <span>
               {param.label}
               {param.tooltip && (
                 <Tooltip title={param.tooltip}>
-                  <QuestionCircleOutlined style={{ marginLeft: 4, color: '#999' }} />
+                  <QuestionCircleOutlined style={{ marginLeft: 4, color: "#999" }} />
                 </Tooltip>
               )}
             </span>
           }
           rules={
-            param.required
-              ? [{ required: true, message: `请输入 ${param.label}` }]
-              : undefined
+            param.required ? [{ required: true, message: `请输入 ${param.label}` }] : undefined
           }
-          valuePropName={param.type === 'switch' ? 'checked' : 'value'}
+          valuePropName={param.type === "switch" ? "checked" : "value"}
           initialValue={param.defaultValue}
         >
-          {param.type === 'input' && <Input placeholder={param.placeholder} />}
-          {param.type === 'select' && (
+          {param.type === "input" && <Input placeholder={param.placeholder} />}
+          {param.type === "select" && (
             <Select
               allowClear
-              placeholder={param.placeholder || '请选择'}
+              placeholder={param.placeholder || "请选择"}
               options={param.options}
             />
           )}
-          {param.type === 'switch' && <Switch />}
+          {param.type === "switch" && <Switch />}
         </Form.Item>
       ))}
     </>
@@ -61,7 +59,7 @@ export function ExtraParamsInput() {
       {(fields, { add, remove }) => (
         <div
           style={{
-            position: 'relative',
+            position: "relative",
             height: fields.length * 48 + 56,
             minHeight: fields.length * 48 + 56,
           }}
@@ -70,34 +68,34 @@ export function ExtraParamsInput() {
             <div
               key={key}
               style={{
-                position: 'absolute',
+                position: "absolute",
                 top: index * 48,
                 left: 0,
                 right: 0,
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 8,
               }}
             >
               <Form.Item
                 {...restField}
-                name={[name, 'key']}
-                rules={[{ required: true, message: '请输入参数名' }]}
+                name={[name, "key"]}
+                rules={[{ required: true, message: "请输入参数名" }]}
                 style={{ marginBottom: 0, flex: 1 }}
               >
                 <Input placeholder="参数名" />
               </Form.Item>
               <Form.Item
                 {...restField}
-                name={[name, 'value']}
-                rules={[{ required: true, message: '请输入参数值' }]}
+                name={[name, "value"]}
+                rules={[{ required: true, message: "请输入参数值" }]}
                 style={{ marginBottom: 0, flex: 1 }}
               >
                 <Input placeholder="参数值" />
               </Form.Item>
               <MinusCircleOutlined
                 onClick={() => remove(name)}
-                style={{ cursor: 'pointer', color: '#ff4d4f', flexShrink: 0 }}
+                style={{ cursor: "pointer", color: "#ff4d4f", flexShrink: 0 }}
               />
             </div>
           ))}
@@ -105,7 +103,7 @@ export function ExtraParamsInput() {
             type="dashed"
             onClick={() => add()}
             icon={<PlusOutlined />}
-            style={{ position: 'absolute', top: fields.length * 48 + 8, width: 'fit-content' }}
+            style={{ position: "absolute", top: fields.length * 48 + 8, width: "fit-content" }}
           >
             添加参数
           </Button>

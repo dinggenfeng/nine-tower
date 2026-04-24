@@ -1,14 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import {
-  Button,
-  Form,
-  Input,
-  Modal,
-  Popconfirm,
-  Space,
-  Tree,
-  message,
-} from 'antd';
+import { useCallback, useEffect, useState } from "react";
+import { Button, Form, Input, Modal, Popconfirm, Space, Tree, message } from "antd";
 import {
   PlusOutlined,
   FolderOutlined,
@@ -16,15 +7,15 @@ import {
   DownloadOutlined,
   EditOutlined,
   DeleteOutlined,
-} from '@ant-design/icons';
-import type { RoleFile, CreateFileRequest } from '../../types/entity/RoleFile';
+} from "@ant-design/icons";
+import type { RoleFile, CreateFileRequest } from "../../types/entity/RoleFile";
 import {
   getFiles,
   createFile,
   updateFile,
   deleteFile,
   getFileDownloadUrl,
-} from '../../api/roleFile';
+} from "../../api/roleFile";
 
 interface RoleFilesProps {
   roleId: number;
@@ -55,7 +46,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
   const handleCreate = (parentDir: string, isDir: boolean) => {
     setCreatingDir(isDir);
     createForm.resetFields();
-    createForm.setFieldsValue({ parentDir, name: '' });
+    createForm.setFieldsValue({ parentDir, name: "" });
     setCreateModalOpen(true);
   };
 
@@ -69,11 +60,11 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
         textContent: creatingDir ? undefined : values.textContent,
       };
       await createFile(roleId, data);
-      message.success(creatingDir ? '目录已创建' : '文件已创建');
+      message.success(creatingDir ? "目录已创建" : "文件已创建");
       setCreateModalOpen(false);
       fetchData();
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
+      if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
     }
@@ -83,7 +74,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
     setSelectedFile(file);
     editForm.setFieldsValue({
       name: file.name,
-      textContent: file.textContent || '',
+      textContent: file.textContent || "",
     });
     setEditModalOpen(true);
   };
@@ -96,11 +87,11 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
         name: values.name,
         textContent: values.textContent,
       });
-      message.success('更新成功');
+      message.success("更新成功");
       setEditModalOpen(false);
       fetchData();
     } catch (err) {
-      if (err && typeof err === 'object' && 'message' in err) {
+      if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
     }
@@ -108,14 +99,14 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
 
   const handleDelete = async (fileId: number) => {
     await deleteFile(fileId);
-    message.success('删除成功');
+    message.success("删除成功");
     fetchData();
   };
 
   const handleDownload = (fileId: number) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
     const url = `${getFileDownloadUrl(fileId)}?token=${token}`;
-    window.open(url, '_blank');
+    window.open(url, "_blank");
   };
 
   interface TreeNode {
@@ -132,7 +123,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
           {f.isDirectory ? <FolderOutlined /> : <FileOutlined />}
           <span>{f.name}</span>
           {!f.isDirectory && f.size != null && f.size > 0 && (
-            <span style={{ color: '#94a3b8', fontSize: 12 }}>
+            <span style={{ color: "#94a3b8", fontSize: 12 }}>
               ({(f.size / 1024).toFixed(1)} KB)
             </span>
           )}
@@ -152,9 +143,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
               icon={<PlusOutlined />}
               onClick={(e) => {
                 e.stopPropagation();
-                const dir = f.parentDir
-                  ? `${f.parentDir}/${f.name}`
-                  : f.name;
+                const dir = f.parentDir ? `${f.parentDir}/${f.name}` : f.name;
                 handleCreate(dir, false);
               }}
             />
@@ -170,10 +159,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
               }}
             />
           )}
-          <Popconfirm
-            title="确定删除？"
-            onConfirm={() => handleDelete(f.id)}
-          >
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(f.id)}>
             <Button
               type="link"
               size="small"
@@ -191,28 +177,19 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
     <div>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate('', false)}
-          >
+          <Button icon={<PlusOutlined />} onClick={() => handleCreate("", false)}>
             新建文件
           </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate('', true)}
-          >
+          <Button icon={<PlusOutlined />} onClick={() => handleCreate("", true)}>
             新建目录
           </Button>
         </Space>
       </div>
 
-      <Tree
-        treeData={toTreeData(files)}
-        defaultExpandAll
-      />
+      <Tree treeData={toTreeData(files)} defaultExpandAll />
 
       <Modal
-        title={creatingDir ? '新建目录' : '新建文件'}
+        title={creatingDir ? "新建目录" : "新建文件"}
         open={createModalOpen}
         onOk={handleCreateSubmit}
         onCancel={() => setCreateModalOpen(false)}
@@ -221,21 +198,12 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
           <Form.Item name="parentDir" hidden>
             <Input />
           </Form.Item>
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: '请输入名称' }]}
-          >
-            <Input
-              placeholder={creatingDir ? '目录名称' : '文件名称'}
-            />
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
+            <Input placeholder={creatingDir ? "目录名称" : "文件名称"} />
           </Form.Item>
           {!creatingDir && (
             <Form.Item name="textContent" label="文件内容">
-              <Input.TextArea
-                rows={8}
-                placeholder="文件内容（可选，创建后可编辑）"
-              />
+              <Input.TextArea rows={8} placeholder="文件内容（可选，创建后可编辑）" />
             </Form.Item>
           )}
         </Form>
@@ -252,16 +220,13 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
           <Form.Item
             name="name"
             label="文件名"
-            rules={[{ required: true, message: '请输入文件名' }]}
+            rules={[{ required: true, message: "请输入文件名" }]}
           >
             <Input />
           </Form.Item>
           {selectedFile && !selectedFile.isDirectory && (
             <Form.Item name="textContent" label="内容">
-              <Input.TextArea
-                rows={15}
-                style={{ fontFamily: 'monospace' }}
-              />
+              <Input.TextArea rows={15} style={{ fontFamily: "monospace" }} />
             </Form.Item>
           )}
         </Form>

@@ -1,10 +1,7 @@
-import request from './request';
-import type { Role, CreateRoleRequest, UpdateRoleRequest } from '../types/entity/Role';
+import request from "./request";
+import type { Role, CreateRoleRequest, UpdateRoleRequest } from "../types/entity/Role";
 
-export async function createRole(
-  projectId: number,
-  data: CreateRoleRequest
-): Promise<Role> {
+export async function createRole(projectId: number, data: CreateRoleRequest): Promise<Role> {
   const res = await request.post<Role>(`/projects/${projectId}/roles`, data);
   return res.data;
 }
@@ -19,10 +16,7 @@ export async function getRole(id: number): Promise<Role> {
   return res.data;
 }
 
-export async function updateRole(
-  id: number,
-  data: UpdateRoleRequest
-): Promise<Role> {
+export async function updateRole(id: number, data: UpdateRoleRequest): Promise<Role> {
   const res = await request.put<Role>(`/roles/${id}`, data);
   return res.data;
 }

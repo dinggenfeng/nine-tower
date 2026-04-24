@@ -1,14 +1,7 @@
-import request from './request';
-import type {
-  Tag,
-  CreateTagRequest,
-  UpdateTagRequest,
-} from '../types/entity/Tag';
+import request from "./request";
+import type { Tag, CreateTagRequest, UpdateTagRequest } from "../types/entity/Tag";
 
-export async function createTag(
-  projectId: number,
-  data: CreateTagRequest
-): Promise<Tag> {
+export async function createTag(projectId: number, data: CreateTagRequest): Promise<Tag> {
   const res = await request.post<Tag>(`/projects/${projectId}/tags`, data);
   return res.data;
 }
@@ -18,10 +11,7 @@ export async function listTags(projectId: number): Promise<Tag[]> {
   return res.data;
 }
 
-export async function updateTag(
-  tagId: number,
-  data: UpdateTagRequest
-): Promise<Tag> {
+export async function updateTag(tagId: number, data: UpdateTagRequest): Promise<Tag> {
   const res = await request.put<Tag>(`/tags/${tagId}`, data);
   return res.data;
 }
