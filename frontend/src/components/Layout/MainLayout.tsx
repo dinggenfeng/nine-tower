@@ -128,7 +128,13 @@ export default function MainLayout() {
   return (
     <Layout style={{ minHeight: "100vh" }}>
       <Layout.Header className={styles.header}>
-        <div className={styles.logo} onClick={() => navigate("/projects")}>
+        <div
+          className={styles.logo}
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate("/projects")}
+          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/projects"); }}
+        >
           <ProjectOutlined className={styles.logoIcon} />
           <span className={styles.logoText}>Ansible Playbook Studio</span>
         </div>

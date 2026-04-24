@@ -37,9 +37,11 @@ const navGroups = [
 ];
 
 const keyToLabel: Record<string, string> = {};
+const allNavKeys = new Set<string>();
 navGroups.forEach((g) =>
   g.items.forEach((item) => {
     keyToLabel[item.key] = item.label;
+    allNavKeys.add(item.key);
   })
 );
 
@@ -56,8 +58,13 @@ export default function ProjectLayout() {
     return () => setCurrentProject(null);
   }, [id, setCurrentProject]);
 
-  const pathParts = location.pathname.split("/");
-  const currentKey = pathParts[3] || "roles";
+  const pathSegments = location.pathname.split("/").filter(Boolean);
+  // Derive currentKey by matching path segments against known nav keys
+  // Path structure: /projects/:id/:navKey/...
+  const currentKey =
+    pathSegments.length >= 3 && allNavKeys.has(pathSegments[2])
+      ? pathSegments[2]
+      : "roles";
 
   return (
     <Layout style={{ minHeight: "100%" }}>
@@ -71,7 +78,10 @@ export default function ProjectLayout() {
                 <div
                   key={item.key}
                   className={`${styles.navItem} ${currentKey === item.key ? styles.navItemActive : ""}`}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => navigate(`/projects/${id}/${item.key}`)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/${item.key}`); }}
                 >
                   {item.icon}
                   <span>{item.label}</span>
@@ -83,11 +93,23 @@ export default function ProjectLayout() {
       </Layout.Sider>
       <Layout.Content className={styles.content}>
         <div className={styles.breadcrumb}>
-          <span className={styles.breadcrumbLink} onClick={() => navigate("/projects")}>
+          <span
+            className={styles.breadcrumbLink}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate("/projects")}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate("/projects"); }}
+          >
             项目
           </span>
           {" / "}
-          <span className={styles.breadcrumbLink} onClick={() => navigate(`/projects/${id}/roles`)}>
+          <span
+            className={styles.breadcrumbLink}
+            role="button"
+            tabIndex={0}
+            onClick={() => navigate(`/projects/${id}/roles`)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") navigate(`/projects/${id}/roles`); }}
+          >
             {currentProject?.name || "..."}
           </span>
           {" / "}
