@@ -16,9 +16,6 @@ public interface RoleFileRepository extends JpaRepository<RoleFile, Long> {
 
   boolean existsByRoleIdAndParentDirAndName(Long roleId, String parentDir, String name);
 
-  boolean existsByRoleIdAndParentDirAndNameAndIdNot(
-      Long roleId, String parentDir, String name, Long id);
-
   void deleteByRoleId(Long roleId);
 
   List<RoleFile> findByRoleIdAndParentDirStartingWith(Long roleId, String parentDirPrefix);

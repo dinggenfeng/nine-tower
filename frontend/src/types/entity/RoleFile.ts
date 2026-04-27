@@ -3,6 +3,7 @@ export interface RoleFile {
   roleId: number;
   parentDir: string;
   name: string;
+  targetPath: string | null;
   isDirectory: boolean;
   size: number | null;
   textContent: string | null;
@@ -12,13 +13,16 @@ export interface RoleFile {
 }
 
 export interface CreateFileRequest {
-  parentDir: string;
+  parentDir?: string;
   name: string;
+  targetPath?: string;
   isDirectory: boolean;
   textContent?: string;
 }
 
 export interface UpdateFileRequest {
-  name: string;
+  name?: string;
+  parentDir?: string;
+  targetPath?: string;
   textContent?: string;
 }

@@ -14,6 +14,7 @@ public class FileResponse {
   private final Long roleId;
   private final String parentDir;
   private final String name;
+  private final String targetPath;
   private final Boolean isDirectory;
   private final Long size;
   private final String textContent;
@@ -22,11 +23,13 @@ public class FileResponse {
   private final LocalDateTime updatedAt;
 
   @JsonCreator
+  @SuppressWarnings("PMD.ExcessiveParameterList")
   public FileResponse(
       @JsonProperty("id") Long id,
       @JsonProperty("roleId") Long roleId,
       @JsonProperty("parentDir") String parentDir,
       @JsonProperty("name") String name,
+      @JsonProperty("targetPath") String targetPath,
       @JsonProperty("isDirectory") Boolean isDirectory,
       @JsonProperty("size") Long size,
       @JsonProperty("textContent") String textContent,
@@ -37,6 +40,7 @@ public class FileResponse {
     this.roleId = roleId;
     this.parentDir = parentDir;
     this.name = name;
+    this.targetPath = targetPath;
     this.isDirectory = isDirectory;
     this.size = size;
     this.textContent = textContent;
@@ -50,16 +54,16 @@ public class FileResponse {
     this.roleId = file.getRoleId();
     this.parentDir = file.getParentDir();
     this.name = file.getName();
+    this.targetPath = file.getTargetPath();
     this.isDirectory = file.getIsDirectory();
     this.children = children;
     this.createdAt = file.getCreatedAt();
     this.updatedAt = file.getUpdatedAt();
     if (!Boolean.TRUE.equals(file.getIsDirectory()) && file.getContent() != null) {
       this.size = (long) file.getContent().length;
-      this.textContent = new String(file.getContent(), java.nio.charset.StandardCharsets.UTF_8);
     } else {
       this.size = null;
-      this.textContent = null;
     }
+    this.textContent = null;
   }
 }

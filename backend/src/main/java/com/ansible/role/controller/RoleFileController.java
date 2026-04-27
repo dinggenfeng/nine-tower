@@ -22,7 +22,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api")
@@ -38,8 +40,25 @@ public class RoleFileController {
       @RequestParam(required = false) String textContent,
       @AuthenticationPrincipal UserDetails userDetails) {
     Long currentUserId = Long.valueOf(userDetails.getUsername());
-    byte[] content = textContent != null ? textContent.getBytes(StandardCharsets.UTF_8) : null;
+    String text = request.getTextContent() != null ? request.getTextContent() : textContent;
+    byte[] content = text != null ? text.getBytes(StandardCharsets.UTF_8) : null;
     return Result.success(roleFileService.createFile(roleId, request, content, currentUserId));
+  }
+
+  @PostMapping("/roles/{roleId}/files/upload")
+  public Result<FileResponse> uploadFile(
+      @PathVariable Long roleId,
+      @RequestPart("file") MultipartFile file,
+      @RequestParam(required = false) String parentDir,
+      @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    try {
+      byte[] content = file.getBytes();
+      return Result.success(roleFileService.uploadFile(
+          roleId, parentDir, file.getOriginalFilename(), content, currentUserId));
+    } catch (java.io.IOException e) {
+      throw new IllegalArgumentException("Failed to read uploaded file", e);
+    }
   }
 
   @GetMapping("/roles/{roleId}/files")

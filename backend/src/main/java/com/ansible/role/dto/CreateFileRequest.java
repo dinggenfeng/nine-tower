@@ -1,7 +1,6 @@
 package com.ansible.role.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
@@ -10,7 +9,6 @@ import lombok.Setter;
 @Setter
 public class CreateFileRequest {
 
-  @NotNull(message = "Parent directory is required")
   @Size(max = 500, message = "Parent directory must not exceed 500 characters")
   private String parentDir;
 
@@ -18,5 +16,10 @@ public class CreateFileRequest {
   @Size(max = 200, message = "Name must not exceed 200 characters")
   private String name;
 
+  @Size(max = 500, message = "Target path must not exceed 500 characters")
+  private String targetPath;
+
   private Boolean isDirectory;
+
+  private String textContent;
 }

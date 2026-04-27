@@ -6,9 +6,10 @@ import RoleFiles from "../RoleFiles";
 vi.mock("../../../api/roleFile", () => ({
   getFiles: vi.fn(),
   createFile: vi.fn(),
+  uploadFile: vi.fn(),
   updateFile: vi.fn(),
   deleteFile: vi.fn(),
-  getFileDownloadUrl: (id: number) => `/api/files/${id}/download`,
+  downloadFile: vi.fn(),
 }));
 
 import { getFiles } from "../../../api/roleFile";
@@ -21,9 +22,10 @@ const baseFile: RoleFile = {
   roleId: 3,
   parentDir: "",
   name: "",
+  targetPath: null,
   isDirectory: false,
   size: 0,
-  textContent: "",
+  textContent: null,
   children: null,
   createdAt: "",
   updatedAt: "",

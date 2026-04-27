@@ -146,7 +146,8 @@ class RoleFileServiceTest {
     FileResponse response = roleFileService.getFile(1L, 100L);
 
     assertThat(response.getName()).isEqualTo("config.yml");
-    assertThat(response.getTextContent()).isEqualTo("hello world");
+    assertThat(response.getIsDirectory()).isFalse();
+    assertThat(response.getSize()).isEqualTo(11);
   }
 
   @Test
@@ -154,13 +155,12 @@ class RoleFileServiceTest {
     stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "old.yml", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
-    when(roleFileRepository.existsByRoleIdAndParentDirAndNameAndIdNot(1L, "", "new.yml", 1L))
+    when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "new.yml"))
         .thenReturn(false);
     when(roleFileRepository.save(any(RoleFile.class))).thenReturn(file);
 
     UpdateFileRequest request = new UpdateFileRequest();
     request.setName("new.yml");
-    request.setTextContent(null);
     FileResponse response = roleFileService.updateFile(1L, request, 100L);
 
     assertThat(response.getName()).isEqualTo("new.yml");
@@ -171,14 +171,19 @@ class RoleFileServiceTest {
     stubRole(1L);
     RoleFile file = createFile(1L, 1L, "", "config.yml", false);
     when(roleFileRepository.findById(1L)).thenReturn(Optional.of(file));
-    when(roleFileRepository.save(any(RoleFile.class))).thenReturn(file);
+    when(roleFileRepository.save(any(RoleFile.class)))
+        .thenAnswer(
+            inv -> {
+              RoleFile saved = inv.getArgument(0);
+              assertThat(new String(saved.getContent(), StandardCharsets.UTF_8))
+                  .isEqualTo("new content");
+              return saved;
+            });
 
     UpdateFileRequest request = new UpdateFileRequest();
     request.setName("config.yml");
     request.setTextContent("new content");
-    FileResponse response = roleFileService.updateFile(1L, request, 100L);
-
-    assertThat(response.getTextContent()).isEqualTo("new content");
+    roleFileService.updateFile(1L, request, 100L);
   }
 
   @Test
@@ -235,5 +240,40 @@ class RoleFileServiceTest {
 
     assertThatThrownBy(() -> roleFileService.getFileName(10L, 2L))
         .isInstanceOf(SecurityException.class);
+  }
+
+  @Test
+  void uploadFile_success() {
+    stubRole(1L);
+    when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "app.jar"))
+        .thenReturn(false);
+    when(roleFileRepository.save(any(RoleFile.class)))
+        .thenAnswer(
+            inv -> {
+              RoleFile f = inv.getArgument(0);
+              ReflectionTestUtils.setField(f, "id", 20L);
+              return f;
+            });
+
+    byte[] binaryContent = new byte[] {0x50, 0x4B, 0x03, 0x04}; // ZIP magic bytes
+    FileResponse response =
+        roleFileService.uploadFile(1L, null, "app.jar", binaryContent, 100L);
+
+    assertThat(response.getName()).isEqualTo("app.jar");
+    assertThat(response.getIsDirectory()).isFalse();
+    assertThat(response.getSize()).isEqualTo(4);
+  }
+
+  @Test
+  void uploadFile_duplicateName_throws() {
+    stubRole(1L);
+    when(roleFileRepository.existsByRoleIdAndParentDirAndName(1L, "", "app.jar"))
+        .thenReturn(true);
+
+    byte[] binaryContent = new byte[] {0x50, 0x4B};
+    assertThatThrownBy(
+            () -> roleFileService.uploadFile(1L, null, "app.jar", binaryContent, 100L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("already exists");
   }
 }

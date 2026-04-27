@@ -189,6 +189,36 @@ class RoleFileControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void uploadFile_success() {
+    HttpHeaders headers = authHeaders();
+    headers.setContentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA);
+    org.springframework.util.LinkedMultiValueMap<String, Object> body =
+        new org.springframework.util.LinkedMultiValueMap<>();
+    org.springframework.core.io.ByteArrayResource resource =
+        new org.springframework.core.io.ByteArrayResource(
+            new byte[] {0x50, 0x4B, 0x03, 0x04}) {
+          @Override
+          public String getFilename() {
+            return "app.jar";
+          }
+        };
+    body.add("file", resource);
+    HttpEntity<org.springframework.util.MultiValueMap<String, Object>> entity =
+        new HttpEntity<>(body, headers);
+
+    ResponseEntity<Result<FileResponse>> resp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/files/upload",
+            HttpMethod.POST,
+            entity,
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resp.getBody().getData().getName()).isEqualTo("app.jar");
+    assertThat(resp.getBody().getData().getSize()).isEqualTo(4);
+  }
+
+  @Test
   void deleteFile_success() {
     Long fileId = createFile("config.yml", "", false);
 

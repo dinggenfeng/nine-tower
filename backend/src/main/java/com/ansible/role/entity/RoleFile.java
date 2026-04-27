@@ -28,6 +28,9 @@ public class RoleFile extends BaseEntity {
   @Column(nullable = false, length = 200)
   private String name;
 
+  @Column(name = "target_path", length = 500)
+  private String targetPath;
+
   @Column(columnDefinition = "bytea")
   private byte[] content;
 
