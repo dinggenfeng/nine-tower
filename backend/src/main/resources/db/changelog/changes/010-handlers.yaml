@@ -1,0 +1,69 @@
+databaseChangeLog:
+  - changeSet:
+      id: 10
+      author: nine-tower
+      changes:
+        - createTable:
+            tableName: handlers
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: module
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: args
+                  type: TEXT
+              - column:
+                  name: when_condition
+                  type: VARCHAR(500)
+              - column:
+                  name: register
+                  type: VARCHAR(100)
+              - column:
+                  name: become_flag
+                  type: BOOLEAN
+              - column:
+                  name: become_user
+                  type: VARCHAR(100)
+              - column:
+                  name: ignore_errors
+                  type: BOOLEAN
+        - createIndex:
+            indexName: idx_handler_role_id
+            tableName: handlers
+            columns:
+              - column:
+                  name: role_id

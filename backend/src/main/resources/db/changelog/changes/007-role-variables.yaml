@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 7
+      author: nine-tower
+      changes:
+        - createTable:
+            tableName: role_variables
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: variable_key
+                  type: VARCHAR(200)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value
+                  type: TEXT
+        - addUniqueConstraint:
+            constraintName: uc_role_variables
+            tableName: role_variables
+            columnNames: role_id, variable_key

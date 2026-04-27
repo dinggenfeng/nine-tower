@@ -1,0 +1,52 @@
+databaseChangeLog:
+  - changeSet:
+      id: 17
+      author: nine-tower
+      changes:
+        - createTable:
+            tableName: variables
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope
+                  type: VARCHAR(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scope_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: value
+                  type: TEXT
+        - addUniqueConstraint:
+            constraintName: uc_variables
+            tableName: variables
+            columnNames: scope, scope_id, key

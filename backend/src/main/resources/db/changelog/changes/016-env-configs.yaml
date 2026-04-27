@@ -1,0 +1,47 @@
+databaseChangeLog:
+  - changeSet:
+      id: 16
+      author: nine-tower
+      changes:
+        - createTable:
+            tableName: env_configs
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: TIMESTAMP
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_by
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: environment_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: config_key
+                  type: VARCHAR(100)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: config_value
+                  type: TEXT
+        - addUniqueConstraint:
+            constraintName: uc_env_configs
+            tableName: env_configs
+            columnNames: environment_id, config_key
