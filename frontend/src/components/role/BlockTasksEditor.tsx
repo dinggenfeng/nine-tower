@@ -375,6 +375,7 @@ function ChildTaskCard({
           setBatchLoopOpen(false);
         }}
         width={480}
+        zIndex={1200}
         okText="确定"
         cancelText="取消"
       >

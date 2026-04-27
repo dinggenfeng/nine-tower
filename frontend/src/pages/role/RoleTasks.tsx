@@ -535,6 +535,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
         onCancel={() => setModalOpen(false)}
         width={800}
         destroyOnClose
+        styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
         footer={
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
@@ -902,6 +903,7 @@ export default function RoleTasks({ roleId }: RoleTasksProps) {
           setBatchLoopOpen(false);
         }}
         width={480}
+        zIndex={1100}
         okText="确定"
         cancelText="取消"
       >

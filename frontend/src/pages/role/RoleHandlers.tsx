@@ -351,6 +351,7 @@ export default function RoleHandlers({ roleId }: RoleHandlersProps) {
         onCancel={() => setModalOpen(false)}
         width={800}
         destroyOnClose
+        styles={{ body: { maxHeight: "calc(100vh - 200px)", overflowY: "auto" } }}
         footer={
           <div style={{ display: "flex", justifyContent: "space-between" }}>
             <Button icon={<EyeOutlined />} onClick={handlePreviewForm}>
