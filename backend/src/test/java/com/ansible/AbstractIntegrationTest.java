@@ -26,7 +26,9 @@ public abstract class AbstractIntegrationTest {
     registry.add("spring.datasource.url", postgres::getJdbcUrl);
     registry.add("spring.datasource.username", postgres::getUsername);
     registry.add("spring.datasource.password", postgres::getPassword);
-    registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+    registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
+    registry.add("spring.liquibase.change-log",
+        () -> "classpath:db/changelog/db.changelog-master.yaml");
     registry.add("app.encryption.key", () -> "MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=");
     registry.add(
         "app.jwt.secret",
