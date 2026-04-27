@@ -261,6 +261,48 @@ class TemplateControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void createDirectory_success() {
+    CreateTemplateRequest req = new CreateTemplateRequest();
+    req.setName("conf.d");
+    req.setIsDirectory(true);
+
+    ResponseEntity<Result<TemplateResponse>> resp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/templates",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resp.getBody().getData().getIsDirectory()).isTrue();
+  }
+
+  @Test
+  void listTemplates_treeWithDirectory() {
+    CreateTemplateRequest dirReq = new CreateTemplateRequest();
+    dirReq.setName("conf.d");
+    dirReq.setIsDirectory(true);
+    restTemplate.exchange(
+        "/api/roles/" + roleId + "/templates",
+        HttpMethod.POST,
+        new HttpEntity<>(dirReq, authHeaders()),
+        new ParameterizedTypeReference<Result<TemplateResponse>>() {});
+
+    createTemplate("app.conf.j2", "conf.d", "/etc/app.conf", "content");
+
+    ResponseEntity<Result<List<TemplateResponse>>> resp =
+        restTemplate.exchange(
+            "/api/roles/" + roleId + "/templates",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    List<TemplateResponse> tree = resp.getBody().getData();
+    assertThat(tree).isNotEmpty();
+  }
+
+  @Test
   void downloadTemplate_notFound() {
     ResponseEntity<byte[]> resp =
         restTemplate.exchange(

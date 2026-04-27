@@ -10,5 +10,7 @@ public interface TemplateRepository extends JpaRepository<Template, Long> {
 
   boolean existsByRoleIdAndParentDirAndName(Long roleId, String parentDir, String name);
 
+  List<Template> findByRoleIdAndParentDirStartingWith(Long roleId, String parentDirPrefix);
+
   void deleteByRoleId(Long roleId);
 }

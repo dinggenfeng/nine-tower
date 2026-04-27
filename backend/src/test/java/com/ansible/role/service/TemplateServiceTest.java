@@ -37,6 +37,19 @@ class TemplateServiceTest {
   private Role testRole;
   private Template testTemplate;
 
+  private Template createTemplate(Long id, Long roleId, String parentDir, String name,
+      String content, boolean isDir) {
+    Template t = new Template();
+    ReflectionTestUtils.setField(t, "id", id);
+    t.setRoleId(roleId);
+    t.setParentDir(parentDir);
+    t.setName(name);
+    t.setIsDirectory(isDir);
+    t.setContent(isDir ? null : content);
+    t.setCreatedBy(10L);
+    return t;
+  }
+
   @BeforeEach
   void setUp() {
     testRole = new Role();
@@ -48,10 +61,11 @@ class TemplateServiceTest {
     testTemplate = new Template();
     ReflectionTestUtils.setField(testTemplate, "id", 1L);
     testTemplate.setRoleId(1L);
-    testTemplate.setParentDir(null);
+    testTemplate.setParentDir("");
     testTemplate.setName("nginx.conf.j2");
     testTemplate.setTargetPath("/etc/nginx/nginx.conf");
     testTemplate.setContent("server { listen {{ http_port }}; }");
+    testTemplate.setIsDirectory(false);
     testTemplate.setCreatedBy(10L);
     ReflectionTestUtils.setField(testTemplate, "createdAt", LocalDateTime.now());
     ReflectionTestUtils.setField(testTemplate, "updatedAt", LocalDateTime.now());
@@ -65,7 +79,7 @@ class TemplateServiceTest {
     request.setContent("server { listen {{ http_port }}; }");
 
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, null, "nginx.conf.j2"))
+    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, "", "nginx.conf.j2"))
         .thenReturn(false);
     when(templateRepository.save(any(Template.class))).thenReturn(testTemplate);
 
@@ -83,7 +97,7 @@ class TemplateServiceTest {
     request.setName("nginx.conf.j2");
 
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, null, "nginx.conf.j2"))
+    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, "", "nginx.conf.j2"))
         .thenReturn(true);
 
     assertThatThrownBy(() -> templateService.createTemplate(1L, request, 10L))
@@ -118,6 +132,7 @@ class TemplateServiceTest {
     savedTemplate.setName("vhost.conf.j2");
     savedTemplate.setTargetPath("/etc/nginx/conf.d/vhost.conf");
     savedTemplate.setContent("server { server_name {{ domain }}; }");
+    savedTemplate.setIsDirectory(false);
     savedTemplate.setCreatedBy(10L);
     ReflectionTestUtils.setField(savedTemplate, "createdAt", LocalDateTime.now());
     ReflectionTestUtils.setField(savedTemplate, "updatedAt", LocalDateTime.now());
@@ -135,15 +150,58 @@ class TemplateServiceTest {
   }
 
   @Test
-  void getTemplatesByRole_success() {
+  void createDirectory_success() {
+    CreateTemplateRequest request = new CreateTemplateRequest();
+    request.setName("conf.d");
+    request.setIsDirectory(true);
+
+    Template savedDir = new Template();
+    ReflectionTestUtils.setField(savedDir, "id", 10L);
+    savedDir.setRoleId(1L);
+    savedDir.setParentDir("");
+    savedDir.setName("conf.d");
+    savedDir.setIsDirectory(true);
+    savedDir.setCreatedBy(10L);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, "", "conf.d"))
+        .thenReturn(false);
+    when(templateRepository.save(any(Template.class))).thenReturn(savedDir);
+
+    TemplateResponse response = templateService.createTemplate(1L, request, 10L);
+
+    assertThat(response.getName()).isEqualTo("conf.d");
+    assertThat(response.getIsDirectory()).isTrue();
+    assertThat(response.getContent()).isNull();
+  }
+
+  @Test
+  void listTemplatesAsTree_success() {
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
     when(templateRepository.findAllByRoleIdOrderByParentDirAscNameAsc(1L))
         .thenReturn(List.of(testTemplate));
 
-    List<TemplateResponse> templates = templateService.getTemplatesByRole(1L, 10L);
+    List<TemplateResponse> tree = templateService.listTemplatesAsTree(1L, 10L);
 
-    assertThat(templates).hasSize(1);
-    assertThat(templates.get(0).getName()).isEqualTo("nginx.conf.j2");
+    assertThat(tree).hasSize(1);
+    assertThat(tree.get(0).getName()).isEqualTo("nginx.conf.j2");
+  }
+
+  @Test
+  void listTemplatesAsTree_directoryAndFile() {
+    Template dir = createTemplate(10L, 1L, "", "conf.d", null, true);
+    Template file = createTemplate(11L, 1L, "conf.d", "app.conf.j2", "content", false);
+
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(templateRepository.findAllByRoleIdOrderByParentDirAscNameAsc(1L))
+        .thenReturn(List.of(dir, file));
+
+    List<TemplateResponse> tree = templateService.listTemplatesAsTree(1L, 10L);
+
+    assertThat(tree).hasSize(1);
+    assertThat(tree.get(0).getName()).isEqualTo("conf.d");
+    assertThat(tree.get(0).getChildren()).hasSize(1);
+    assertThat(tree.get(0).getChildren().get(0).getName()).isEqualTo("app.conf.j2");
   }
 
   @Test
@@ -200,7 +258,7 @@ class TemplateServiceTest {
 
     when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
-    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, null, "other.conf.j2"))
+    when(templateRepository.existsByRoleIdAndParentDirAndName(1L, "", "other.conf.j2"))
         .thenReturn(true);
 
     assertThatThrownBy(() -> templateService.updateTemplate(1L, request, 10L))
@@ -243,6 +301,21 @@ class TemplateServiceTest {
   }
 
   @Test
+  void deleteDirectory_cascadesChildren() {
+    Template dir = createTemplate(10L, 1L, "", "conf.d", null, true);
+    Template child = createTemplate(11L, 1L, "conf.d", "app.conf.j2", "content", false);
+    when(templateRepository.findById(10L)).thenReturn(Optional.of(dir));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+    when(templateRepository.findByRoleIdAndParentDirStartingWith(1L, "conf.d/"))
+        .thenReturn(List.of(child));
+
+    templateService.deleteTemplate(10L, 10L);
+
+    verify(templateRepository).deleteAll(List.of(child));
+    verify(templateRepository).delete(dir);
+  }
+
+  @Test
   void getTemplateContent_success() {
     when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
     when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
@@ -273,10 +346,23 @@ class TemplateServiceTest {
   }
 
   @Test
+  void getTemplateContent_directory_throws() {
+    testTemplate.setIsDirectory(true);
+    testTemplate.setContent(null);
+    when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(testRole));
+
+    assertThatThrownBy(() -> templateService.getTemplateContent(1L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Cannot download a directory");
+  }
+
+  @Test
   void getTemplateName_success() {
     when(templateRepository.findById(1L)).thenReturn(Optional.of(testTemplate));
     when(roleRepository.findById(testTemplate.getRoleId())).thenReturn(Optional.of(testRole));
-    when(accessChecker.checkMembership(testRole.getProjectId(), 10L)).thenReturn(new ProjectMember());
+    when(accessChecker.checkMembership(testRole.getProjectId(), 10L))
+        .thenReturn(new ProjectMember());
 
     String name = templateService.getTemplateName(1L, 10L);
 

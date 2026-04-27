@@ -18,4 +18,6 @@ public class UpdateTemplateRequest {
   private String targetPath;
 
   private String content;
+
+  private Boolean isDirectory;
 }

@@ -9,7 +9,9 @@ import com.ansible.role.repository.RoleRepository;
 import com.ansible.role.repository.TemplateRepository;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,33 +34,84 @@ public class TemplateService {
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
 
+    boolean isDir = Boolean.TRUE.equals(request.getIsDirectory());
+    String parentDir = request.getParentDir() != null ? request.getParentDir() : "";
     if (templateRepository.existsByRoleIdAndParentDirAndName(
-        roleId, request.getParentDir(), request.getName())) {
+        roleId, parentDir, request.getName())) {
       throw new IllegalArgumentException(
           "Template with this name already exists in this directory");
     }
 
     Template template = new Template();
     template.setRoleId(roleId);
-    template.setParentDir(request.getParentDir());
+    template.setParentDir(parentDir);
     template.setName(request.getName());
     template.setTargetPath(request.getTargetPath());
-    template.setContent(request.getContent());
+    template.setIsDirectory(isDir);
+    template.setContent(isDir ? null : request.getContent());
     template.setCreatedBy(currentUserId);
     Template saved = templateRepository.save(template);
-    return new TemplateResponse(saved);
+    return new TemplateResponse(saved, null);
   }
 
   @Transactional(readOnly = true)
-  public List<TemplateResponse> getTemplatesByRole(Long roleId, Long currentUserId) {
+  public List<TemplateResponse> listTemplatesAsTree(Long roleId, Long currentUserId) {
     Role role =
         roleRepository
             .findById(roleId)
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
-    return templateRepository.findAllByRoleIdOrderByParentDirAscNameAsc(roleId).stream()
-        .map(TemplateResponse::new)
-        .toList();
+    List<Template> all =
+        templateRepository.findAllByRoleIdOrderByParentDirAscNameAsc(roleId);
+    Map<String, List<Template>> byParent =
+        all.stream().collect(Collectors.groupingBy(t -> t.getParentDir() != null ? t.getParentDir() : ""));
+    return buildTree("", byParent);
+  }
+
+  @SuppressWarnings("PMD.CognitiveComplexity")
+  private List<TemplateResponse> buildTree(
+      String parentDir, Map<String, List<Template>> byParent) {
+    List<Template> items = byParent.getOrDefault(parentDir, List.of());
+    List<TemplateResponse> result = new java.util.ArrayList<>(
+        items.stream()
+            .map(
+                t ->
+                    new TemplateResponse(
+                        t,
+                        buildTree(
+                            t.getParentDir() == null || t.getParentDir().isEmpty()
+                                    ? t.getName()
+                                    : t.getParentDir() + "/" + t.getName(),
+                            byParent)))
+            .toList());
+
+    // Add implicit directories: paths in byParent that are children of parentDir
+    // but have no corresponding directory entity
+    java.util.Set<String> existingNames =
+        items.stream().map(Template::getName).collect(Collectors.toSet());
+    for (String key : byParent.keySet()) {
+      if (key.isEmpty()) {
+        continue;
+      }
+      // key is a direct child of parentDir if parentDir is a prefix and the remainder
+      // has no "/"
+      String prefix = parentDir.isEmpty() ? "" : parentDir + "/";
+      if (key.startsWith(prefix)) {
+        String remainder = key.substring(prefix.length());
+        int slash = remainder.indexOf('/');
+        if (slash > 0) {
+          // key like "conf.d/nginx" — the top-level implicit dir is "conf.d"
+          remainder = remainder.substring(0, slash);
+        }
+        if (!remainder.isEmpty() && !existingNames.contains(remainder)) {
+          existingNames.add(remainder);
+          String childPath = parentDir.isEmpty() ? remainder : parentDir + "/" + remainder;
+          result.add(new TemplateResponse(parentDir, remainder, buildTree(childPath, byParent)));
+        }
+      }
+    }
+
+    return result;
   }
 
   @Transactional(readOnly = true)
@@ -72,11 +125,11 @@ public class TemplateService {
             .findById(template.getRoleId())
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
-    return new TemplateResponse(template);
+    return new TemplateResponse(template, null);
   }
 
   @Transactional
-  @SuppressWarnings({"PMD.CognitiveComplexity", "PMD.CyclomaticComplexity"})
+  @SuppressWarnings({"PMD.CognitiveComplexity", "PMD.CyclomaticComplexity", "PMD.NPathComplexity"})
   public TemplateResponse updateTemplate(
       Long templateId, UpdateTemplateRequest request, Long currentUserId) {
     Template template =
@@ -115,11 +168,17 @@ public class TemplateService {
     if (request.getTargetPath() != null) {
       template.setTargetPath(request.getTargetPath());
     }
-    if (request.getContent() != null) {
+    if (request.getContent() != null && !Boolean.TRUE.equals(template.getIsDirectory())) {
       template.setContent(request.getContent());
     }
+    if (request.getIsDirectory() != null) {
+      template.setIsDirectory(request.getIsDirectory());
+      if (Boolean.TRUE.equals(request.getIsDirectory())) {
+        template.setContent(null);
+      }
+    }
     Template saved = templateRepository.save(template);
-    return new TemplateResponse(saved);
+    return new TemplateResponse(saved, null);
   }
 
   @Transactional(readOnly = true)
@@ -133,6 +192,9 @@ public class TemplateService {
             .findById(template.getRoleId())
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkMembership(role.getProjectId(), currentUserId);
+    if (Boolean.TRUE.equals(template.getIsDirectory())) {
+      throw new IllegalArgumentException("Cannot download a directory");
+    }
     return template.getContent() != null ? template.getContent() : "";
   }
 
@@ -161,6 +223,16 @@ public class TemplateService {
             .findById(template.getRoleId())
             .orElseThrow(() -> new IllegalArgumentException("Role not found"));
     accessChecker.checkOwnerOrAdmin(role.getProjectId(), template.getCreatedBy(), currentUserId);
+    if (Boolean.TRUE.equals(template.getIsDirectory())) {
+      String childPrefix =
+          template.getParentDir() == null || template.getParentDir().isEmpty()
+              ? template.getName() + "/"
+              : template.getParentDir() + "/" + template.getName() + "/";
+      List<Template> children =
+          templateRepository.findByRoleIdAndParentDirStartingWith(
+              template.getRoleId(), childPrefix);
+      templateRepository.deleteAll(children);
+    }
     templateRepository.delete(template);
   }
 }

@@ -9,7 +9,7 @@ vi.mock("../../../api/template", () => ({
   getTemplate: vi.fn(),
   updateTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
-  getTemplateDownloadUrl: (id: number) => `/api/templates/${id}/download`,
+  downloadTemplate: vi.fn(),
 }));
 
 vi.mock("@uiw/react-codemirror", () => ({
@@ -26,13 +26,15 @@ const mockGet = vi.mocked(getTemplates);
 const baseTemplate = {
   id: 0,
   roleId: 4,
-  parentDir: "",
+  parentDir: null,
   name: "",
-  targetPath: "",
-  content: "",
+  targetPath: null,
+  content: null,
+  isDirectory: false,
+  size: null,
+  children: null,
   createdBy: 1,
   createdAt: "",
-  updatedAt: "",
 };
 
 describe("RoleTemplates", () => {
@@ -48,24 +50,46 @@ describe("RoleTemplates", () => {
 
   it("renders template names in the tree", async () => {
     mockGet.mockResolvedValue([
-      { ...baseTemplate, id: 1, name: "nginx.conf.j2", parentDir: "nginx" },
-      { ...baseTemplate, id: 2, name: "app.yml.j2" },
+      {
+        ...baseTemplate,
+        id: 1,
+        name: "conf.d",
+        isDirectory: true,
+        children: [
+          {
+            ...baseTemplate,
+            id: 2,
+            name: "nginx.conf.j2",
+            isDirectory: false,
+            size: 1024,
+          },
+        ],
+      },
+      { ...baseTemplate, id: 3, name: "app.yml.j2" },
     ]);
     render(<RoleTemplates roleId={4} />);
     await waitFor(() => {
+      expect(screen.getByText("conf.d")).toBeInTheDocument();
       expect(screen.getByText("nginx.conf.j2")).toBeInTheDocument();
       expect(screen.getByText("app.yml.j2")).toBeInTheDocument();
-      // Directory node
-      expect(screen.getByText("nginx")).toBeInTheDocument();
     });
   });
 
-  it("opens the create modal when 添加模板 is clicked", async () => {
+  it("opens the create modal when 新建模板 is clicked", async () => {
     mockGet.mockResolvedValue([]);
     render(<RoleTemplates roleId={4} />);
-    await userEvent.click(screen.getByRole("button", { name: /添加模板/ }));
+    await userEvent.click(screen.getByRole("button", { name: /新建模板/ }));
     await waitFor(() => {
-      expect(screen.getAllByText("添加模板").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("新建模板").length).toBeGreaterThan(1);
+    });
+  });
+
+  it("opens the create-directory modal when 新建目录 is clicked", async () => {
+    mockGet.mockResolvedValue([]);
+    render(<RoleTemplates roleId={4} />);
+    await userEvent.click(screen.getByRole("button", { name: /新建目录/ }));
+    await waitFor(() => {
+      expect(screen.getAllByText("新建目录").length).toBeGreaterThan(1);
     });
   });
 });

@@ -43,7 +43,7 @@ public class TemplateController {
   public Result<List<TemplateResponse>> getTemplates(
       @PathVariable Long roleId, @AuthenticationPrincipal UserDetails userDetails) {
     Long currentUserId = Long.valueOf(userDetails.getUsername());
-    return Result.success(templateService.getTemplatesByRole(roleId, currentUserId));
+    return Result.success(templateService.listTemplatesAsTree(roleId, currentUserId));
   }
 
   @GetMapping("/templates/{id}")

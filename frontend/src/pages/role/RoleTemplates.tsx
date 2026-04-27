@@ -1,5 +1,16 @@
-import { useCallback, useEffect, useState } from "react";
-import { Button, Card, Form, Input, Modal, Popconfirm, Space, Tree, message } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Button,
+  Dropdown,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Tree,
+  message,
+} from "antd";
 import {
   PlusOutlined,
   EditOutlined,
@@ -8,6 +19,9 @@ import {
   ArrowLeftOutlined,
   FolderOutlined,
   DownloadOutlined,
+  UploadOutlined,
+  FileAddOutlined,
+  FolderAddOutlined,
 } from "@ant-design/icons";
 import CodeMirror from "@uiw/react-codemirror";
 import { yaml } from "@codemirror/lang-yaml";
@@ -32,19 +46,27 @@ interface RoleTemplatesProps {
 export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [creatingDir, setCreatingDir] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [contentTemplate, setContentTemplate] = useState<Template | null>(null);
   const [contentValue, setContentValue] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [form] = Form.useForm();
+  const [savingContent, setSavingContent] = useState(false);
+  const [createForm] = Form.useForm();
+  const [editForm] = Form.useForm();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const uploadParentDirRef = useRef<string>("");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const list = await getTemplates(roleId);
       setTemplates(list);
+    } catch {
+      // ignore fetch errors
     } finally {
       setLoading(false);
     }
@@ -54,81 +76,117 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fetchData();
   }, [fetchData]);
 
-  const handleCreate = () => {
-    setEditingTemplate(null);
-    form.resetFields();
-    setModalOpen(true);
-  };
-
-  const handleEdit = (record: Template) => {
-    setEditingTemplate(record);
-    form.setFieldsValue({
-      name: record.name,
-      parentDir: record.parentDir,
-      targetPath: record.targetPath,
-    });
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    try {
-      const values = await form.validateFields();
-      if (editingTemplate) {
-        const data: UpdateTemplateRequest = {
-          name: values.name,
-          parentDir: values.parentDir,
-          targetPath: values.targetPath,
-        };
-        await updateTemplate(editingTemplate.id, data);
-        message.success("模板已更新");
-      } else {
-        const data: CreateTemplateRequest = {
-          name: values.name,
-          parentDir: values.parentDir,
-          targetPath: values.targetPath,
-        };
-        await createTemplate(roleId, data);
-        message.success("模板已创建");
+  const directoryOptions = useMemo(() => {
+    const result: { label: string; value: string }[] = [{ label: "/ (根目录)", value: "" }];
+    const walk = (items: Template[], parentPath: string) => {
+      for (const t of items) {
+        if (t.isDirectory) {
+          const fullPath = parentPath ? `${parentPath}/${t.name}` : t.name;
+          result.push({ label: fullPath || "/", value: fullPath });
+          if (t.children) walk(t.children, fullPath);
+        }
       }
-      setModalOpen(false);
+    };
+    walk(templates, "");
+    return result;
+  }, [templates]);
+
+  const handleCreate = (parentDir: string, isDir: boolean) => {
+    setEditingTemplate(null);
+    setCreatingDir(isDir);
+    createForm.resetFields();
+    createForm.setFieldsValue({ parentDir, name: "" });
+    setCreateModalOpen(true);
+  };
+
+  const handleCreateSubmit = async () => {
+    setCreating(true);
+    try {
+      const values = await createForm.validateFields();
+      const data: CreateTemplateRequest = {
+        name: values.name,
+        parentDir: values.parentDir || "",
+        targetPath: values.targetPath || undefined,
+        content: creatingDir ? undefined : values.content,
+        isDirectory: creatingDir,
+      };
+      await createTemplate(roleId, data);
+      message.success(creatingDir ? "目录已创建" : "模板已创建");
+      setCreateModalOpen(false);
       fetchData();
     } catch (err) {
       if (err && typeof err === "object" && "message" in err) {
         message.error((err as { message: string }).message);
       }
     } finally {
-      setSubmitting(false);
+      setCreating(false);
     }
   };
 
-  const handleDelete = async (id: number) => {
-    await deleteTemplate(id);
-    message.success("模板已删除");
-    fetchData();
+  const triggerFileUpload = (parentDir: string) => {
+    uploadParentDirRef.current = parentDir;
+    fileInputRef.current?.click();
   };
 
-  const handleEditContent = async (record: Template) => {
-    const detail = await getTemplate(record.id);
-    setContentTemplate(detail);
-    setContentValue(detail.content || "");
+  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const content = reader.result as string;
+      setCreatingDir(false);
+      createForm.resetFields();
+      createForm.setFieldsValue({
+        name: file.name,
+        parentDir: uploadParentDirRef.current || "",
+        targetPath: "",
+        content,
+      });
+      setCreateModalOpen(true);
+    };
+    reader.onerror = () => {
+      message.error("文件读取失败");
+    };
+    reader.readAsText(file);
+
+    e.target.value = "";
   };
 
-  const handleDownload = async (record: Template) => {
-    try {
-      await downloadTemplate(record.id);
-    } catch {
-      message.error("下载失败");
-    }
+  const handleEdit = (template: Template) => {
+    setEditingTemplate(template);
+    editForm.setFieldsValue({
+      name: template.name,
+      parentDir: template.parentDir || "",
+      targetPath: template.targetPath || "",
+    });
+    setEditModalOpen(true);
   };
 
-  const handleSaveContent = async () => {
-    if (!contentTemplate) return;
+  const handleEditSubmit = async () => {
     setSaving(true);
     try {
-      await updateTemplate(contentTemplate.id, { content: contentValue });
-      message.success("模板内容已保存");
-      setContentTemplate(null);
+      const values = await editForm.validateFields();
+      if (!editingTemplate) return;
+      const data: UpdateTemplateRequest = {};
+      if (values.name !== editingTemplate.name) {
+        data.name = values.name;
+      }
+      if ((values.parentDir || "") !== (editingTemplate.parentDir || "")) {
+        data.parentDir = values.parentDir || "";
+      }
+      if (
+        (values.targetPath || null) !== (editingTemplate.targetPath || null)
+      ) {
+        data.targetPath = values.targetPath || null;
+      }
+      if (Object.keys(data).length === 0) {
+        setEditModalOpen(false);
+        return;
+      }
+      await updateTemplate(editingTemplate.id, data);
+      message.success("更新成功");
+      setEditModalOpen(false);
       fetchData();
     } catch (err) {
       if (err && typeof err === "object" && "message" in err) {
@@ -139,7 +197,54 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     }
   };
 
-  // --- Content editor view ---
+  const handleDelete = async (id: number) => {
+    try {
+      await deleteTemplate(id);
+      message.success("删除成功");
+      fetchData();
+    } catch (err) {
+      if (err && typeof err === "object" && "message" in err) {
+        message.error((err as { message: string }).message);
+      }
+    }
+  };
+
+  const handleEditContent = async (tpl: Template) => {
+    try {
+      const detail = await getTemplate(tpl.id);
+      setContentTemplate(detail);
+      setContentValue(detail.content || "");
+    } catch {
+      message.error("加载模板内容失败");
+    }
+  };
+
+  const handleSaveContent = async () => {
+    if (!contentTemplate) return;
+    setSavingContent(true);
+    try {
+      await updateTemplate(contentTemplate.id, { content: contentValue });
+      message.success("模板内容已保存");
+      setContentTemplate(null);
+      fetchData();
+    } catch (err) {
+      if (err && typeof err === "object" && "message" in err) {
+        message.error((err as { message: string }).message);
+      }
+    } finally {
+      setSavingContent(false);
+    }
+  };
+
+  const handleDownload = async (tpl: Template) => {
+    try {
+      await downloadTemplate(tpl.id);
+    } catch {
+      message.error("下载失败");
+    }
+  };
+
+  // --- Content editor view (CodeMirror) ---
   if (contentTemplate) {
     return (
       <div>
@@ -159,27 +264,31 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           >
             返回模板列表
           </Button>
-          <Button type="primary" onClick={handleSaveContent} loading={saving}>
+          <Button type="primary" onClick={handleSaveContent} loading={savingContent}>
             保存
           </Button>
         </div>
-        <Card
-          title={
-            <Space>
-              <FileTextOutlined />
-              <span>
-                {contentTemplate.parentDir ? `${contentTemplate.parentDir}/` : ""}
-                {contentTemplate.name}
-              </span>
-            </Space>
-          }
-          size="small"
-          style={{ marginBottom: 16 }}
+        <div
+          style={{
+            marginBottom: 16,
+            padding: "12px 16px",
+            border: "1px solid #f0f0f0",
+            borderRadius: 8,
+          }}
         >
-          <span style={{ color: "#64748b" }}>
+          <Space>
+            <FileTextOutlined />
+            <span>
+              {contentTemplate.parentDir
+                ? `${contentTemplate.parentDir}/`
+                : ""}
+              {contentTemplate.name}
+            </span>
+          </Space>
+          <span style={{ marginLeft: 16, color: "#64748b" }}>
             目标路径: {contentTemplate.targetPath || "未设置"}
           </span>
-        </Card>
+        </div>
         <CodeMirror
           value={contentValue}
           onChange={(value) => setContentValue(value)}
@@ -196,51 +305,25 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
   }
 
   // --- Tree view ---
-  // Build directory tree from flat template list (templates have parentDir for hierarchy)
-  interface AntTreeNode {
+  interface TreeNode {
     key: string;
     title: React.ReactNode;
-    children?: AntTreeNode[];
+    children?: TreeNode[];
   }
 
-  const buildTreeData = (): AntTreeNode[] => {
-    // Group templates by directory path
-    const dirNodes = new Map<string, AntTreeNode>();
-    const rootNodes: AntTreeNode[] = [];
-
-    for (const t of templates) {
-      const parts = t.parentDir ? t.parentDir.split("/").filter(Boolean) : [];
-      let currentLevel = rootNodes;
-      let pathSoFar = "";
-
-      // Create directory nodes for each path segment
-      for (const part of parts) {
-        pathSoFar = pathSoFar ? `${pathSoFar}/${part}` : part;
-        if (!dirNodes.has(pathSoFar)) {
-          const dirNode: AntTreeNode = {
-            key: `dir:${pathSoFar}`,
-            title: (
-              <Space>
-                <FolderOutlined />
-                <span>{part}</span>
-              </Space>
-            ),
-            children: [],
-          };
-          dirNodes.set(pathSoFar, dirNode);
-          currentLevel.push(dirNode);
-        }
-        const existing = dirNodes.get(pathSoFar)!;
-        currentLevel = existing.children!;
-      }
-
-      // Add the template file node
-      currentLevel.push({
-        key: `file:${t.id}`,
-        title: (
-          <Space>
-            <FileTextOutlined />
-            <span>{t.name}</span>
+  const toTreeData = (items: Template[]): TreeNode[] =>
+    items.map((t) => ({
+      key: t.isDirectory ? `dir:${t.parentDir || ""}/${t.name}` : `file:${t.id}`,
+      title: (
+        <Space>
+          {t.isDirectory ? <FolderOutlined /> : <FileTextOutlined />}
+          <span>{t.name}</span>
+          {!t.isDirectory && t.size != null && t.size > 0 && (
+            <span style={{ color: "#94a3b8", fontSize: 12 }}>
+              ({(t.size / 1024).toFixed(1)} KB)
+            </span>
+          )}
+          {!t.isDirectory && (
             <Button
               type="link"
               size="small"
@@ -251,15 +334,66 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
             >
               内容
             </Button>
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEdit(t);
+          )}
+          <Button
+            type="link"
+            size="small"
+            icon={<EditOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEdit(t);
+            }}
+          />
+          {t.isDirectory && (
+            <Dropdown
+              menu={{
+                items: [
+                  {
+                    key: "file",
+                    icon: <FileAddOutlined />,
+                    label: "新建模板",
+                    onClick: () => {
+                      const dir = t.parentDir
+                        ? `${t.parentDir}/${t.name}`
+                        : t.name;
+                      handleCreate(dir, false);
+                    },
+                  },
+                  {
+                    key: "upload",
+                    icon: <UploadOutlined />,
+                    label: "上传模板",
+                    onClick: () => {
+                      const dir = t.parentDir
+                        ? `${t.parentDir}/${t.name}`
+                        : t.name;
+                      triggerFileUpload(dir);
+                    },
+                  },
+                  {
+                    key: "dir",
+                    icon: <FolderAddOutlined />,
+                    label: "新建子目录",
+                    onClick: () => {
+                      const dir = t.parentDir
+                        ? `${t.parentDir}/${t.name}`
+                        : t.name;
+                      handleCreate(dir, true);
+                    },
+                  },
+                ],
               }}
-            />
+              trigger={["click"]}
+            >
+              <Button
+                type="link"
+                size="small"
+                icon={<PlusOutlined />}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </Dropdown>
+          )}
+          {!t.isDirectory && (
             <Button
               type="link"
               size="small"
@@ -269,54 +403,125 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
                 handleDownload(t);
               }}
             />
-            <Popconfirm title="确定删除？" onConfirm={() => handleDelete(t.id)}>
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Popconfirm>
-          </Space>
-        ),
-      });
-    }
+          )}
+          <Popconfirm title="确定删除？" onConfirm={() => handleDelete(t.id)}>
+            <Button
+              type="link"
+              size="small"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Popconfirm>
+        </Space>
+      ),
+      children: t.children ? toTreeData(t.children) : undefined,
+    }));
 
-    return rootNodes;
-  };
-
-  const antTreeData = buildTreeData();
+  const treeData = toTreeData(templates);
 
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
-          添加模板
-        </Button>
+        <Space>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleCreate("", false)}
+          >
+            新建模板
+          </Button>
+          <Button
+            icon={<PlusOutlined />}
+            onClick={() => handleCreate("", true)}
+          >
+            新建目录
+          </Button>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={() => triggerFileUpload("")}
+          >
+            上传模板
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            style={{ display: "none" }}
+            onChange={handleFileSelected}
+          />
+        </Space>
       </div>
-      {loading ? <span>加载中...</span> : <Tree treeData={antTreeData} defaultExpandAll />}
+
+      {loading ? (
+        <span style={{ color: "#94a3b8" }}>加载中...</span>
+      ) : (
+        <Tree treeData={treeData} defaultExpandAll />
+      )}
+
       <Modal
-        title={editingTemplate ? "编辑模板" : "添加模板"}
-        open={modalOpen}
-        onOk={handleSubmit}
-        onCancel={() => setModalOpen(false)}
-        confirmLoading={submitting}
+        title={creatingDir ? "新建目录" : editingTemplate ? "编辑模板" : "新建模板"}
+        open={createModalOpen}
+        onOk={handleCreateSubmit}
+        onCancel={() => setCreateModalOpen(false)}
+        confirmLoading={creating}
       >
-        <Form form={form} layout="vertical">
+        <Form form={createForm} layout="vertical">
+          <Form.Item name="parentDir" label="目录">
+            <Select
+              options={directoryOptions}
+              placeholder="选择父目录"
+              allowClear
+            />
+          </Form.Item>
           <Form.Item
             name="name"
-            label="文件名"
-            rules={[{ required: true, message: "请输入模板文件名" }]}
+            label="名称"
+            rules={[{ required: true, message: "请输入名称" }]}
           >
-            <Input placeholder="例如: nginx.conf.j2" />
-          </Form.Item>
-          <Form.Item name="parentDir" label="目录">
-            <Input placeholder="例如: nginx/conf.d（留空表示根目录）" />
+            <Input placeholder={creatingDir ? "目录名称" : "模板名称"} />
           </Form.Item>
           <Form.Item name="targetPath" label="目标路径">
-            <Input placeholder="例如: /etc/nginx/nginx.conf" />
+            <Input placeholder="部署目标路径（可选）" />
           </Form.Item>
+          {!creatingDir && (
+            <Form.Item name="content" label="模板内容">
+              <Input.TextArea
+                rows={8}
+                placeholder="模板内容（可选，创建后可在线编辑）"
+              />
+            </Form.Item>
+          )}
+        </Form>
+      </Modal>
+
+      <Modal
+        title={editingTemplate?.isDirectory ? "编辑目录" : "编辑模板"}
+        open={editModalOpen}
+        onOk={handleEditSubmit}
+        onCancel={() => setEditModalOpen(false)}
+        confirmLoading={saving}
+        width={500}
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            name="name"
+            label={editingTemplate?.isDirectory ? "目录名" : "模板名"}
+            rules={[{ required: true, message: "请输入名称" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item name="parentDir" label="目录">
+            <Select
+              options={directoryOptions}
+              placeholder="选择父目录"
+              allowClear
+            />
+          </Form.Item>
+          {editingTemplate && !editingTemplate.isDirectory && (
+            <Form.Item name="targetPath" label="目标路径">
+              <Input placeholder="部署目标路径（可选）" />
+            </Form.Item>
+          )}
         </Form>
       </Modal>
     </div>

@@ -20,4 +20,6 @@ public class CreateTemplateRequest {
   private String targetPath;
 
   private String content;
+
+  private Boolean isDirectory;
 }

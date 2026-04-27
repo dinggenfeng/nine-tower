@@ -5,6 +5,9 @@ export interface Template {
   name: string;
   targetPath: string | null;
   content: string | null;
+  isDirectory: boolean;
+  size: number | null;
+  children: Template[] | null;
   createdBy: number;
   createdAt: string;
 }
@@ -14,6 +17,7 @@ export interface CreateTemplateRequest {
   parentDir?: string;
   targetPath?: string;
   content?: string;
+  isDirectory?: boolean;
 }
 
 export interface UpdateTemplateRequest {
@@ -21,4 +25,5 @@ export interface UpdateTemplateRequest {
   parentDir?: string;
   targetPath?: string;
   content?: string;
+  isDirectory?: boolean;
 }

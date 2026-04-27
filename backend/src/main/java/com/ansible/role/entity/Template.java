@@ -33,4 +33,7 @@ public class Template extends BaseEntity {
 
   @Column(columnDefinition = "TEXT")
   private String content;
+
+  @Column(name = "is_directory")
+  private Boolean isDirectory = false;
 }
