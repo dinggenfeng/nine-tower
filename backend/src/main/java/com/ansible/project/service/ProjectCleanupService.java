@@ -10,10 +10,8 @@ import com.ansible.playbook.repository.PlaybookRepository;
 import com.ansible.playbook.repository.PlaybookRoleRepository;
 import com.ansible.playbook.repository.PlaybookTagRepository;
 import com.ansible.role.repository.HandlerRepository;
-import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleFileRepository;
 import com.ansible.role.repository.RoleRepository;
-import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.role.repository.TemplateRepository;
 import com.ansible.tag.repository.TagRepository;
@@ -35,8 +33,6 @@ public class ProjectCleanupService {
   private final HandlerRepository handlerRepository;
   private final TemplateRepository templateRepository;
   private final RoleFileRepository roleFileRepository;
-  private final RoleVariableRepository roleVariableRepository;
-  private final RoleDefaultVariableRepository roleDefaultVariableRepository;
   private final HostGroupRepository hostGroupRepository;
   private final HostRepository hostRepository;
   private final VariableRepository variableRepository;
@@ -112,8 +108,8 @@ public class ProjectCleanupService {
     handlerRepository.deleteByRoleId(roleId);
     templateRepository.deleteByRoleId(roleId);
     roleFileRepository.deleteByRoleId(roleId);
-    roleVariableRepository.deleteByRoleId(roleId);
-    roleDefaultVariableRepository.deleteByRoleId(roleId);
+    variableRepository.deleteByScopeAndScopeId(VariableScope.ROLE_VARS, roleId);
+    variableRepository.deleteByScopeAndScopeId(VariableScope.ROLE_DEFAULTS, roleId);
     playbookRoleRepository.deleteByRoleId(roleId);
   }
 
