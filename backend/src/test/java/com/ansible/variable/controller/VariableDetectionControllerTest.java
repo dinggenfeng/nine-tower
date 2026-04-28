@@ -101,7 +101,7 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
     assertThat(vars).isNotEmpty();
     DetectedVariableResponse appPort = vars.stream()
         .filter(v -> v.key().equals("app_port")).findFirst().orElseThrow();
-    assertThat(appPort.suggestedScope()).isEqualTo("ROLE");
+    assertThat(appPort.suggestedScope()).isEqualTo("ROLE_VARS");
   }
 
   @Test
