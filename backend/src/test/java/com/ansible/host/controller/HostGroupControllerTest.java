@@ -156,4 +156,20 @@ class HostGroupControllerTest extends AbstractIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(hostGroupRepository.findById(hgId)).isEmpty();
   }
+
+  @Test
+  void copyHostGroup_copiesHostGroupAndHosts() {
+    Long hgId = createHostGroup("Web Servers");
+
+    ResponseEntity<Result<HostGroupResponse>> response =
+        restTemplate.exchange(
+            "/api/host-groups/" + hgId + "/copy",
+            HttpMethod.POST,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().getData().getName()).isEqualTo("Web Servers (副本)");
+    assertThat(response.getBody().getData().getProjectId()).isEqualTo(projectId);
+  }
 }
