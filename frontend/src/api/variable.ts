@@ -18,10 +18,13 @@ export async function createVariable(
 
 export async function listVariables(
   projectId: number,
-  scope: VariableScope,
+  scope?: VariableScope,
   scopeId?: number
 ): Promise<Variable[]> {
-  const params: Record<string, string | number> = { scope };
+  const params: Record<string, string | number> = {};
+  if (scope != null) {
+    params.scope = scope;
+  }
   if (scopeId != null) {
     params.scopeId = scopeId;
   }

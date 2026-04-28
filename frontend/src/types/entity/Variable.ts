@@ -1,4 +1,4 @@
-export type VariableScope = "PROJECT" | "HOSTGROUP" | "ENVIRONMENT";
+export type VariableScope = "PROJECT" | "HOSTGROUP" | "ENVIRONMENT" | "ROLE_VARS" | "ROLE_DEFAULTS";
 
 export interface Variable {
   id: number;
@@ -34,24 +34,19 @@ export interface VariableOccurrence {
 export interface DetectedVariable {
   key: string;
   occurrences: VariableOccurrence[];
-  suggestedScope: "ROLE" | "PROJECT";
+  suggestedScope: "ROLE_VARS" | "PROJECT";
 }
 
 export interface DetectedVariableRow extends DetectedVariable {
-  /** The user-selected scope target */
-  scopeType: "project" | "role";
-  /** Role ID when scopeType is "role" */
-  targetRoleId?: number;
-  /** Value filled by user */
+  scope: VariableScope;
+  scopeId?: number;
   userValue: string;
-  /** Unique key for table row */
   rowKey: string;
 }
 
 export interface BatchVariableSaveItem {
   key: string;
-  saveAs: "VARIABLE" | "ROLE_VARIABLE";
-  scope?: string;
-  roleId?: number;
+  scope: VariableScope;
+  scopeId?: number;
   value?: string;
 }

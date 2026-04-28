@@ -6,11 +6,11 @@ export type VariableScopeKind =
   | "ROLE_DEFAULTS";
 
 const PRIORITY_RANK: Record<VariableScopeKind, number> = {
-  ENVIRONMENT: 5,
-  HOSTGROUP: 4,
-  PROJECT: 3,
-  ROLE_VARS: 2,
-  ROLE_DEFAULTS: 1,
+  ENVIRONMENT: 4,
+  HOSTGROUP: 3,
+  PROJECT: 2,
+  ROLE_VARS: 1,
+  ROLE_DEFAULTS: 0,
 };
 
 export interface KeyedVariable {
