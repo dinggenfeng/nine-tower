@@ -8,8 +8,6 @@ import RoleTasks from "./RoleTasks";
 import RoleHandlers from "./RoleHandlers";
 import RoleTemplates from "./RoleTemplates";
 import RoleFiles from "./RoleFiles";
-import RoleVars from "./RoleVars";
-import RoleDefaults from "./RoleDefaults";
 
 export default function RoleDetail() {
   const { id, roleId } = useParams<{ id: string; roleId: string }>();
@@ -35,8 +33,6 @@ export default function RoleDetail() {
     { key: "handlers", label: "Handlers", children: <RoleHandlers roleId={Number(roleId)} /> },
     { key: "templates", label: "Templates", children: <RoleTemplates roleId={Number(roleId)} /> },
     { key: "files", label: "Files", children: <RoleFiles roleId={Number(roleId)} /> },
-    { key: "vars", label: "Vars", children: <RoleVars roleId={Number(roleId)} /> },
-    { key: "defaults", label: "Defaults", children: <RoleDefaults roleId={Number(roleId)} /> },
   ];
 
   return (
