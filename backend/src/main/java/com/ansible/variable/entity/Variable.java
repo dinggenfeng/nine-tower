@@ -27,7 +27,7 @@ public class Variable extends BaseEntity {
   @Column(name = "scope_id", nullable = false)
   private Long scopeId;
 
-  @Column(nullable = false, length = 100)
+  @Column(nullable = false, length = 200)
   private String key;
 
   @Column(columnDefinition = "TEXT")

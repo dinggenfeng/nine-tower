@@ -3,5 +3,7 @@ package com.ansible.variable.entity;
 public enum VariableScope {
   PROJECT,
   HOSTGROUP,
-  ENVIRONMENT
+  ENVIRONMENT,
+  ROLE_VARS,
+  ROLE_DEFAULTS
 }

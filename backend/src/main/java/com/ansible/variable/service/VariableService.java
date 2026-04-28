@@ -2,6 +2,7 @@ package com.ansible.variable.service;
 
 import com.ansible.environment.repository.EnvironmentRepository;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.role.repository.RoleRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.CreateVariableRequest;
 import com.ansible.variable.dto.UpdateVariableRequest;
@@ -22,6 +23,7 @@ public class VariableService {
   private final ProjectAccessChecker accessChecker;
   private final HostGroupRepository hostGroupRepository;
   private final EnvironmentRepository environmentRepository;
+  private final RoleRepository roleRepository;
 
   private Long resolveProjectId(Variable v) {
     return switch (v.getScope()) {
@@ -33,6 +35,10 @@ public class VariableService {
       case ENVIRONMENT -> environmentRepository
           .findById(v.getScopeId())
           .orElseThrow(() -> new IllegalArgumentException("Environment not found"))
+          .getProjectId();
+      case ROLE_VARS, ROLE_DEFAULTS -> roleRepository
+          .findById(v.getScopeId())
+          .orElseThrow(() -> new IllegalArgumentException("Role not found"))
           .getProjectId();
     };
   }

@@ -8,5 +8,5 @@ import jakarta.validation.constraints.Size;
 public record CreateVariableRequest(
     @NotNull VariableScope scope,
     @NotNull Long scopeId,
-    @NotBlank @Size(max = 100) String key,
+    @NotBlank @Size(max = 200) String key,
     String value) { }
