@@ -4,6 +4,8 @@ import type {
   CreateVariableRequest,
   UpdateVariableRequest,
   VariableScope,
+  DetectedVariable,
+  BatchVariableSaveItem,
 } from "../types/entity/Variable";
 
 export async function createVariable(
@@ -42,4 +44,19 @@ export async function updateVariable(
 
 export async function deleteVariable(varId: number): Promise<void> {
   await request.delete(`/variables/${varId}`);
+}
+
+export async function detectVariables(projectId: number): Promise<DetectedVariable[]> {
+  const res = await request.get<DetectedVariable[]>(`/projects/${projectId}/detect-variables`);
+  return res.data;
+}
+
+export async function batchSaveVariables(
+  projectId: number,
+  items: BatchVariableSaveItem[]
+): Promise<Array<{ index: number; success: boolean; key?: string; error?: string }>> {
+  const res = await request.post<
+    Array<{ index: number; success: boolean; key?: string; error?: string }>
+  >(`/projects/${projectId}/variables/batch`, items);
+  return res.data;
 }
