@@ -14,7 +14,7 @@ import {
   Tag,
   Tooltip,
 } from "antd";
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { CopyOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
 import type {
   HostGroup,
@@ -23,6 +23,7 @@ import type {
   CreateHostRequest,
 } from "../../types/entity/Host";
 import {
+  copyHostGroup,
   createHostGroup,
   deleteHostGroup,
   getHostGroups,
@@ -52,6 +53,7 @@ export default function HostGroupManager() {
   const [hostForm] = Form.useForm<CreateHostRequest>();
   const [hgSaving, setHgSaving] = useState(false);
   const [hostSaving, setHostSaving] = useState(false);
+  const [copyingFromHostId, setCopyingFromHostId] = useState<number | null>(null);
 
   const fetchHostGroups = useCallback(async () => {
     setLoading(true);
@@ -121,6 +123,18 @@ export default function HostGroupManager() {
     fetchHostGroups();
   };
 
+  const handleCopyHostGroup = async (hgId: number) => {
+    try {
+      const copied = await copyHostGroup(hgId);
+      message.success("主机组已复制");
+      await fetchHostGroups();
+      setSelectedHostGroup(copied);
+      fetchHosts(copied.id);
+    } catch {
+      message.error("复制主机组失败");
+    }
+  };
+
   const openHgModal = (hg?: HostGroup) => {
     if (hg) {
       setEditingHg(hg);
@@ -137,9 +151,13 @@ export default function HostGroupManager() {
     setHostSaving(true);
     try {
       const values = await hostForm.validateFields();
-      await createHost(selectedHostGroup.id, values);
+      await createHost(selectedHostGroup.id, {
+        ...values,
+        copyFromHostId: copyingFromHostId ?? undefined,
+      });
       message.success("主机创建成功");
       setHostModalOpen(false);
+      setCopyingFromHostId(null);
       hostForm.resetFields();
       fetchHosts(selectedHostGroup.id);
     } finally {
@@ -167,6 +185,19 @@ export default function HostGroupManager() {
     await deleteHost(hostId);
     message.success("主机已删除");
     if (selectedHostGroup) fetchHosts(selectedHostGroup.id);
+  };
+
+  const handleCopyHost = (host: Host) => {
+    setCopyingFromHostId(host.id);
+    setEditingHost(null);
+    hostForm.setFieldsValue({
+      name: host.name,
+      ip: host.ip,
+      port: host.port,
+      ansibleUser: host.ansibleUser,
+      ansibleBecome: host.ansibleBecome,
+    });
+    setHostModalOpen(true);
   };
 
   const openHostModal = (host?: Host) => {
@@ -213,6 +244,14 @@ export default function HostGroupManager() {
       width: 100,
       render: (_: unknown, record: Host) => (
         <Space>
+          <Tooltip title="复制">
+            <Button
+              type="text"
+              size="small"
+              icon={<CopyOutlined />}
+              onClick={() => handleCopyHost(record)}
+            />
+          </Tooltip>
           <Tooltip title="编辑">
             <Button
               type="text"
@@ -269,6 +308,13 @@ export default function HostGroupManager() {
                     size="small"
                     icon={<EditOutlined />}
                     onClick={() => openHgModal(hg)}
+                    style={{ color: "inherit" }}
+                  />
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<CopyOutlined />}
+                    onClick={() => handleCopyHostGroup(hg.id)}
                     style={{ color: "inherit" }}
                   />
                   <Popconfirm title="确认删除此主机组？" onConfirm={() => handleDeleteHg(hg.id)}>
@@ -351,11 +397,12 @@ export default function HostGroupManager() {
 
       {/* Host Modal */}
       <Modal
-        title={editingHost ? "编辑主机" : "新建主机"}
+        title={editingHost ? "编辑主机" : copyingFromHostId ? "复制主机" : "新建主机"}
         open={hostModalOpen}
         onOk={editingHost ? handleUpdateHost : handleCreateHost}
         onCancel={() => {
           setHostModalOpen(false);
+          setCopyingFromHostId(null);
           hostForm.resetFields();
         }}
         confirmLoading={hostSaving}
