@@ -47,17 +47,23 @@ import {
 import { listEnvironments } from "../../api/environment";
 import { getHostGroups } from "../../api/host";
 import { getRoles } from "../../api/role";
-import { getRoleVariables, getRoleDefaults } from "../../api/roleVariable";
 import type { Environment } from "../../types/entity/Environment";
 import type { HostGroup } from "../../types/entity/Host";
 import type { Role } from "../../types/entity/Role";
-import type { RoleVariable, RoleDefaultVariable } from "../../types/entity/RoleVariable";
 import { resolveVariablePriority, type VariableScopeKind } from "../../utils/variablePriority";
 
 const scopeLabels: Record<VariableScope, string> = {
   PROJECT: "项目级",
   HOSTGROUP: "主机组级",
   ENVIRONMENT: "环境级",
+  ROLE_VARS: "Role Vars",
+  ROLE_DEFAULTS: "Role Defaults",
+};
+
+const detectionScopeLabels: Record<"PROJECT" | "ROLE_VARS" | "ROLE_DEFAULTS", string> = {
+  PROJECT: "项目级",
+  ROLE_VARS: "Role Vars",
+  ROLE_DEFAULTS: "Role Defaults",
 };
 
 type ViewMode = "table" | "tree";
@@ -82,6 +88,7 @@ export default function VariableManager() {
   const [saving, setSaving] = useState(false);
   const [hostGroups, setHostGroups] = useState<HostGroup[]>([]);
   const [environments, setEnvironments] = useState<Environment[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [form] = Form.useForm();
 
   // Tree view state
@@ -97,28 +104,35 @@ export default function VariableManager() {
   interface CopyModalState {
     open: boolean;
     sourceVar: DetectedVariableRow | null;
-    targetType: "project" | "role";
-    targetRoleId?: number;
+    targetScope: "PROJECT" | "ROLE_VARS" | "ROLE_DEFAULTS";
+    targetScopeId?: number;
   }
   const [copyModal, setCopyModal] = useState<CopyModalState>({
     open: false,
     sourceVar: null,
-    targetType: "role",
+    targetScope: "PROJECT",
   });
 
   useEffect(() => {
     if (!pid) return;
     getHostGroups(pid).then(setHostGroups);
     listEnvironments(pid).then(setEnvironments);
+    getRoles(pid).then(setRoles);
   }, [pid]);
 
   const fetchVariables = useCallback(async () => {
     if (!pid) return;
     setLoading(true);
     try {
-      // For PROJECT scope, pass pid as scopeId to filter by project
-      const data = await listVariables(pid, scope, scope === "PROJECT" ? pid : scopeId);
-      setVariables(data);
+      if (scope === "PROJECT") {
+        const data = await listVariables(pid, "PROJECT");
+        setVariables(data);
+      } else if (scopeId != null) {
+        const data = await listVariables(pid, scope, scopeId);
+        setVariables(data);
+      } else {
+        setVariables([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -135,23 +149,23 @@ export default function VariableManager() {
     if (!pid) return;
     setTreeLoading(true);
     try {
-      const [projectVars, hostgroupVars, envVars, roles] = await Promise.all([
+      const [projectVars, hostgroupVars, envVars, rolesList] = await Promise.all([
         listVariables(pid, "PROJECT").catch(() => [] as Variable[]),
         listVariables(pid, "HOSTGROUP").catch(() => [] as Variable[]),
         listVariables(pid, "ENVIRONMENT").catch(() => [] as Variable[]),
         getRoles(pid).catch(() => [] as Role[]),
       ]);
 
-      // Fetch role variables and defaults for all roles
-      const roleVarPromises = roles.map((role) =>
-        getRoleVariables(role.id)
+      // Fetch role vars and defaults for each role using the unified API
+      const roleVarPromises = rolesList.map((role) =>
+        listVariables(pid, "ROLE_VARS", role.id)
           .then((vars) => ({ roleId: role.id, vars }))
-          .catch(() => ({ roleId: role.id, vars: [] as RoleVariable[] }))
+          .catch(() => ({ roleId: role.id, vars: [] as Variable[] }))
       );
-      const roleDefaultPromises = roles.map((role) =>
-        getRoleDefaults(role.id)
+      const roleDefaultPromises = rolesList.map((role) =>
+        listVariables(pid, "ROLE_DEFAULTS", role.id)
           .then((defaults) => ({ roleId: role.id, defaults }))
-          .catch(() => ({ roleId: role.id, defaults: [] as RoleDefaultVariable[] }))
+          .catch(() => ({ roleId: role.id, defaults: [] as Variable[] }))
       );
 
       const [roleVarResults, roleDefaultResults] = await Promise.all([
@@ -159,18 +173,15 @@ export default function VariableManager() {
         Promise.all(roleDefaultPromises),
       ]);
 
-      const roleVarsMap = new Map<number, RoleVariable[]>();
-      roleVarResults.forEach((r) => roleVarsMap.set(r.roleId, r.vars));
-
-      const roleDefaultsMap = new Map<number, RoleDefaultVariable[]>();
-      roleDefaultResults.forEach((r) => roleDefaultsMap.set(r.roleId, r.defaults));
+      const allRoleVars = roleVarResults.flatMap((r) => r.vars);
+      const allRoleDefaults = roleDefaultResults.flatMap((r) => r.defaults);
 
       const { duplicateKeys, winningScope } = resolveVariablePriority({
         projectVars,
         hostgroupVars,
         environmentVars: envVars,
-        roleVars: roleVarResults.flatMap((r) => r.vars),
-        roleDefaults: roleDefaultResults.flatMap((r) => r.defaults),
+        roleVars: allRoleVars,
+        roleDefaults: allRoleDefaults,
       });
 
       const scopeNameMap: Record<VariableScopeKind, string> = {
@@ -224,9 +235,17 @@ export default function VariableManager() {
         envVarsMap.set(v.scopeId, list);
       });
 
+      // Build role vars/defaults maps
+      const roleVarsMap = new Map<number, Variable[]>();
+      roleVarResults.forEach((r) => roleVarsMap.set(r.roleId, r.vars));
+
+      const roleDefaultsMap = new Map<number, Variable[]>();
+      roleDefaultResults.forEach((r) => roleDefaultsMap.set(r.roleId, r.defaults));
+
       // Resolve names
       const hostGroupNameMap = new Map(hostGroups.map((h) => [h.id, h.name]));
       const envNameMap = new Map(environments.map((e) => [e.id, e.name]));
+      const roleNameMap = new Map(rolesList.map((r) => [r.id, r.name]));
 
       const nodes: TreeVariableNode[] = [];
 
@@ -290,12 +309,13 @@ export default function VariableManager() {
 
       // Role vars
       const roleVarsChildren: TreeVariableNode[] = [];
-      roles.forEach((role) => {
+      rolesList.forEach((role) => {
         const vars = roleVarsMap.get(role.id) || [];
+        const roleName = roleNameMap.get(role.id) || role.name;
         if (vars.length > 0) {
           roleVarsChildren.push({
             key: `role-vars-${role.id}`,
-            title: `${role.name}/ (${vars.length})`,
+            title: `${roleName}/ (${vars.length})`,
             children: vars.map((v) => ({
               key: `role-var-${v.id}`,
               title: buildTitle(v.key, v.value, "ROLE_VARS"),
@@ -303,10 +323,9 @@ export default function VariableManager() {
           });
         }
       });
-      const totalRoleVars = roleVarResults.reduce((sum, r) => sum + r.vars.length, 0);
       nodes.push({
         key: "scope-ROLE_VARS",
-        title: `Role 级变量 (${totalRoleVars})`,
+        title: `Role 级变量 (${allRoleVars.length})`,
         children:
           roleVarsChildren.length > 0
             ? roleVarsChildren
@@ -315,12 +334,13 @@ export default function VariableManager() {
 
       // Role defaults
       const roleDefaultsChildren: TreeVariableNode[] = [];
-      roles.forEach((role) => {
+      rolesList.forEach((role) => {
         const defaults = roleDefaultsMap.get(role.id) || [];
+        const roleName = roleNameMap.get(role.id) || role.name;
         if (defaults.length > 0) {
           roleDefaultsChildren.push({
             key: `role-defaults-${role.id}`,
-            title: `${role.name}/ (${defaults.length})`,
+            title: `${roleName}/ (${defaults.length})`,
             children: defaults.map((d) => ({
               key: `role-default-${d.id}`,
               title: buildTitle(d.key, d.value, "ROLE_DEFAULTS"),
@@ -328,10 +348,9 @@ export default function VariableManager() {
           });
         }
       });
-      const totalRoleDefaults = roleDefaultResults.reduce((sum, r) => sum + r.defaults.length, 0);
       nodes.push({
         key: "scope-ROLE_DEFAULTS",
-        title: `Role 默认变量 (${totalRoleDefaults})`,
+        title: `Role 默认变量 (${allRoleDefaults.length})`,
         children:
           roleDefaultsChildren.length > 0
             ? roleDefaultsChildren
@@ -385,9 +404,10 @@ export default function VariableManager() {
         });
         message.success("更新成功");
       } else {
+        const resolvedScopeId = values.scope === "PROJECT" ? pid : values.scopeId;
         const data: CreateVariableRequest = {
           scope: values.scope,
-          scopeId: values.scopeId ?? pid,
+          scopeId: resolvedScopeId,
           key: values.key,
           value: values.value,
         };
@@ -421,14 +441,16 @@ export default function VariableManager() {
     try {
       const vars = await detectVariables(pid);
       const rows: DetectedVariableRow[] = vars.map((v) => {
-        const scopeType = v.suggestedScope === "PROJECT" ? "project" : "role";
+        const resolvedScope: VariableScope =
+          v.suggestedScope === "PROJECT" ? "PROJECT" : "ROLE_VARS";
         const firstOccurrence = v.occurrences[0];
+        const scopeId = resolvedScope !== "PROJECT" ? firstOccurrence?.roleId : undefined;
         return {
           ...v,
-          scopeType,
-          targetRoleId: scopeType === "role" ? firstOccurrence.roleId : undefined,
+          scope: resolvedScope,
+          scopeId,
           userValue: "",
-          rowKey: v.key + "-" + (scopeType === "role" ? firstOccurrence.roleId : "proj"),
+          rowKey: v.key + "-" + resolvedScope + "-" + (scopeId ?? "proj"),
         };
       });
       setDetectedVars(rows);
@@ -442,9 +464,9 @@ export default function VariableManager() {
   }, [pid]);
 
   const updateRowScope = useCallback(
-    (rowKey: string, scopeType: "project" | "role", targetRoleId?: number) => {
+    (rowKey: string, newScope: VariableScope, newScopeId?: number) => {
       setDetectedVars((prev) =>
-        prev.map((r) => (r.rowKey === rowKey ? { ...r, scopeType, targetRoleId } : r))
+        prev.map((r) => (r.rowKey === rowKey ? { ...r, scope: newScope, scopeId: newScopeId } : r))
       );
     },
     []
@@ -464,7 +486,7 @@ export default function VariableManager() {
     setCopyModal({
       open: true,
       sourceVar: record,
-      targetType: record.scopeType === "project" ? "role" : "role",
+      targetScope: record.scope === "PROJECT" ? "ROLE_VARS" : "PROJECT",
     });
   }, []);
 
@@ -474,19 +496,19 @@ export default function VariableManager() {
     const newRowKey =
       src.key +
       "-" +
-      copyModal.targetType +
+      copyModal.targetScope +
       "-" +
-      (copyModal.targetRoleId ?? "proj") +
+      (copyModal.targetScopeId ?? "proj") +
       "-" +
       Date.now();
     const newRow: DetectedVariableRow = {
       ...src,
-      scopeType: copyModal.targetType,
-      targetRoleId: copyModal.targetType === "role" ? copyModal.targetRoleId : undefined,
+      scope: copyModal.targetScope,
+      scopeId: copyModal.targetScope !== "PROJECT" ? copyModal.targetScopeId : undefined,
       rowKey: newRowKey,
     };
     setDetectedVars((prev) => [...prev, newRow]);
-    setCopyModal({ open: false, sourceVar: null, targetType: "role" });
+    setCopyModal({ open: false, sourceVar: null, targetScope: "PROJECT" });
   }, [copyModal]);
 
   const handleBatchSave = useCallback(async () => {
@@ -495,10 +517,7 @@ export default function VariableManager() {
     const seen = new Map<string, string>();
     const errors: string[] = [];
     for (const row of detectedVars) {
-      const id =
-        row.scopeType === "project"
-          ? `project:${pid}:${row.key}`
-          : `role:${row.targetRoleId}:${row.key}`;
+      const id = `${row.scope}:${row.scopeId ?? pid}:${row.key}`;
       if (seen.has(id)) {
         errors.push(`变量 "${row.key}" 重复`);
       }
@@ -513,9 +532,8 @@ export default function VariableManager() {
     try {
       const items: BatchVariableSaveItem[] = detectedVars.map((row) => ({
         key: row.key,
-        saveAs: row.scopeType === "project" ? "VARIABLE" : "ROLE_VARIABLE",
-        scope: row.scopeType === "project" ? "PROJECT" : undefined,
-        roleId: row.scopeType === "role" ? row.targetRoleId : undefined,
+        scope: row.scope,
+        scopeId: row.scope === "PROJECT" ? undefined : row.scopeId,
         value: row.userValue || undefined,
       }));
 
@@ -539,11 +557,17 @@ export default function VariableManager() {
     }
   }, [pid, detectedVars, fetchVariables]);
 
-  const scopeOptions = (): { label: string; value: number }[] => {
-    if (scope === "HOSTGROUP") return hostGroups.map((h) => ({ label: h.name, value: h.id }));
-    if (scope === "ENVIRONMENT") return environments.map((e) => ({ label: e.name, value: e.id }));
-    return [];
-  };
+  /** Build scopeId options based on the current scope */
+  const scopeIdOptions = useCallback(
+    (s: VariableScope): { label: string; value: number }[] => {
+      if (s === "HOSTGROUP") return hostGroups.map((h) => ({ label: h.name, value: h.id }));
+      if (s === "ENVIRONMENT") return environments.map((e) => ({ label: e.name, value: e.id }));
+      if (s === "ROLE_VARS" || s === "ROLE_DEFAULTS")
+        return roles.map((r) => ({ label: r.name, value: r.id }));
+      return [];
+    },
+    [hostGroups, environments, roles]
+  );
 
   const columns = [
     { title: "Key", dataIndex: "key", key: "key" },
@@ -567,6 +591,9 @@ export default function VariableManager() {
   ];
 
   const defaultExpandedKeys = useMemo(() => treeData.map((n) => n.key), [treeData]);
+
+  // Watch form scope field to dynamically show/hide scopeId
+  const formScopeValue = Form.useWatch("scope", form);
 
   return (
     <div>
@@ -642,7 +669,7 @@ export default function VariableManager() {
                 onChange={setScopeId}
                 style={{ width: 200 }}
                 placeholder={`选择${scopeLabels[scope]}`}
-                options={scopeOptions()}
+                options={scopeIdOptions(scope)}
               />
             )}
           </>
@@ -719,38 +746,46 @@ export default function VariableManager() {
               },
               {
                 title: "作用域",
-                width: 220,
-                render: (_: unknown, record: DetectedVariableRow) => (
-                  <Space>
-                    <Select
-                      value={record.scopeType}
-                      onChange={(val) =>
-                        updateRowScope(
-                          record.rowKey,
-                          val,
-                          val === "role" ? record.occurrences[0]?.roleId : undefined
-                        )
-                      }
-                      style={{ width: 100 }}
-                      size="small"
-                      options={[
-                        { label: "项目级", value: "project" },
-                        { label: "Role 级", value: "role" },
-                      ]}
-                    />
-                    {record.scopeType === "role" && (
+                width: 280,
+                render: (_: unknown, record: DetectedVariableRow) => {
+                  const detectionScopes: (keyof typeof detectionScopeLabels)[] = [
+                    "PROJECT",
+                    "ROLE_VARS",
+                    "ROLE_DEFAULTS",
+                  ];
+                  return (
+                    <Space>
                       <Select
-                        value={record.targetRoleId}
-                        onChange={(val) => updateRowScope(record.rowKey, "role", val)}
-                        style={{ width: 100 }}
+                        value={record.scope}
+                        onChange={(val: VariableScope) =>
+                          updateRowScope(
+                            record.rowKey,
+                            val,
+                            val !== "PROJECT" ? record.occurrences[0]?.roleId : undefined
+                          )
+                        }
+                        style={{ width: 130 }}
                         size="small"
-                        options={Array.from(
-                          new Map(record.occurrences.map((o) => [o.roleId, o.roleName]))
-                        ).map(([id, name]) => ({ label: name, value: id }))}
+                        options={detectionScopes.map((s) => ({
+                          label: detectionScopeLabels[s],
+                          value: s,
+                        }))}
                       />
-                    )}
-                  </Space>
-                ),
+                      {record.scope !== "PROJECT" && (
+                        <Select
+                          value={record.scopeId}
+                          onChange={(val) => updateRowScope(record.rowKey, record.scope, val)}
+                          style={{ width: 120 }}
+                          size="small"
+                          placeholder="选择 Role"
+                          options={Array.from(
+                            new Map(record.occurrences.map((o) => [o.roleId, o.roleName]))
+                          ).map(([id, name]) => ({ label: name, value: id }))}
+                        />
+                      )}
+                    </Space>
+                  );
+                },
               },
               {
                 title: "值（可选）",
@@ -842,13 +877,13 @@ export default function VariableManager() {
                   }))}
                 />
               </Form.Item>
-              {form.getFieldValue("scope") !== "PROJECT" && (
+              {formScopeValue && formScopeValue !== "PROJECT" && (
                 <Form.Item
                   name="scopeId"
                   label="关联对象"
                   rules={[{ required: true, message: "请选择关联对象" }]}
                 >
-                  <Select options={scopeOptions()} />
+                  <Select options={scopeIdOptions((formScopeValue as VariableScope) || scope)} />
                 </Form.Item>
               )}
             </>
@@ -866,7 +901,7 @@ export default function VariableManager() {
         title="复制变量到其他作用域"
         open={copyModal.open}
         onOk={confirmCopy}
-        onCancel={() => setCopyModal({ open: false, sourceVar: null, targetType: "role" })}
+        onCancel={() => setCopyModal({ open: false, sourceVar: null, targetScope: "PROJECT" })}
         okText="确认复制"
         cancelText="取消"
       >
@@ -878,21 +913,31 @@ export default function VariableManager() {
             <p>
               复制到：
               <Select
-                value={copyModal.targetType}
+                value={copyModal.targetScope}
                 onChange={(val) =>
                   setCopyModal((prev) => ({
                     ...prev,
-                    targetType: val,
-                    targetRoleId: undefined,
+                    targetScope: val,
+                    targetScopeId: undefined,
                   }))
                 }
-                style={{ width: 120, marginLeft: 8 }}
+                style={{ width: 150, marginLeft: 8 }}
                 size="small"
-                options={[
-                  { label: "项目级", value: "project" },
-                  { label: "Role 级", value: "role" },
-                ]}
+                options={Object.entries(detectionScopeLabels).map(([k, v]) => ({
+                  label: v,
+                  value: k,
+                }))}
               />
+              {copyModal.targetScope !== "PROJECT" && (
+                <Select
+                  value={copyModal.targetScopeId}
+                  onChange={(val) => setCopyModal((prev) => ({ ...prev, targetScopeId: val }))}
+                  style={{ width: 150, marginLeft: 8 }}
+                  size="small"
+                  placeholder="选择 Role"
+                  options={roles.map((r) => ({ label: r.name, value: r.id }))}
+                />
+              )}
             </p>
           </div>
         )}
