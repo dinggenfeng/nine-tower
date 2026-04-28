@@ -77,7 +77,7 @@ class VariableDetectionServiceTest {
     // target_os appears in one role -> ROLE scope
     DetectedVariableResponse targetOs = result.stream()
         .filter(r -> r.key().equals("target_os")).findFirst().orElseThrow();
-    assertThat(targetOs.suggestedScope()).isEqualTo("ROLE");
+    assertThat(targetOs.suggestedScope()).isEqualTo("ROLE_VARS");
     assertThat(targetOs.occurrences()).hasSize(1);
   }
 

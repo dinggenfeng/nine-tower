@@ -61,7 +61,7 @@ public class VariableDetectionService {
           List<VariableOccurrence> occurrences = entry.getValue();
           Set<Long> distinctRoles = occurrences.stream()
               .map(VariableOccurrence::roleId).collect(Collectors.toSet());
-          String suggestedScope = distinctRoles.size() == 1 ? "ROLE" : "PROJECT";
+          String suggestedScope = distinctRoles.size() == 1 ? "ROLE_VARS" : "PROJECT";
           return new DetectedVariableResponse(key, occurrences, suggestedScope);
         })
         .sorted(Comparator.comparing(DetectedVariableResponse::key))
@@ -116,8 +116,13 @@ public class VariableDetectionService {
       if (isBuiltin(varName)) {
         continue;
       }
-      map.computeIfAbsent(varName, k -> new ArrayList<>())
-          .add(new VariableOccurrence(roleId, roleName, type, entityId, entityName, field));
+      List<VariableOccurrence> occurrences =
+          map.computeIfAbsent(varName, k -> new ArrayList<>());
+      VariableOccurrence occurrence =
+          new VariableOccurrence(roleId, roleName, type, entityId, entityName, field);
+      if (!occurrences.contains(occurrence)) {
+        occurrences.add(occurrence);
+      }
     }
   }
 

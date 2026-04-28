@@ -3,6 +3,8 @@ package com.ansible.variable.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -10,6 +12,8 @@ import com.ansible.environment.entity.Environment;
 import com.ansible.environment.repository.EnvironmentRepository;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.role.entity.Role;
+import com.ansible.role.repository.RoleRepository;
 import com.ansible.project.entity.ProjectMember;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.CreateVariableRequest;
@@ -36,6 +40,7 @@ class VariableServiceTest {
   @Mock private ProjectAccessChecker accessChecker;
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private EnvironmentRepository environmentRepository;
+  @Mock private RoleRepository roleRepository;
 
   @InjectMocks private VariableService variableService;
 
@@ -280,5 +285,48 @@ class VariableServiceTest {
     variableService.deleteVariable(3L, 50L);
 
     verify(accessChecker).checkOwnerOrAdmin(300L, 50L, 50L);
+  }
+
+  @Test
+  void createVariable_roleVarsScope_success() {
+    when(accessChecker.checkMembership(anyLong(), anyLong())).thenReturn(new ProjectMember());
+    when(variableRepository.existsByScopeAndScopeIdAndKey(
+        VariableScope.ROLE_VARS, 1L, "app_port")).thenReturn(false);
+    when(variableRepository.save(any(Variable.class))).thenAnswer(inv -> {
+      Variable v = inv.getArgument(0);
+      ReflectionTestUtils.setField(v, "id", 10L);
+      return v;
+    });
+
+    CreateVariableRequest req = new CreateVariableRequest(VariableScope.ROLE_VARS, 1L, "app_port", "8080");
+    VariableResponse resp = variableService.createVariable(1L, req, 1L);
+
+    assertThat(resp.key()).isEqualTo("app_port");
+    verify(variableRepository).save(argThat(v ->
+        v.getScope() == VariableScope.ROLE_VARS
+        && v.getScopeId().equals(1L)
+        && v.getKey().equals("app_port")));
+  }
+
+  @Test
+  void getVariable_roleVarsScope_resolvesProjectId() {
+    Variable v = new Variable();
+    ReflectionTestUtils.setField(v, "id", 5L);
+    v.setScope(VariableScope.ROLE_VARS);
+    v.setScopeId(10L);
+    v.setKey("db_port");
+    v.setValue("3306");
+    v.setCreatedBy(1L);
+
+    Role role = new Role();
+    ReflectionTestUtils.setField(role, "id", 10L);
+    role.setProjectId(1L);
+
+    when(variableRepository.findById(5L)).thenReturn(Optional.of(v));
+    when(roleRepository.findById(10L)).thenReturn(Optional.of(role));
+    when(accessChecker.checkMembership(1L, 1L)).thenReturn(new ProjectMember());
+
+    VariableResponse resp = variableService.getVariable(5L, 1L);
+    assertThat(resp.scope()).isEqualTo(VariableScope.ROLE_VARS);
   }
 }
