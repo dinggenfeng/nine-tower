@@ -1,0 +1,30 @@
+- generic [ref=e4]:
+  - generic [ref=e6]:
+    - generic [ref=e7]: Ansible
+    - generic [ref=e8]: Playbook Studio
+    - generic [ref=e9]: 可视化开发和管理你的 Ansible Playbook
+    - generic [ref=e10]:
+      - generic [ref=e11]: 项目管理
+      - generic [ref=e12]: 主机管理
+      - generic [ref=e13]: 角色编排
+      - generic [ref=e14]: 剧本开发
+  - generic [ref=e16]:
+    - generic [ref=e17]: 欢迎回来
+    - generic [ref=e18]: 登录以继续
+    - generic [ref=e19]:
+      - generic [ref=e25]:
+        - img "user" [ref=e27]:
+          - img [ref=e28]
+        - textbox "用户名" [ref=e30]
+      - generic [ref=e36]:
+        - img "lock" [ref=e38]:
+          - img [ref=e39]
+        - textbox "密码" [ref=e41]
+        - img "eye-invisible" [ref=e43] [cursor=pointer]:
+          - img [ref=e44]
+      - button "登 录" [ref=e52] [cursor=pointer]:
+        - generic [ref=e53]: 登 录
+    - generic [ref=e54]:
+      - text: 还没有账号？
+      - link "立即注册" [ref=e55] [cursor=pointer]:
+        - /url: /register

@@ -52,61 +52,68 @@ public class VariableDetectionController {
       @AuthenticationPrincipal UserDetails userDetails) {
     Long userId = Long.valueOf(userDetails.getUsername());
     accessChecker.checkMembership(projectId, userId);
-
     List<Map<String, Object>> results = new ArrayList<>();
     for (int i = 0; i < requests.size(); i++) {
-      BatchVariableSaveRequest req = requests.get(i);
-      try {
-        if ("ROLE_VARIABLE".equals(req.saveAs())) {
-          if (req.roleId() == null) {
-            results.add(Map.of(
-                "index", i, "success", false, "error", "roleId is required for ROLE_VARIABLE"));
-            continue;
-          }
-          Role role = roleRepository
-              .findById(req.roleId())
-              .orElseThrow(
-                  () -> new IllegalArgumentException("Role not found: " + req.roleId()));
-          if (!role.getProjectId().equals(projectId)) {
-            results.add(Map.of(
-                "index", i, "success", false, "error",
-                "Role does not belong to this project"));
-            continue;
-          }
-          if (roleVariableRepository.existsByRoleIdAndKey(req.roleId(), req.key())) {
-            results.add(Map.of(
-                "index", i, "success", false, "error",
-                "Variable '" + req.key() + "' already exists in this Role"));
-            continue;
-          }
-          RoleVariable rv = new RoleVariable();
-          rv.setRoleId(req.roleId());
-          rv.setKey(req.key());
-          rv.setValue(req.value() != null ? req.value() : "");
-          rv.setCreatedBy(userId);
-          roleVariableRepository.save(rv);
-          results.add(Map.of("index", i, "success", true, "key", req.key()));
-        } else {
-          VariableScope scope = VariableScope.valueOf(req.scope());
-          if (variableRepository.existsByScopeAndScopeIdAndKey(scope, projectId, req.key())) {
-            results.add(Map.of(
-                "index", i, "success", false, "error",
-                "Variable '" + req.key() + "' already exists at " + scope + " level"));
-            continue;
-          }
-          Variable v = new Variable();
-          v.setScope(scope);
-          v.setScopeId(projectId);
-          v.setKey(req.key());
-          v.setValue(req.value() != null ? req.value() : "");
-          v.setCreatedBy(userId);
-          variableRepository.save(v);
-          results.add(Map.of("index", i, "success", true, "key", req.key()));
-        }
-      } catch (Exception e) {
-        results.add(Map.of("index", i, "success", false, "error", e.getMessage()));
-      }
+      results.add(saveOneItem(projectId, userId, i, requests.get(i)));
     }
     return Result.success(results);
+  }
+
+  private Map<String, Object> saveOneItem(
+      Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
+    try {
+      if ("ROLE_VARIABLE".equals(req.saveAs())) {
+        return saveAsRoleVariable(projectId, userId, index, req);
+      }
+      return saveAsVariable(projectId, userId, index, req);
+    } catch (IllegalArgumentException e) {
+      return Map.of("index", index, "success", false, "error", e.getMessage());
+    }
+  }
+
+  private Map<String, Object> saveAsRoleVariable(
+      Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
+    if (req.roleId() == null) {
+      return errorResult(index, "roleId is required for ROLE_VARIABLE");
+    }
+    Role role = roleRepository
+        .findById(req.roleId())
+        .orElseThrow(
+            () -> new IllegalArgumentException("Role not found: " + req.roleId()));
+    if (!role.getProjectId().equals(projectId)) {
+      return errorResult(index, "Role does not belong to this project");
+    }
+    if (roleVariableRepository.existsByRoleIdAndKey(req.roleId(), req.key())) {
+      return errorResult(index,
+          "Variable '" + req.key() + "' already exists in this Role");
+    }
+    RoleVariable rv = new RoleVariable();
+    rv.setRoleId(req.roleId());
+    rv.setKey(req.key());
+    rv.setValue(req.value() != null ? req.value() : "");
+    rv.setCreatedBy(userId);
+    roleVariableRepository.save(rv);
+    return Map.of("index", index, "success", true, "key", req.key());
+  }
+
+  private Map<String, Object> saveAsVariable(
+      Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
+    VariableScope scope = VariableScope.valueOf(req.scope());
+    if (variableRepository.existsByScopeAndScopeIdAndKey(scope, projectId, req.key())) {
+      return errorResult(index,
+          "Variable '" + req.key() + "' already exists at " + scope + " level");
+    }
+    Variable v = new Variable();
+    v.setScope(scope);
+    v.setScopeId(projectId);
+    v.setKey(req.key());
+    v.setValue(req.value() != null ? req.value() : "");
+    v.setCreatedBy(userId);
+    variableRepository.save(v);
+    return Map.of("index", index, "success", true, "key", req.key());
+  }
+
+  private static Map<String, Object> errorResult(int index, String message) {
+    return Map.of("index", index, "success", false, "error", message);
   }
 }
