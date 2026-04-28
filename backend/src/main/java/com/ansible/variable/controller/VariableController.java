@@ -40,7 +40,7 @@ public class VariableController {
   @GetMapping("/projects/{projectId}/variables")
   public Result<List<VariableResponse>> listVariables(
       @PathVariable Long projectId,
-      @RequestParam VariableScope scope,
+      @RequestParam(required = false) VariableScope scope,
       @RequestParam(required = false) Long scopeId,
       @AuthenticationPrincipal UserDetails userDetails) {
     Long currentUserId = Long.valueOf(userDetails.getUsername());

@@ -65,6 +65,12 @@ public class VariableService {
   public List<VariableResponse> listVariables(
       Long projectId, VariableScope scope, Long scopeId, Long userId) {
     accessChecker.checkMembership(projectId, userId);
+    if (scope == null) {
+      return variableRepository.findAll().stream()
+          .filter(v -> belongsToProject(v, projectId))
+          .map(this::toResponse)
+          .toList();
+    }
     if (scopeId != null) {
       return variableRepository.findByScopeAndScopeIdOrderByIdAsc(scope, scopeId).stream()
           .map(this::toResponse)
@@ -112,6 +118,21 @@ public class VariableService {
             .orElseThrow(() -> new IllegalArgumentException("Variable not found"));
     accessChecker.checkOwnerOrAdmin(resolveProjectId(v), v.getCreatedBy(), userId);
     variableRepository.delete(v);
+  }
+
+  private boolean belongsToProject(Variable v, Long projectId) {
+    return switch (v.getScope()) {
+      case PROJECT -> v.getScopeId().equals(projectId);
+      case HOSTGROUP -> hostGroupRepository.findById(v.getScopeId())
+          .map(hg -> hg.getProjectId().equals(projectId))
+          .orElse(false);
+      case ENVIRONMENT -> environmentRepository.findById(v.getScopeId())
+          .map(env -> env.getProjectId().equals(projectId))
+          .orElse(false);
+      case ROLE_VARS, ROLE_DEFAULTS -> roleRepository.findById(v.getScopeId())
+          .map(role -> role.getProjectId().equals(projectId))
+          .orElse(false);
+    };
   }
 
   private VariableResponse toResponse(Variable v) {
