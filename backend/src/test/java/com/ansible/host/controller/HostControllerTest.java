@@ -196,4 +196,27 @@ class HostControllerTest extends AbstractIntegrationTest {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(hostRepository.findById(hostId)).isEmpty();
   }
+
+  @Test
+  void createHost_withCopyFromHostId_retainsSensitiveFields() {
+    Long sourceHostId = createHost("web-01", "192.168.1.10");
+
+    CreateHostRequest req = new CreateHostRequest();
+    req.setName("web-01-copy");
+    req.setIp("192.168.1.10");
+    req.setPort(22);
+    req.setAnsibleUser("ansible");
+    req.setCopyFromHostId(sourceHostId);
+
+    ResponseEntity<Result<HostResponse>> response =
+        restTemplate.exchange(
+            "/api/host-groups/" + hostGroupId + "/hosts",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(response.getBody().getData().getName()).isEqualTo("web-01-copy");
+    assertThat(response.getBody().getData().getAnsibleSshPass()).isEqualTo("****");
+  }
 }

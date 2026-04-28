@@ -65,4 +65,11 @@ public class HostGroupController {
     hostGroupService.deleteHostGroup(id, currentUserId);
     return Result.success();
   }
+
+  @PostMapping("/host-groups/{id}/copy")
+  public Result<HostGroupResponse> copyHostGroup(
+      @PathVariable Long id, @AuthenticationPrincipal UserDetails userDetails) {
+    Long currentUserId = Long.valueOf(userDetails.getUsername());
+    return Result.success(hostGroupService.copyHostGroup(id, currentUserId));
+  }
 }

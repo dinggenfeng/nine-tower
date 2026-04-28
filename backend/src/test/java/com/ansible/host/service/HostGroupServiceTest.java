@@ -9,8 +9,10 @@ import static org.mockito.Mockito.when;
 import com.ansible.host.dto.CreateHostGroupRequest;
 import com.ansible.host.dto.HostGroupResponse;
 import com.ansible.host.dto.UpdateHostGroupRequest;
+import com.ansible.host.entity.Host;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.host.repository.HostRepository;
 import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.time.LocalDateTime;
@@ -30,6 +32,7 @@ class HostGroupServiceTest {
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private ProjectAccessChecker accessChecker;
   @Mock private ProjectCleanupService cleanupService;
+  @Mock private HostRepository hostRepository;
   @InjectMocks private HostGroupService hostGroupService;
 
   private HostGroup testHostGroup;
@@ -124,5 +127,72 @@ class HostGroupServiceTest {
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
     verify(cleanupService).cleanupHostGroupResources(1L);
     verify(hostGroupRepository).delete(testHostGroup);
+  }
+
+  @Test
+  void copyHostGroup_copiesHostGroupAndHosts() {
+    Host sourceHost = new Host();
+    ReflectionTestUtils.setField(sourceHost, "id", 10L);
+    sourceHost.setHostGroupId(1L);
+    sourceHost.setName("web-01");
+    sourceHost.setIp("192.168.1.10");
+    sourceHost.setPort(22);
+    sourceHost.setAnsibleUser("ansible");
+    sourceHost.setAnsibleSshPass("encrypted-pass");
+    sourceHost.setAnsibleBecome(false);
+    sourceHost.setCreatedBy(10L);
+
+    HostGroup copiedHostGroup = new HostGroup();
+    ReflectionTestUtils.setField(copiedHostGroup, "id", 2L);
+    copiedHostGroup.setProjectId(10L);
+    copiedHostGroup.setName("Web Servers (副本)");
+    copiedHostGroup.setDescription("All web servers");
+    copiedHostGroup.setCreatedBy(10L);
+
+    when(hostGroupRepository.findById(1L)).thenReturn(Optional.of(testHostGroup));
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers (副本)"))
+        .thenReturn(false);
+    when(hostGroupRepository.save(any(HostGroup.class))).thenReturn(copiedHostGroup);
+    when(hostRepository.findAllByHostGroupId(1L)).thenReturn(List.of(sourceHost));
+    when(hostRepository.save(any(Host.class)))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+
+    HostGroupResponse response = hostGroupService.copyHostGroup(1L, 10L);
+
+    assertThat(response.getName()).isEqualTo("Web Servers (副本)");
+    verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
+    verify(hostGroupRepository).save(any(HostGroup.class));
+    verify(hostRepository).findAllByHostGroupId(1L);
+    verify(hostRepository).save(any(Host.class));
+  }
+
+  @Test
+  void copyHostGroup_generatesUniqueName_whenDuplicate() {
+    when(hostGroupRepository.findById(1L)).thenReturn(Optional.of(testHostGroup));
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers (副本)"))
+        .thenReturn(true);
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers (副本)2"))
+        .thenReturn(true);
+    when(hostGroupRepository.existsByProjectIdAndName(10L, "Web Servers (副本)3"))
+        .thenReturn(false);
+
+    HostGroup copiedHostGroup = new HostGroup();
+    ReflectionTestUtils.setField(copiedHostGroup, "id", 2L);
+    copiedHostGroup.setName("Web Servers (副本)3");
+    when(hostGroupRepository.save(any(HostGroup.class))).thenReturn(copiedHostGroup);
+    when(hostRepository.findAllByHostGroupId(1L)).thenReturn(List.of());
+
+    HostGroupResponse response = hostGroupService.copyHostGroup(1L, 10L);
+
+    assertThat(response.getName()).isEqualTo("Web Servers (副本)3");
+  }
+
+  @Test
+  void copyHostGroup_hostGroupNotFound_throws() {
+    when(hostGroupRepository.findById(99L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> hostGroupService.copyHostGroup(99L, 10L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("not found");
   }
 }

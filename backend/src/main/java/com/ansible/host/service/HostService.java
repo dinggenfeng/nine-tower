@@ -38,12 +38,22 @@ public class HostService {
     host.setIp(request.getIp());
     host.setPort(Objects.requireNonNullElse(request.getPort(), 22));
     host.setAnsibleUser(request.getAnsibleUser());
+
+    Host sourceHost = null;
+    if (request.getCopyFromHostId() != null) {
+      sourceHost = hostRepository.findById(request.getCopyFromHostId()).orElse(null);
+    }
+
     if (StringUtils.hasText(request.getAnsibleSshPass())) {
       host.setAnsibleSshPass(encryptionService.encrypt(request.getAnsibleSshPass()));
+    } else if (sourceHost != null && sourceHost.getAnsibleSshPass() != null) {
+      host.setAnsibleSshPass(sourceHost.getAnsibleSshPass());
     }
     if (StringUtils.hasText(request.getAnsibleSshPrivateKeyFile())) {
       host.setAnsibleSshPrivateKeyFile(
           encryptionService.encrypt(request.getAnsibleSshPrivateKeyFile()));
+    } else if (sourceHost != null && sourceHost.getAnsibleSshPrivateKeyFile() != null) {
+      host.setAnsibleSshPrivateKeyFile(sourceHost.getAnsibleSshPrivateKeyFile());
     }
     host.setAnsibleBecome(Objects.requireNonNullElse(request.getAnsibleBecome(), false));
     host.setCreatedBy(currentUserId);

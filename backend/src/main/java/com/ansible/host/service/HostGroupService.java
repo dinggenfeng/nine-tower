@@ -3,8 +3,10 @@ package com.ansible.host.service;
 import com.ansible.host.dto.CreateHostGroupRequest;
 import com.ansible.host.dto.HostGroupResponse;
 import com.ansible.host.dto.UpdateHostGroupRequest;
+import com.ansible.host.entity.Host;
 import com.ansible.host.entity.HostGroup;
 import com.ansible.host.repository.HostGroupRepository;
+import com.ansible.host.repository.HostRepository;
 import com.ansible.project.service.ProjectCleanupService;
 import com.ansible.security.ProjectAccessChecker;
 import java.util.List;
@@ -18,6 +20,7 @@ import org.springframework.util.StringUtils;
 public class HostGroupService {
 
   private final HostGroupRepository hostGroupRepository;
+  private final HostRepository hostRepository;
   private final ProjectAccessChecker accessChecker;
   private final ProjectCleanupService cleanupService;
 
@@ -78,6 +81,56 @@ public class HostGroupService {
       hostGroup.setDescription(request.getDescription());
     }
     HostGroup saved = hostGroupRepository.save(hostGroup);
+    return new HostGroupResponse(saved);
+  }
+
+  @Transactional
+  public HostGroupResponse copyHostGroup(Long hostGroupId, Long currentUserId) {
+    HostGroup source =
+        hostGroupRepository
+            .findById(hostGroupId)
+            .orElseThrow(() -> new IllegalArgumentException("Host group not found"));
+    accessChecker.checkOwnerOrAdmin(
+        source.getProjectId(), source.getCreatedBy(), currentUserId);
+
+    String newName = source.getName() + " (副本)";
+    if (hostGroupRepository.existsByProjectIdAndName(source.getProjectId(), newName)) {
+      int suffix = 2;
+      while (hostGroupRepository.existsByProjectIdAndName(
+          source.getProjectId(), newName + suffix)) {
+        suffix++;
+        if (suffix > 100) {
+          throw new IllegalStateException(
+              "Cannot generate a unique name for the copied host group");
+        }
+      }
+      newName = newName + suffix;
+    }
+
+    HostGroup copy = new HostGroup();
+    copy.setProjectId(source.getProjectId());
+    copy.setName(newName);
+    copy.setDescription(source.getDescription());
+    copy.setCreatedBy(currentUserId);
+    HostGroup saved = hostGroupRepository.save(copy);
+
+    List<Host> sourceHosts = hostRepository.findAllByHostGroupId(hostGroupId);
+    if (!sourceHosts.isEmpty()) {
+      for (Host sourceHost : sourceHosts) {
+        Host hostCopy = new Host();
+        hostCopy.setHostGroupId(saved.getId());
+        hostCopy.setName(sourceHost.getName());
+        hostCopy.setIp(sourceHost.getIp());
+        hostCopy.setPort(sourceHost.getPort());
+        hostCopy.setAnsibleUser(sourceHost.getAnsibleUser());
+        hostCopy.setAnsibleSshPass(sourceHost.getAnsibleSshPass());
+        hostCopy.setAnsibleSshPrivateKeyFile(sourceHost.getAnsibleSshPrivateKeyFile());
+        hostCopy.setAnsibleBecome(sourceHost.getAnsibleBecome());
+        hostCopy.setCreatedBy(currentUserId);
+        hostRepository.save(hostCopy);
+      }
+    }
+
     return new HostGroupResponse(saved);
   }
 

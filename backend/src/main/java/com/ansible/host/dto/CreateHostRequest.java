@@ -29,4 +29,6 @@ public class CreateHostRequest {
   private String ansibleSshPrivateKeyFile;
 
   private Boolean ansibleBecome = false;
+
+  private Long copyFromHostId;
 }

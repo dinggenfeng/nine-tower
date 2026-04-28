@@ -3,6 +3,7 @@ package com.ansible.host.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -125,5 +126,68 @@ class HostServiceTest {
 
     verify(accessChecker).checkOwnerOrAdmin(10L, 10L, 10L);
     verify(hostRepository).delete(testHost);
+  }
+
+  @Test
+  void createHost_withCopyFromHostId_retainsEncryptedFields() {
+    Host sourceHost = new Host();
+    sourceHost.setAnsibleSshPass("encrypted-source-pass");
+    sourceHost.setAnsibleSshPrivateKeyFile("encrypted-source-key");
+
+    CreateHostRequest request = new CreateHostRequest();
+    request.setName("web-02");
+    request.setIp("192.168.1.11");
+    request.setPort(22);
+    request.setAnsibleUser("ansible");
+    request.setCopyFromHostId(5L);
+
+    when(hostGroupRepository.findById(1L)).thenReturn(Optional.of(testHostGroup));
+    when(hostRepository.findById(5L)).thenReturn(Optional.of(sourceHost));
+    when(hostRepository.save(any(Host.class))).thenReturn(testHost);
+
+    hostService.createHost(1L, request, 10L);
+
+    verify(hostRepository).findById(5L);
+    verify(encryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void createHost_withCopyFromHostId_userProvidedPasswordOverrides() {
+    Host sourceHost = new Host();
+    sourceHost.setAnsibleSshPass("encrypted-source-pass");
+
+    CreateHostRequest request = new CreateHostRequest();
+    request.setName("web-02");
+    request.setIp("192.168.1.11");
+    request.setPort(22);
+    request.setAnsibleSshPass("new-password");
+    request.setCopyFromHostId(5L);
+
+    when(hostGroupRepository.findById(1L)).thenReturn(Optional.of(testHostGroup));
+    when(hostRepository.findById(5L)).thenReturn(Optional.of(sourceHost));
+    when(encryptionService.encrypt("new-password")).thenReturn("encrypted-new");
+    when(hostRepository.save(any(Host.class))).thenReturn(testHost);
+
+    hostService.createHost(1L, request, 10L);
+
+    verify(encryptionService).encrypt("new-password");
+    verify(hostRepository).findById(5L);
+  }
+
+  @Test
+  void createHost_withCopyFromHostId_sourceNotFound_doesNotFail() {
+    CreateHostRequest request = new CreateHostRequest();
+    request.setName("web-02");
+    request.setIp("192.168.1.11");
+    request.setPort(22);
+    request.setCopyFromHostId(99L);
+
+    when(hostGroupRepository.findById(1L)).thenReturn(Optional.of(testHostGroup));
+    when(hostRepository.findById(99L)).thenReturn(Optional.empty());
+    when(hostRepository.save(any(Host.class))).thenReturn(testHost);
+
+    HostResponse response = hostService.createHost(1L, request, 10L);
+
+    assertThat(response).isNotNull();
   }
 }

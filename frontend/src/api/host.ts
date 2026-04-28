@@ -39,6 +39,11 @@ export async function deleteHostGroup(id: number): Promise<void> {
   await request.delete(`/host-groups/${id}`);
 }
 
+export async function copyHostGroup(id: number): Promise<HostGroup> {
+  const res = await request.post<HostGroup>(`/host-groups/${id}/copy`);
+  return res.data;
+}
+
 // Host APIs
 export async function createHost(hostGroupId: number, data: CreateHostRequest): Promise<Host> {
   const res = await request.post<Host>(`/host-groups/${hostGroupId}/hosts`, data);
