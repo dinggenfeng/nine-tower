@@ -20,11 +20,7 @@ import com.ansible.playbook.repository.PlaybookRoleRepository;
 import com.ansible.playbook.repository.PlaybookTagRepository;
 import com.ansible.playbook.yaml.PlaybookYamlGenerator;
 import com.ansible.role.entity.Role;
-import com.ansible.role.entity.RoleDefaultVariable;
-import com.ansible.role.entity.RoleVariable;
-import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleRepository;
-import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
@@ -51,8 +47,6 @@ public class PlaybookService {
   private final PlaybookTagRepository playbookTagRepository;
   private final PlaybookEnvironmentRepository playbookEnvironmentRepository;
   private final RoleRepository roleRepository;
-  private final RoleVariableRepository roleVariableRepository;
-  private final RoleDefaultVariableRepository roleDefaultVariableRepository;
   private final HostGroupRepository hostGroupRepository;
   private final TagRepository tagRepository;
   private final VariableRepository variableRepository;
@@ -351,8 +345,8 @@ public class PlaybookService {
 
   private void addRoleDefaults(Map<String, String> merged, List<PlaybookRole> playbookRoles) {
     for (PlaybookRole pr : playbookRoles) {
-      for (RoleDefaultVariable v :
-          roleDefaultVariableRepository.findAllByRoleIdOrderByKeyAsc(pr.getRoleId())) {
+      for (Variable v : variableRepository.findByScopeAndScopeIdOrderByIdAsc(
+          VariableScope.ROLE_DEFAULTS, pr.getRoleId())) {
         merged.put(v.getKey(), v.getValue());
       }
     }
@@ -360,7 +354,8 @@ public class PlaybookService {
 
   private void addRoleVars(Map<String, String> merged, List<PlaybookRole> playbookRoles) {
     for (PlaybookRole pr : playbookRoles) {
-      for (RoleVariable v : roleVariableRepository.findAllByRoleIdOrderByKeyAsc(pr.getRoleId())) {
+      for (Variable v : variableRepository.findByScopeAndScopeIdOrderByIdAsc(
+          VariableScope.ROLE_VARS, pr.getRoleId())) {
         merged.put(v.getKey(), v.getValue());
       }
     }

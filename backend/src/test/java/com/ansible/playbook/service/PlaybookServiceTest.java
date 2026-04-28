@@ -26,11 +26,7 @@ import com.ansible.playbook.repository.PlaybookRoleRepository;
 import com.ansible.playbook.repository.PlaybookTagRepository;
 import com.ansible.playbook.yaml.PlaybookYamlGenerator;
 import com.ansible.role.entity.Role;
-import com.ansible.role.entity.RoleDefaultVariable;
-import com.ansible.role.entity.RoleVariable;
-import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleRepository;
-import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.tag.entity.Tag;
 import com.ansible.tag.repository.TagRepository;
@@ -57,8 +53,6 @@ class PlaybookServiceTest {
   @Mock private PlaybookTagRepository playbookTagRepository;
   @Mock private PlaybookEnvironmentRepository playbookEnvironmentRepository;
   @Mock private RoleRepository roleRepository;
-  @Mock private RoleVariableRepository roleVariableRepository;
-  @Mock private RoleDefaultVariableRepository roleDefaultVariableRepository;
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private TagRepository tagRepository;
   @Mock private VariableRepository variableRepository;
@@ -193,8 +187,10 @@ class PlaybookServiceTest {
     when(tagRepository.findById(3L)).thenReturn(Optional.of(tag));
 
     when(playbookEnvironmentRepository.findByPlaybookId(1L)).thenReturn(List.of());
-    when(roleVariableRepository.findAllByRoleIdOrderByKeyAsc(10L)).thenReturn(List.of());
-    when(roleDefaultVariableRepository.findAllByRoleIdOrderByKeyAsc(10L)).thenReturn(List.of());
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_DEFAULTS, 10L))
+        .thenReturn(List.of());
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, 10L))
+        .thenReturn(List.of());
     when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.PROJECT, 1L))
         .thenReturn(List.of());
     when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.HOSTGROUP, 5L))
@@ -245,22 +241,26 @@ class PlaybookServiceTest {
     when(playbookEnvironmentRepository.findByPlaybookId(1L)).thenReturn(List.of(pe));
 
     // Same key "override_me" appears at every level; the last write wins.
-    RoleDefaultVariable defaultVar = new RoleDefaultVariable();
+    Variable defaultVar = new Variable();
     defaultVar.setKey("override_me");
     defaultVar.setValue("from_default");
-    defaultVar.setRoleId(10L);
-    RoleDefaultVariable defaultOnly = new RoleDefaultVariable();
+    defaultVar.setScope(VariableScope.ROLE_DEFAULTS);
+    defaultVar.setScopeId(10L);
+    Variable defaultOnly = new Variable();
     defaultOnly.setKey("from_default_only");
     defaultOnly.setValue("d");
-    defaultOnly.setRoleId(10L);
-    when(roleDefaultVariableRepository.findAllByRoleIdOrderByKeyAsc(10L))
+    defaultOnly.setScope(VariableScope.ROLE_DEFAULTS);
+    defaultOnly.setScopeId(10L);
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_DEFAULTS, 10L))
         .thenReturn(List.of(defaultVar, defaultOnly));
 
-    RoleVariable roleVar = new RoleVariable();
+    Variable roleVar = new Variable();
     roleVar.setKey("override_me");
     roleVar.setValue("from_role_var");
-    roleVar.setRoleId(10L);
-    when(roleVariableRepository.findAllByRoleIdOrderByKeyAsc(10L)).thenReturn(List.of(roleVar));
+    roleVar.setScope(VariableScope.ROLE_VARS);
+    roleVar.setScopeId(10L);
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, 10L))
+        .thenReturn(List.of(roleVar));
 
     Variable projectVar = new Variable();
     projectVar.setKey("override_me");
@@ -330,12 +330,15 @@ class PlaybookServiceTest {
     pe.setEnvironmentId(7L);
     when(playbookEnvironmentRepository.findByPlaybookId(1L)).thenReturn(List.of(pe));
 
-    RoleVariable roleVar = new RoleVariable();
+    Variable roleVar = new Variable();
     roleVar.setKey("port");
     roleVar.setValue("80");
-    roleVar.setRoleId(10L);
-    when(roleVariableRepository.findAllByRoleIdOrderByKeyAsc(10L)).thenReturn(List.of(roleVar));
-    when(roleDefaultVariableRepository.findAllByRoleIdOrderByKeyAsc(10L)).thenReturn(List.of());
+    roleVar.setScope(VariableScope.ROLE_VARS);
+    roleVar.setScopeId(10L);
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, 10L))
+        .thenReturn(List.of(roleVar));
+    when(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_DEFAULTS, 10L))
+        .thenReturn(List.of());
 
     Variable projectVar = new Variable();
     projectVar.setKey("port");
