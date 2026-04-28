@@ -1,5 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Dropdown, Form, Input, Modal, Popconfirm, Select, Space, Tree, message } from "antd";
+import {
+  Button,
+  Dropdown,
+  Form,
+  Input,
+  Modal,
+  Popconfirm,
+  Select,
+  Space,
+  Tree,
+  message,
+} from "antd";
 import {
   UploadOutlined,
   PlusOutlined,
@@ -105,27 +116,47 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [uploading, setUploading] = useState(false);
 
-    if (file.size > 500 * 1024 * 1024) {
-      message.error("文件大小不能超过 500MB");
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const parentDir = uploadParentDirRef.current || undefined;
+    const files = Array.from(fileList);
+
+    const oversized = files.filter((f) => f.size > 500 * 1024 * 1024);
+    if (oversized.length > 0) {
+      message.error(`${oversized.map((f) => f.name).join(", ")} 超过 500MB 限制`);
       e.target.value = "";
       return;
     }
 
-    try {
-      await uploadFile(roleId, file, uploadParentDirRef.current || undefined);
-      message.success("文件已上传");
-      fetchData();
-    } catch (err) {
-      if (err && typeof err === "object" && "message" in err) {
-        message.error((err as { message: string }).message);
+    setUploading(true);
+    const hideLoading = message.loading(`正在上传 ${files.length} 个文件...`, 0);
+
+    let success = 0;
+    let fail = 0;
+
+    for (const file of files) {
+      try {
+        await uploadFile(roleId, file, parentDir);
+        success++;
+      } catch {
+        fail++;
       }
     }
 
+    hideLoading();
+    setUploading(false);
     e.target.value = "";
+
+    if (fail === 0) {
+      message.success(`${success} 个文件已上传`);
+    } else {
+      message.warning(`上传完成: ${success} 成功, ${fail} 失败`);
+    }
+    fetchData();
   };
 
   const handleEdit = (file: RoleFile) => {
@@ -289,22 +320,23 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
     <div>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate("", false)}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate("", false)}>
             新建文件
           </Button>
           <Button icon={<PlusOutlined />} onClick={() => handleCreate("", true)}>
             新建目录
           </Button>
-          <Button icon={<UploadOutlined />} onClick={() => triggerFileUpload("")}>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={() => triggerFileUpload("")}
+            loading={uploading}
+          >
             上传文件
           </Button>
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             style={{ display: "none" }}
             onChange={handleFileSelected}
           />
@@ -326,11 +358,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
       >
         <Form form={createForm} layout="vertical">
           <Form.Item name="parentDir" label="目录">
-            <Select
-              options={directoryOptions}
-              placeholder="选择父目录"
-              allowClear
-            />
+            <Select options={directoryOptions} placeholder="选择父目录" allowClear />
           </Form.Item>
           <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
             <Input placeholder={creatingDir ? "目录名称" : "文件名称"} />
@@ -358,11 +386,7 @@ export default function RoleFiles({ roleId }: RoleFilesProps) {
             <Input />
           </Form.Item>
           <Form.Item name="parentDir" label="目录">
-            <Select
-              options={directoryOptions}
-              placeholder="选择父目录"
-              allowClear
-            />
+            <Select options={directoryOptions} placeholder="选择父目录" allowClear />
           </Form.Item>
           {selectedFile && !selectedFile.isDirectory && (
             <Form.Item name="targetPath" label="目标路径">

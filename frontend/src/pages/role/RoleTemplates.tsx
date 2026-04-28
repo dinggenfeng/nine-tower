@@ -128,29 +128,49 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelected = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const [uploading, setUploading] = useState(false);
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const content = reader.result as string;
-      setCreatingDir(false);
-      createForm.resetFields();
-      createForm.setFieldsValue({
-        name: file.name,
-        parentDir: uploadParentDirRef.current || "",
-        targetPath: "",
-        content,
+  const handleFileSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const parentDir = uploadParentDirRef.current || "";
+    const files = Array.from(fileList);
+
+    setUploading(true);
+    const hideLoading = message.loading(`正在上传 ${files.length} 个模板...`, 0);
+
+    let success = 0;
+    let fail = 0;
+
+    const readFile = (file: File): Promise<string> =>
+      new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = () => reject(new Error(`读取 ${file.name} 失败`));
+        reader.readAsText(file);
       });
-      setCreateModalOpen(true);
-    };
-    reader.onerror = () => {
-      message.error("文件读取失败");
-    };
-    reader.readAsText(file);
 
+    for (const file of files) {
+      try {
+        const content = await readFile(file);
+        await createTemplate(roleId, { name: file.name, parentDir, content });
+        success++;
+      } catch (err) {
+        fail++;
+      }
+    }
+
+    hideLoading();
+    setUploading(false);
     e.target.value = "";
+
+    if (fail === 0) {
+      message.success(`${success} 个模板已上传`);
+    } else {
+      message.warning(`上传完成: ${success} 成功, ${fail} 失败`);
+    }
+    fetchData();
   };
 
   const handleEdit = (template: Template) => {
@@ -175,9 +195,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
       if ((values.parentDir || "") !== (editingTemplate.parentDir || "")) {
         data.parentDir = values.parentDir || "";
       }
-      if (
-        (values.targetPath || null) !== (editingTemplate.targetPath || null)
-      ) {
+      if ((values.targetPath || null) !== (editingTemplate.targetPath || null)) {
         data.targetPath = values.targetPath || null;
       }
       if (Object.keys(data).length === 0) {
@@ -279,9 +297,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           <Space>
             <FileTextOutlined />
             <span>
-              {contentTemplate.parentDir
-                ? `${contentTemplate.parentDir}/`
-                : ""}
+              {contentTemplate.parentDir ? `${contentTemplate.parentDir}/` : ""}
               {contentTemplate.name}
             </span>
           </Space>
@@ -353,9 +369,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
                     icon: <FileAddOutlined />,
                     label: "新建模板",
                     onClick: () => {
-                      const dir = t.parentDir
-                        ? `${t.parentDir}/${t.name}`
-                        : t.name;
+                      const dir = t.parentDir ? `${t.parentDir}/${t.name}` : t.name;
                       handleCreate(dir, false);
                     },
                   },
@@ -364,9 +378,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
                     icon: <UploadOutlined />,
                     label: "上传模板",
                     onClick: () => {
-                      const dir = t.parentDir
-                        ? `${t.parentDir}/${t.name}`
-                        : t.name;
+                      const dir = t.parentDir ? `${t.parentDir}/${t.name}` : t.name;
                       triggerFileUpload(dir);
                     },
                   },
@@ -375,9 +387,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
                     icon: <FolderAddOutlined />,
                     label: "新建子目录",
                     onClick: () => {
-                      const dir = t.parentDir
-                        ? `${t.parentDir}/${t.name}`
-                        : t.name;
+                      const dir = t.parentDir ? `${t.parentDir}/${t.name}` : t.name;
                       handleCreate(dir, true);
                     },
                   },
@@ -424,28 +434,23 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
     <div>
       <div style={{ marginBottom: 16 }}>
         <Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate("", false)}
-          >
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreate("", false)}>
             新建模板
           </Button>
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => handleCreate("", true)}
-          >
+          <Button icon={<PlusOutlined />} onClick={() => handleCreate("", true)}>
             新建目录
           </Button>
           <Button
             icon={<UploadOutlined />}
             onClick={() => triggerFileUpload("")}
+            loading={uploading}
           >
             上传模板
           </Button>
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             style={{ display: "none" }}
             onChange={handleFileSelected}
           />
@@ -467,17 +472,9 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
       >
         <Form form={createForm} layout="vertical">
           <Form.Item name="parentDir" label="目录">
-            <Select
-              options={directoryOptions}
-              placeholder="选择父目录"
-              allowClear
-            />
+            <Select options={directoryOptions} placeholder="选择父目录" allowClear />
           </Form.Item>
-          <Form.Item
-            name="name"
-            label="名称"
-            rules={[{ required: true, message: "请输入名称" }]}
-          >
+          <Form.Item name="name" label="名称" rules={[{ required: true, message: "请输入名称" }]}>
             <Input placeholder={creatingDir ? "目录名称" : "模板名称"} />
           </Form.Item>
           <Form.Item name="targetPath" label="目标路径">
@@ -485,10 +482,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
           </Form.Item>
           {!creatingDir && (
             <Form.Item name="content" label="模板内容">
-              <Input.TextArea
-                rows={8}
-                placeholder="模板内容（可选，创建后可在线编辑）"
-              />
+              <Input.TextArea rows={8} placeholder="模板内容（可选，创建后可在线编辑）" />
             </Form.Item>
           )}
         </Form>
@@ -511,11 +505,7 @@ export default function RoleTemplates({ roleId }: RoleTemplatesProps) {
             <Input />
           </Form.Item>
           <Form.Item name="parentDir" label="目录">
-            <Select
-              options={directoryOptions}
-              placeholder="选择父目录"
-              allowClear
-            />
+            <Select options={directoryOptions} placeholder="选择父目录" allowClear />
           </Form.Item>
           {editingTemplate && !editingTemplate.isDirectory && (
             <Form.Item name="targetPath" label="目标路径">

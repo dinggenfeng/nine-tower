@@ -28,9 +28,22 @@ import {
   DeleteOutlined,
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
-import type { Variable, VariableScope, CreateVariableRequest, DetectedVariableRow, BatchVariableSaveItem } from "../../types/entity/Variable";
+import type {
+  Variable,
+  VariableScope,
+  CreateVariableRequest,
+  DetectedVariableRow,
+  BatchVariableSaveItem,
+} from "../../types/entity/Variable";
 import type { ReactNode } from "react";
-import { listVariables, createVariable, updateVariable, deleteVariable, detectVariables, batchSaveVariables } from "../../api/variable";
+import {
+  listVariables,
+  createVariable,
+  updateVariable,
+  deleteVariable,
+  detectVariables,
+  batchSaveVariables,
+} from "../../api/variable";
 import { listEnvironments } from "../../api/environment";
 import { getHostGroups } from "../../api/host";
 import { getRoles } from "../../api/role";
@@ -469,8 +482,7 @@ export default function VariableManager() {
     const newRow: DetectedVariableRow = {
       ...src,
       scopeType: copyModal.targetType,
-      targetRoleId:
-        copyModal.targetType === "role" ? copyModal.targetRoleId : undefined,
+      targetRoleId: copyModal.targetType === "role" ? copyModal.targetRoleId : undefined,
       rowKey: newRowKey,
     };
     setDetectedVars((prev) => [...prev, newRow]);
@@ -513,9 +525,7 @@ export default function VariableManager() {
 
       if (succeeded.length > 0) {
         message.success(`成功保存 ${succeeded.length} 个变量`);
-        setDetectedVars((prev) =>
-          prev.filter((_, i) => results[i]?.success)
-        );
+        setDetectedVars((prev) => prev.filter((_, i) => results[i]?.success));
         fetchVariables();
       }
       if (failed.length > 0) {
@@ -700,12 +710,8 @@ export default function VariableManager() {
                     {occurrences.map((o, i) => (
                       <div key={i} style={{ fontSize: 12, color: "#666" }}>
                         {o.roleName} ·{" "}
-                        {o.type === "TASK"
-                          ? "任务"
-                          : o.type === "HANDLER"
-                            ? "Handler"
-                            : "模板"}{" "}
-                        · {o.entityName}
+                        {o.type === "TASK" ? "任务" : o.type === "HANDLER" ? "Handler" : "模板"} ·{" "}
+                        {o.entityName}
                       </div>
                     ))}
                   </div>
@@ -722,9 +728,7 @@ export default function VariableManager() {
                         updateRowScope(
                           record.rowKey,
                           val,
-                          val === "role"
-                            ? record.occurrences[0]?.roleId
-                            : undefined
+                          val === "role" ? record.occurrences[0]?.roleId : undefined
                         )
                       }
                       style={{ width: 100 }}
@@ -737,15 +741,11 @@ export default function VariableManager() {
                     {record.scopeType === "role" && (
                       <Select
                         value={record.targetRoleId}
-                        onChange={(val) =>
-                          updateRowScope(record.rowKey, "role", val)
-                        }
+                        onChange={(val) => updateRowScope(record.rowKey, "role", val)}
                         style={{ width: 100 }}
                         size="small"
                         options={Array.from(
-                          new Map(
-                            record.occurrences.map((o) => [o.roleId, o.roleName])
-                          )
+                          new Map(record.occurrences.map((o) => [o.roleId, o.roleName]))
                         ).map(([id, name]) => ({ label: name, value: id }))}
                       />
                     )}
@@ -761,9 +761,7 @@ export default function VariableManager() {
                     size="small"
                     placeholder="输入变量值"
                     value={record.userValue}
-                    onChange={(e) =>
-                      updateRowValue(record.rowKey, e.target.value)
-                    }
+                    onChange={(e) => updateRowValue(record.rowKey, e.target.value)}
                   />
                 ),
               },
@@ -868,9 +866,7 @@ export default function VariableManager() {
         title="复制变量到其他作用域"
         open={copyModal.open}
         onOk={confirmCopy}
-        onCancel={() =>
-          setCopyModal({ open: false, sourceVar: null, targetType: "role" })
-        }
+        onCancel={() => setCopyModal({ open: false, sourceVar: null, targetType: "role" })}
         okText="确认复制"
         cancelText="取消"
       >
