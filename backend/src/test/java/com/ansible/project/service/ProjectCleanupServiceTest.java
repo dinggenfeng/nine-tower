@@ -17,10 +17,8 @@ import com.ansible.playbook.repository.PlaybookRoleRepository;
 import com.ansible.playbook.repository.PlaybookTagRepository;
 import com.ansible.role.entity.Role;
 import com.ansible.role.repository.HandlerRepository;
-import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleFileRepository;
 import com.ansible.role.repository.RoleRepository;
-import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.role.repository.TaskRepository;
 import com.ansible.role.repository.TemplateRepository;
 import com.ansible.tag.entity.Tag;
@@ -45,8 +43,6 @@ class ProjectCleanupServiceTest {
   @Mock private HandlerRepository handlerRepository;
   @Mock private TemplateRepository templateRepository;
   @Mock private RoleFileRepository roleFileRepository;
-  @Mock private RoleVariableRepository roleVariableRepository;
-  @Mock private RoleDefaultVariableRepository roleDefaultVariableRepository;
   @Mock private HostGroupRepository hostGroupRepository;
   @Mock private HostRepository hostRepository;
   @Mock private VariableRepository variableRepository;
@@ -98,8 +94,8 @@ class ProjectCleanupServiceTest {
     verify(handlerRepository).deleteByRoleId(20L);
     verify(templateRepository).deleteByRoleId(20L);
     verify(roleFileRepository).deleteByRoleId(20L);
-    verify(roleVariableRepository).deleteByRoleId(20L);
-    verify(roleDefaultVariableRepository).deleteByRoleId(20L);
+    verify(variableRepository).deleteByScopeAndScopeId(VariableScope.ROLE_VARS, 20L);
+    verify(variableRepository).deleteByScopeAndScopeId(VariableScope.ROLE_DEFAULTS, 20L);
     verify(playbookRoleRepository).deleteByRoleId(20L);
     verify(roleRepository).deleteByProjectId(projectId);
 
@@ -127,8 +123,8 @@ class ProjectCleanupServiceTest {
     verify(handlerRepository).deleteByRoleId(1L);
     verify(templateRepository).deleteByRoleId(1L);
     verify(roleFileRepository).deleteByRoleId(1L);
-    verify(roleVariableRepository).deleteByRoleId(1L);
-    verify(roleDefaultVariableRepository).deleteByRoleId(1L);
+    verify(variableRepository).deleteByScopeAndScopeId(VariableScope.ROLE_VARS, 1L);
+    verify(variableRepository).deleteByScopeAndScopeId(VariableScope.ROLE_DEFAULTS, 1L);
     verify(playbookRoleRepository).deleteByRoleId(1L);
   }
 

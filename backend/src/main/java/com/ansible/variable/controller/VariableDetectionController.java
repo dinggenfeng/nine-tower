@@ -1,15 +1,10 @@
 package com.ansible.variable.controller;
 
 import com.ansible.common.Result;
-import com.ansible.role.entity.Role;
-import com.ansible.role.entity.RoleVariable;
-import com.ansible.role.repository.RoleRepository;
-import com.ansible.role.repository.RoleVariableRepository;
 import com.ansible.security.ProjectAccessChecker;
 import com.ansible.variable.dto.BatchVariableSaveRequest;
 import com.ansible.variable.dto.DetectedVariableResponse;
 import com.ansible.variable.entity.Variable;
-import com.ansible.variable.entity.VariableScope;
 import com.ansible.variable.repository.VariableRepository;
 import com.ansible.variable.service.VariableDetectionService;
 import jakarta.validation.Valid;
@@ -33,8 +28,6 @@ public class VariableDetectionController {
 
   private final VariableDetectionService detectionService;
   private final VariableRepository variableRepository;
-  private final RoleVariableRepository roleVariableRepository;
-  private final RoleRepository roleRepository;
   private final ProjectAccessChecker accessChecker;
 
   @GetMapping("/projects/{projectId}/detect-variables")
@@ -62,55 +55,32 @@ public class VariableDetectionController {
   private Map<String, Object> saveOneItem(
       Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
     try {
-      if ("ROLE_VARIABLE".equals(req.saveAs())) {
-        return saveAsRoleVariable(projectId, userId, index, req);
+      Long scopeId = resolveScopeId(projectId, req);
+      if (variableRepository.existsByScopeAndScopeIdAndKey(req.scope(), scopeId, req.key())) {
+        return errorResult(index,
+            "Variable '" + req.key() + "' already exists in " + req.scope() + " scope");
       }
-      return saveAsVariable(projectId, userId, index, req);
+      Variable v = new Variable();
+      v.setScope(req.scope());
+      v.setScopeId(scopeId);
+      v.setKey(req.key());
+      v.setValue(req.value() != null ? req.value() : "");
+      v.setCreatedBy(userId);
+      variableRepository.save(v);
+      return Map.of("index", index, "success", true, "key", req.key());
     } catch (IllegalArgumentException e) {
       return Map.of("index", index, "success", false, "error", e.getMessage());
     }
   }
 
-  private Map<String, Object> saveAsRoleVariable(
-      Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
-    if (req.roleId() == null) {
-      return errorResult(index, "roleId is required for ROLE_VARIABLE");
+  private Long resolveScopeId(Long projectId, BatchVariableSaveRequest req) {
+    if (req.scopeId() != null) {
+      return req.scopeId();
     }
-    Role role = roleRepository
-        .findById(req.roleId())
-        .orElseThrow(
-            () -> new IllegalArgumentException("Role not found: " + req.roleId()));
-    if (!role.getProjectId().equals(projectId)) {
-      return errorResult(index, "Role does not belong to this project");
+    if (req.scope() == com.ansible.variable.entity.VariableScope.PROJECT) {
+      return projectId;
     }
-    if (roleVariableRepository.existsByRoleIdAndKey(req.roleId(), req.key())) {
-      return errorResult(index,
-          "Variable '" + req.key() + "' already exists in this Role");
-    }
-    RoleVariable rv = new RoleVariable();
-    rv.setRoleId(req.roleId());
-    rv.setKey(req.key());
-    rv.setValue(req.value() != null ? req.value() : "");
-    rv.setCreatedBy(userId);
-    roleVariableRepository.save(rv);
-    return Map.of("index", index, "success", true, "key", req.key());
-  }
-
-  private Map<String, Object> saveAsVariable(
-      Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
-    VariableScope scope = VariableScope.valueOf(req.scope());
-    if (variableRepository.existsByScopeAndScopeIdAndKey(scope, projectId, req.key())) {
-      return errorResult(index,
-          "Variable '" + req.key() + "' already exists at " + scope + " level");
-    }
-    Variable v = new Variable();
-    v.setScope(scope);
-    v.setScopeId(projectId);
-    v.setKey(req.key());
-    v.setValue(req.value() != null ? req.value() : "");
-    v.setCreatedBy(userId);
-    variableRepository.save(v);
-    return Map.of("index", index, "success", true, "key", req.key());
+    throw new IllegalArgumentException("scopeId is required for scope: " + req.scope());
   }
 
   private static Map<String, Object> errorResult(int index, String message) {

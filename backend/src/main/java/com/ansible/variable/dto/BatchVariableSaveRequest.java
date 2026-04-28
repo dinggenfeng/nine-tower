@@ -1,9 +1,10 @@
 package com.ansible.variable.dto;
 
+import com.ansible.variable.entity.VariableScope;
+
 public record BatchVariableSaveRequest(
     String key,
-    String saveAs,       // "VARIABLE" or "ROLE_VARIABLE"
-    String scope,        // "PROJECT", "HOSTGROUP", "ENVIRONMENT" — only when saveAs=VARIABLE
-    Long roleId,         // only when saveAs=ROLE_VARIABLE
+    VariableScope scope,
+    Long scopeId,
     String value
 ) {}

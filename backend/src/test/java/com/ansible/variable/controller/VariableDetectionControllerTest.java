@@ -3,10 +3,13 @@ package com.ansible.variable.controller;
 import com.ansible.AbstractIntegrationTest;
 import com.ansible.common.Result;
 import com.ansible.variable.dto.*;
-import com.ansible.role.entity.RoleVariable;
-import com.ansible.role.repository.*;
+import com.ansible.variable.entity.VariableScope;
 import com.ansible.user.repository.UserRepository;
 import com.ansible.project.repository.*;
+import com.ansible.role.repository.RoleRepository;
+import com.ansible.role.repository.TaskRepository;
+import com.ansible.role.repository.HandlerRepository;
+import com.ansible.role.repository.TemplateRepository;
 import com.ansible.variable.repository.VariableRepository;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +31,6 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
   @Autowired private TaskRepository taskRepository;
   @Autowired private HandlerRepository handlerRepository;
   @Autowired private TemplateRepository templateRepository;
-  @Autowired private RoleVariableRepository roleVariableRepository;
   @Autowired private VariableRepository variableRepository;
 
   private String token;
@@ -75,7 +77,6 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
 
   @AfterEach
   void tearDown() {
-    roleVariableRepository.deleteAll();
     variableRepository.deleteAll();
     templateRepository.deleteAll();
     handlerRepository.deleteAll();
@@ -104,12 +105,12 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
-  void batchSave_savesRoleVariable() {
+  void batchSave_savesVariableWithScopeAndScopeId() {
     HttpHeaders headers = new HttpHeaders();
     headers.setBearerAuth(token);
 
     List<BatchVariableSaveRequest> requests = List.of(
-        new BatchVariableSaveRequest("my_var", "ROLE_VARIABLE", null, roleId, "test_value")
+        new BatchVariableSaveRequest("my_var", VariableScope.ROLE_VARS, roleId, "test_value")
     );
     var response = restTemplate.exchange("/api/projects/" + projectId + "/variables/batch",
         HttpMethod.POST, new HttpEntity<>(requests, headers),
@@ -120,25 +121,26 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
     assertThat(results).hasSize(1);
     assertThat(results.get(0).get("success")).isEqualTo(true);
 
-    List<RoleVariable> saved = roleVariableRepository.findAllByRoleIdOrderByKeyAsc(roleId);
+    var saved = variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, roleId);
     assertThat(saved).hasSize(1);
     assertThat(saved.get(0).getKey()).isEqualTo("my_var");
   }
 
   @Test
-  void batchSave_rejectsDuplicateRoleVariable() {
-    // Pre-create a variable
-    RoleVariable existing = new RoleVariable();
-    existing.setRoleId(roleId);
+  void batchSave_rejectsDuplicateVariable() {
+    // Pre-create a variable with the same scope/scopeId/key
+    com.ansible.variable.entity.Variable existing = new com.ansible.variable.entity.Variable();
+    existing.setScope(VariableScope.ROLE_VARS);
+    existing.setScopeId(roleId);
     existing.setKey("my_var");
     existing.setValue("old");
     existing.setCreatedBy(1L);
-    roleVariableRepository.save(existing);
+    variableRepository.save(existing);
 
     HttpHeaders headers = new HttpHeaders();
     headers.setBearerAuth(token);
     List<BatchVariableSaveRequest> requests = List.of(
-        new BatchVariableSaveRequest("my_var", "ROLE_VARIABLE", null, roleId, "new")
+        new BatchVariableSaveRequest("my_var", VariableScope.ROLE_VARS, roleId, "new")
     );
     var response = restTemplate.exchange("/api/projects/" + projectId + "/variables/batch",
         HttpMethod.POST, new HttpEntity<>(requests, headers),
