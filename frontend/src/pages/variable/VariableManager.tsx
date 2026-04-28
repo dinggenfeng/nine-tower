@@ -14,6 +14,8 @@ import {
   Tree,
   Card,
   Typography,
+  Tag,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,11 +23,14 @@ import {
   ApartmentOutlined,
   CheckCircleOutlined,
   WarningOutlined,
+  ScanOutlined,
+  CopyOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useParams } from "react-router-dom";
-import type { Variable, VariableScope, CreateVariableRequest } from "../../types/entity/Variable";
+import type { Variable, VariableScope, CreateVariableRequest, DetectedVariableRow, BatchVariableSaveItem } from "../../types/entity/Variable";
 import type { ReactNode } from "react";
-import { listVariables, createVariable, updateVariable, deleteVariable } from "../../api/variable";
+import { listVariables, createVariable, updateVariable, deleteVariable, detectVariables, batchSaveVariables } from "../../api/variable";
 import { listEnvironments } from "../../api/environment";
 import { getHostGroups } from "../../api/host";
 import { getRoles } from "../../api/role";
@@ -70,6 +75,23 @@ export default function VariableManager() {
   const [viewMode, setViewMode] = useState<ViewMode>("table");
   const [treeData, setTreeData] = useState<TreeVariableNode[]>([]);
   const [treeLoading, setTreeLoading] = useState(false);
+
+  // Variable detection state
+  const [detecting, setDetecting] = useState(false);
+  const [detectedVars, setDetectedVars] = useState<DetectedVariableRow[]>([]);
+  const [savingVars, setSavingVars] = useState(false);
+
+  interface CopyModalState {
+    open: boolean;
+    sourceVar: DetectedVariableRow | null;
+    targetType: "project" | "role";
+    targetRoleId?: number;
+  }
+  const [copyModal, setCopyModal] = useState<CopyModalState>({
+    open: false,
+    sourceVar: null,
+    targetType: "role",
+  });
 
   useEffect(() => {
     if (!pid) return;
@@ -380,6 +402,133 @@ export default function VariableManager() {
     }
   };
 
+  const handleDetect = useCallback(async () => {
+    if (!pid) return;
+    setDetecting(true);
+    try {
+      const vars = await detectVariables(pid);
+      const rows: DetectedVariableRow[] = vars.map((v) => {
+        const scopeType = v.suggestedScope === "PROJECT" ? "project" : "role";
+        const firstOccurrence = v.occurrences[0];
+        return {
+          ...v,
+          scopeType,
+          targetRoleId: scopeType === "role" ? firstOccurrence.roleId : undefined,
+          userValue: "",
+          rowKey: v.key + "-" + (scopeType === "role" ? firstOccurrence.roleId : "proj"),
+        };
+      });
+      setDetectedVars(rows);
+      message.success(`检测到 ${rows.length} 个未注册变量`);
+    } catch {
+      message.error("变量探测失败");
+      setDetectedVars([]);
+    } finally {
+      setDetecting(false);
+    }
+  }, [pid]);
+
+  const updateRowScope = useCallback(
+    (rowKey: string, scopeType: "project" | "role", targetRoleId?: number) => {
+      setDetectedVars((prev) =>
+        prev.map((r) => (r.rowKey === rowKey ? { ...r, scopeType, targetRoleId } : r))
+      );
+    },
+    []
+  );
+
+  const updateRowValue = useCallback((rowKey: string, value: string) => {
+    setDetectedVars((prev) =>
+      prev.map((r) => (r.rowKey === rowKey ? { ...r, userValue: value } : r))
+    );
+  }, []);
+
+  const deleteRow = useCallback((rowKey: string) => {
+    setDetectedVars((prev) => prev.filter((r) => r.rowKey !== rowKey));
+  }, []);
+
+  const handleCopy = useCallback((record: DetectedVariableRow) => {
+    setCopyModal({
+      open: true,
+      sourceVar: record,
+      targetType: record.scopeType === "project" ? "role" : "role",
+    });
+  }, []);
+
+  const confirmCopy = useCallback(() => {
+    if (!copyModal.sourceVar) return;
+    const src = copyModal.sourceVar;
+    const newRowKey =
+      src.key +
+      "-" +
+      copyModal.targetType +
+      "-" +
+      (copyModal.targetRoleId ?? "proj") +
+      "-" +
+      Date.now();
+    const newRow: DetectedVariableRow = {
+      ...src,
+      scopeType: copyModal.targetType,
+      targetRoleId:
+        copyModal.targetType === "role" ? copyModal.targetRoleId : undefined,
+      rowKey: newRowKey,
+    };
+    setDetectedVars((prev) => [...prev, newRow]);
+    setCopyModal({ open: false, sourceVar: null, targetType: "role" });
+  }, [copyModal]);
+
+  const handleBatchSave = useCallback(async () => {
+    if (!pid) return;
+    // Frontend validation: check duplicates within batch
+    const seen = new Map<string, string>();
+    const errors: string[] = [];
+    for (const row of detectedVars) {
+      const id =
+        row.scopeType === "project"
+          ? `project:${pid}:${row.key}`
+          : `role:${row.targetRoleId}:${row.key}`;
+      if (seen.has(id)) {
+        errors.push(`变量 "${row.key}" 重复`);
+      }
+      seen.set(id, row.rowKey);
+    }
+    if (errors.length > 0) {
+      message.error(errors.join(", "));
+      return;
+    }
+
+    setSavingVars(true);
+    try {
+      const items: BatchVariableSaveItem[] = detectedVars.map((row) => ({
+        key: row.key,
+        saveAs: row.scopeType === "project" ? "VARIABLE" : "ROLE_VARIABLE",
+        scope: row.scopeType === "project" ? "PROJECT" : undefined,
+        roleId: row.scopeType === "role" ? row.targetRoleId : undefined,
+        value: row.userValue || undefined,
+      }));
+
+      const results = await batchSaveVariables(pid, items);
+      const failed = results.filter((r) => !r.success);
+      const succeeded = results.filter((r) => r.success);
+
+      if (succeeded.length > 0) {
+        message.success(`成功保存 ${succeeded.length} 个变量`);
+        setDetectedVars((prev) =>
+          prev.filter((_, i) => results[i]?.success)
+        );
+        fetchVariables();
+      }
+      if (failed.length > 0) {
+        const msgs = failed.map((f) => f.error).join("; ");
+        message.error(`保存失败: ${msgs}`);
+      }
+    } catch {
+      message.error("批量保存失败");
+    } finally {
+      setSavingVars(false);
+    }
+  }, [pid, detectedVars, fetchVariables]);
+
   const scopeOptions = (): { label: string; value: number }[] => {
     if (scope === "HOSTGROUP") return hostGroups.map((h) => ({ label: h.name, value: h.id }));
     if (scope === "ENVIRONMENT") return environments.map((e) => ({ label: e.name, value: e.id }));
@@ -491,7 +640,162 @@ export default function VariableManager() {
         <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate}>
           新建变量
         </Button>
+        <Button
+          icon={<ScanOutlined />}
+          onClick={handleDetect}
+          loading={detecting}
+          style={{ borderStyle: "dashed" }}
+        >
+          变量探测
+        </Button>
       </div>
+
+      {detectedVars.length > 0 && (
+        <Card
+          size="small"
+          title={
+            <Space>
+              <span>探测结果</span>
+              <Tag color="blue">{detectedVars.length} 个变量</Tag>
+            </Space>
+          }
+          extra={
+            <Space>
+              <Button onClick={() => setDetectedVars([])}>取消</Button>
+              <Button type="primary" onClick={handleBatchSave} loading={savingVars}>
+                批量保存 ({detectedVars.length}条)
+              </Button>
+            </Space>
+          }
+          style={{ marginBottom: 16 }}
+        >
+          <Table
+            rowKey="rowKey"
+            dataSource={detectedVars}
+            pagination={false}
+            size="small"
+            columns={[
+              {
+                title: "变量名",
+                dataIndex: "key",
+                width: 180,
+                render: (key: string) => (
+                  <code
+                    style={{
+                      background: "#f5f5f5",
+                      padding: "2px 6px",
+                      borderRadius: 4,
+                    }}
+                  >
+                    {key}
+                  </code>
+                ),
+              },
+              {
+                title: "来源",
+                dataIndex: "occurrences",
+                width: 300,
+                render: (occurrences: DetectedVariableRow["occurrences"]) => (
+                  <div>
+                    {occurrences.map((o, i) => (
+                      <div key={i} style={{ fontSize: 12, color: "#666" }}>
+                        {o.roleName} ·{" "}
+                        {o.type === "TASK"
+                          ? "任务"
+                          : o.type === "HANDLER"
+                            ? "Handler"
+                            : "模板"}{" "}
+                        · {o.entityName}
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+              {
+                title: "作用域",
+                width: 220,
+                render: (_: unknown, record: DetectedVariableRow) => (
+                  <Space>
+                    <Select
+                      value={record.scopeType}
+                      onChange={(val) =>
+                        updateRowScope(
+                          record.rowKey,
+                          val,
+                          val === "role"
+                            ? record.occurrences[0]?.roleId
+                            : undefined
+                        )
+                      }
+                      style={{ width: 100 }}
+                      size="small"
+                      options={[
+                        { label: "项目级", value: "project" },
+                        { label: "Role 级", value: "role" },
+                      ]}
+                    />
+                    {record.scopeType === "role" && (
+                      <Select
+                        value={record.targetRoleId}
+                        onChange={(val) =>
+                          updateRowScope(record.rowKey, "role", val)
+                        }
+                        style={{ width: 100 }}
+                        size="small"
+                        options={Array.from(
+                          new Map(
+                            record.occurrences.map((o) => [o.roleId, o.roleName])
+                          )
+                        ).map(([id, name]) => ({ label: name, value: id }))}
+                      />
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                title: "值（可选）",
+                dataIndex: "userValue",
+                width: 160,
+                render: (_: unknown, record: DetectedVariableRow) => (
+                  <Input
+                    size="small"
+                    placeholder="输入变量值"
+                    value={record.userValue}
+                    onChange={(e) =>
+                      updateRowValue(record.rowKey, e.target.value)
+                    }
+                  />
+                ),
+              },
+              {
+                title: "操作",
+                width: 100,
+                render: (_: unknown, record: DetectedVariableRow) => (
+                  <Space>
+                    <Tooltip title="复制">
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CopyOutlined />}
+                        onClick={() => handleCopy(record)}
+                      />
+                    </Tooltip>
+                    <Tooltip title="删除">
+                      <Button
+                        type="text"
+                        size="small"
+                        danger
+                        icon={<DeleteOutlined />}
+                        onClick={() => deleteRow(record.rowKey)}
+                      />
+                    </Tooltip>
+                  </Space>
+                ),
+              },
+            ]}
+          />
+        </Card>
+      )}
 
       {/* Table View */}
       {viewMode === "table" && (
@@ -558,6 +862,44 @@ export default function VariableManager() {
             <Input.TextArea rows={3} placeholder="变量值" />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="复制变量到其他作用域"
+        open={copyModal.open}
+        onOk={confirmCopy}
+        onCancel={() =>
+          setCopyModal({ open: false, sourceVar: null, targetType: "role" })
+        }
+        okText="确认复制"
+        cancelText="取消"
+      >
+        {copyModal.sourceVar && (
+          <div style={{ padding: "8px 0" }}>
+            <p>
+              变量：<code>{copyModal.sourceVar.key}</code>
+            </p>
+            <p>
+              复制到：
+              <Select
+                value={copyModal.targetType}
+                onChange={(val) =>
+                  setCopyModal((prev) => ({
+                    ...prev,
+                    targetType: val,
+                    targetRoleId: undefined,
+                  }))
+                }
+                style={{ width: 120, marginLeft: 8 }}
+                size="small"
+                options={[
+                  { label: "项目级", value: "project" },
+                  { label: "Role 级", value: "role" },
+                ]}
+              />
+            </p>
+          </div>
+        )}
       </Modal>
     </div>
   );
