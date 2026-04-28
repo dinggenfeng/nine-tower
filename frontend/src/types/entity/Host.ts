@@ -39,6 +39,7 @@ export interface CreateHostRequest {
   ansibleSshPass?: string;
   ansibleSshPrivateKeyFile?: string;
   ansibleBecome?: boolean;
+  copyFromHostId?: number;
 }
 
 export interface UpdateHostRequest {
