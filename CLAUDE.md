@@ -127,7 +127,7 @@ Spring Boot 3.x + Java 21 (Maven 单模块)
 - Tag ✅ 标签管理
 - Environment ✅ 环境管理 + EnvConfig
 - File ✅ Role 文件管理（目录树/上传下载）
-- Variable ✅ 多级变量管理（PROJECT/HOSTGROUP/ENVIRONMENT）
+- Variable ✅ 多级变量管理（PROJECT/HOSTGROUP/ENVIRONMENT/ROLE_VARS/ROLE_DEFAULTS）
 - Playbook ✅ Playbook 管理 + Role 关联 + YAML 生成
 
 **全部功能模块开发完成。**

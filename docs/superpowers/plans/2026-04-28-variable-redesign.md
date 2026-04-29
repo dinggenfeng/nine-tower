@@ -1,6 +1,8 @@
 # Variable Management Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox syntax for tracking.
+
+> **Status:** Implemented in `b7f8764` (`fix(variable): align unified variable workflow`). This document is retained as the implementation record.
 
 **Goal:** Unify the two separate variable systems (general scoped variables + role variables) into a single table, single API, single frontend page.
 
@@ -108,7 +110,7 @@
 - Modify: `backend/src/main/java/com/ansible/variable/dto/CreateVariableRequest.java`
 - Modify: `backend/src/main/java/com/ansible/variable/dto/UpdateVariableRequest.java`
 
-- [ ] **Step 1: Update VariableScope enum**
+- [x] **Step 1: Update VariableScope enum**
 
 Replace `backend/src/main/java/com/ansible/variable/entity/VariableScope.java` with:
 
@@ -124,7 +126,7 @@ public enum VariableScope {
 }
 ```
 
-- [ ] **Step 2: Update Variable entity key length**
+- [x] **Step 2: Update Variable entity key length**
 
 In `backend/src/main/java/com/ansible/variable/entity/Variable.java`, change line 30 from:
 
@@ -138,7 +140,7 @@ to:
     @Column(nullable = false, length = 200)
 ```
 
-- [ ] **Step 3: Update CreateVariableRequest key size**
+- [x] **Step 3: Update CreateVariableRequest key size**
 
 In `backend/src/main/java/com/ansible/variable/dto/CreateVariableRequest.java`, change line 11 from:
 
@@ -152,7 +154,7 @@ to:
       @NotBlank @Size(max = 200) String key,
 ```
 
-- [ ] **Step 4: Update UpdateVariableRequest key size**
+- [x] **Step 4: Update UpdateVariableRequest key size**
 
 In `backend/src/main/java/com/ansible/variable/dto/UpdateVariableRequest.java`, change line 5 from:
 
@@ -166,12 +168,12 @@ to:
 public record UpdateVariableRequest(@NotBlank @Size(max = 200) String key, String value) { }
 ```
 
-- [ ] **Step 5: Compile to verify no breakage**
+- [x] **Step 5: Compile to verify no breakage**
 
 Run: `cd backend && mvn compile -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```
 feat(variable): expand VariableScope to 5 values and increase key length to 200
@@ -186,7 +188,7 @@ feat(variable): expand VariableScope to 5 values and increase key length to 200
 - Modify: `backend/src/main/java/com/ansible/variable/service/VariableService.java`
 - Modify: `backend/src/main/java/com/ansible/variable/service/VariableDetectionService.java`
 
-- [ ] **Step 1: Update VariableDetectionService suggestedScope**
+- [x] **Step 1: Update VariableDetectionService suggestedScope**
 
 In `backend/src/main/java/com/ansible/variable/service/VariableDetectionService.java`, line 64, change:
 
@@ -202,7 +204,7 @@ to:
 
 This aligns the backend suggestion with the new 5-value scope enum.
 
-- [ ] **Step 2: Write failing tests for ROLE_VARS/ROLE_DEFAULTS in VariableServiceTest**
+- [x] **Step 2: Write failing tests for ROLE_VARS/ROLE_DEFAULTS in VariableServiceTest**
 
 In `backend/src/test/java/com/ansible/variable/service/VariableServiceTest.java`, add these test methods:
 
@@ -259,12 +261,12 @@ void getVariable_roleVarsScope_resolvesProjectId() {
 }
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `cd backend && mvn test -Dtest=VariableServiceTest -pl . -q 2>&1 | tail -20`
 Expected: Compilation error or test failure (VariableService doesn't handle ROLE_VARS yet)
 
-- [ ] **Step 4: Update VariableRepository**
+- [x] **Step 4: Update VariableRepository**
 
 Replace `backend/src/main/java/com/ansible/variable/repository/VariableRepository.java` with:
 
@@ -293,7 +295,7 @@ public interface VariableRepository extends JpaRepository<Variable, Long> {
 }
 ```
 
-- [ ] **Step 5: Update VariableService to handle ROLE_VARS/ROLE_DEFAULTS**
+- [x] **Step 5: Update VariableService to handle ROLE_VARS/ROLE_DEFAULTS**
 
 Replace `backend/src/main/java/com/ansible/variable/service/VariableService.java` with:
 
@@ -429,23 +431,23 @@ public class VariableService {
 
 Key changes: Added `RoleRepository` dependency, expanded `resolveProjectId` switch to handle `ROLE_VARS` and `ROLE_DEFAULTS`.
 
-- [ ] **Step 6: Update VariableServiceTest to add RoleRepository mock**
+- [x] **Step 6: Update VariableServiceTest to add RoleRepository mock**
 
 In the test file, add `@Mock private RoleRepository roleRepository;` to the test class fields (if not already present). Ensure the test class has all mocks needed for the new dependency.
 
-- [ ] **Step 7: Run VariableServiceTest**
+- [x] **Step 7: Run VariableServiceTest**
 
 Run: `cd backend && mvn test -Dtest=VariableServiceTest -q`
 Expected: All tests PASS
 
-- [ ] **Step 8: Update VariableDetectionServiceTest**
+- [x] **Step 8: Update VariableDetectionServiceTest**
 
 In `backend/src/test/java/com/ansible/variable/service/VariableDetectionServiceTest.java`, update the test that checks `suggestedScope` — change assertions expecting `"ROLE"` to expect `"ROLE_VARS"`.
 
 Run: `cd backend && mvn test -Dtest=VariableDetectionServiceTest -q`
 Expected: All tests PASS
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```
 feat(variable): add ROLE_VARS and ROLE_DEFAULTS scope support to VariableService
@@ -459,7 +461,7 @@ feat(variable): add ROLE_VARS and ROLE_DEFAULTS scope support to VariableService
 - Modify: `backend/src/main/java/com/ansible/variable/dto/BatchVariableSaveRequest.java`
 - Modify: `backend/src/main/java/com/ansible/variable/controller/VariableDetectionController.java`
 
-- [ ] **Step 1: Update BatchVariableSaveRequest DTO**
+- [x] **Step 1: Update BatchVariableSaveRequest DTO**
 
 Replace `backend/src/main/java/com/ansible/variable/dto/BatchVariableSaveRequest.java` with:
 
@@ -476,7 +478,7 @@ public record BatchVariableSaveRequest(
 ) {}
 ```
 
-- [ ] **Step 2: Update VariableDetectionController to use unified Variable**
+- [x] **Step 2: Update VariableDetectionController to use unified Variable**
 
 Replace `backend/src/main/java/com/ansible/variable/controller/VariableDetectionController.java` with:
 
@@ -574,12 +576,12 @@ public class VariableDetectionController {
 
 Key changes: Removed `RoleVariableRepository`, `RoleRepository`, `RoleVariable` imports. Simplified batch save to always create `Variable` entities with the specified `scope`.
 
-- [ ] **Step 3: Compile to verify**
+- [x] **Step 3: Compile to verify**
 
 Run: `cd backend && mvn compile -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 4: Update and run VariableDetectionControllerTest**
+- [x] **Step 4: Update and run VariableDetectionControllerTest**
 
 Update the integration test to use the new DTO format. In `backend/src/test/java/com/ansible/variable/controller/VariableDetectionControllerTest.java`:
 
@@ -591,7 +593,7 @@ The test should now save a `Variable` with `scope=ROLE_VARS` and `scopeId=roleId
 Run: `cd backend && mvn test -Dtest=VariableDetectionControllerTest -q`
 Expected: All tests PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 refactor(variable): simplify batch save to use unified Variable entity
@@ -605,7 +607,7 @@ refactor(variable): simplify batch save to use unified Variable entity
 - Modify: `backend/src/main/java/com/ansible/variable/controller/VariableController.java`
 - Modify: `backend/src/main/java/com/ansible/variable/service/VariableService.java`
 
-- [ ] **Step 1: Make scope query parameter optional in VariableController**
+- [x] **Step 1: Make scope query parameter optional in VariableController**
 
 In `backend/src/main/java/com/ansible/variable/controller/VariableController.java`, change the `listVariables` method (line 40-48):
 
@@ -634,7 +636,7 @@ Also update the call to pass nullable scope:
         return Result.success(variableService.listVariables(projectId, scope, scopeId, currentUserId));
 ```
 
-- [ ] **Step 2: Update VariableService.listVariables to handle null scope**
+- [x] **Step 2: Update VariableService.listVariables to handle null scope**
 
 In `backend/src/main/java/com/ansible/variable/service/VariableService.java`, update the `listVariables` method:
 
@@ -695,7 +697,7 @@ To:
 
 Note: The `findAll().stream().filter()` approach is simple and correct for the internal-team single-tenant use case. Performance is acceptable because variable counts are small.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `cd backend && mvn test -Dtest=VariableServiceTest -q`
 Expected: All tests PASS
@@ -703,7 +705,7 @@ Expected: All tests PASS
 Run: `cd backend && mvn test -Dtest=VariableControllerTest -q`
 Expected: All tests PASS
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 feat(variable): make scope query parameter optional for listing all project variables
@@ -716,7 +718,7 @@ feat(variable): make scope query parameter optional for listing all project vari
 **Files:**
 - Modify: `backend/src/main/java/com/ansible/playbook/service/PlaybookService.java`
 
-- [ ] **Step 1: Update imports**
+- [x] **Step 1: Update imports**
 
 In `backend/src/main/java/com/ansible/playbook/service/PlaybookService.java`, remove these imports (lines 23-26):
 
@@ -729,7 +731,7 @@ import com.ansible.role.repository.RoleVariableRepository;
 
 No new imports needed — `VariableRepository` and `VariableScope` are already imported.
 
-- [ ] **Step 2: Remove RoleVariableRepository and RoleDefaultVariableRepository fields**
+- [x] **Step 2: Remove RoleVariableRepository and RoleDefaultVariableRepository fields**
 
 Remove these field declarations (lines 54-55):
 
@@ -738,7 +740,7 @@ Remove these field declarations (lines 54-55):
   private final RoleDefaultVariableRepository roleDefaultVariableRepository;
 ```
 
-- [ ] **Step 3: Update addRoleDefaults method**
+- [x] **Step 3: Update addRoleDefaults method**
 
 Replace the `addRoleDefaults` method (lines 352-359) with:
 
@@ -753,7 +755,7 @@ Replace the `addRoleDefaults` method (lines 352-359) with:
   }
 ```
 
-- [ ] **Step 4: Update addRoleVars method**
+- [x] **Step 4: Update addRoleVars method**
 
 Replace the `addRoleVars` method (lines 361-367) with:
 
@@ -768,17 +770,17 @@ Replace the `addRoleVars` method (lines 361-367) with:
   }
 ```
 
-- [ ] **Step 5: Compile to verify**
+- [x] **Step 5: Compile to verify**
 
 Run: `cd backend && mvn compile -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 6: Run PlaybookService tests**
+- [x] **Step 6: Run PlaybookService tests**
 
 Run: `cd backend && mvn test -Dtest=PlaybookServiceTest -q`
 Expected: All tests PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```
 refactor(playbook): use unified Variable for role vars and defaults in YAML generation
@@ -791,7 +793,7 @@ refactor(playbook): use unified Variable for role vars and defaults in YAML gene
 **Files:**
 - Modify: `backend/src/main/java/com/ansible/project/service/ProjectCleanupService.java`
 
-- [ ] **Step 1: Update imports**
+- [x] **Step 1: Update imports**
 
 Remove these imports:
 ```java
@@ -799,7 +801,7 @@ import com.ansible.role.repository.RoleDefaultVariableRepository;
 import com.ansible.role.repository.RoleVariableRepository;
 ```
 
-- [ ] **Step 2: Remove old repository fields**
+- [x] **Step 2: Remove old repository fields**
 
 Remove these field declarations:
 ```java
@@ -807,7 +809,7 @@ Remove these field declarations:
   private final RoleDefaultVariableRepository roleDefaultVariableRepository;
 ```
 
-- [ ] **Step 3: Update cleanupRoleResources**
+- [x] **Step 3: Update cleanupRoleResources**
 
 In `cleanupRoleResources` (lines 108-118), replace:
 ```java
@@ -821,12 +823,12 @@ with:
     variableRepository.deleteByScopeAndScopeId(VariableScope.ROLE_DEFAULTS, roleId);
 ```
 
-- [ ] **Step 4: Compile to verify**
+- [x] **Step 4: Compile to verify**
 
 Run: `cd backend && mvn compile -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```
 refactor(cleanup): use unified Variable for role variable cleanup
@@ -856,7 +858,7 @@ refactor(cleanup): use unified Variable for role variable cleanup
 - Delete: `backend/src/test/java/com/ansible/role/controller/RoleVariableControllerTest.java`
 - Delete: `backend/src/test/java/com/ansible/role/controller/RoleDefaultVariableControllerTest.java`
 
-- [ ] **Step 1: Delete all 14 source files and 4 test files**
+- [x] **Step 1: Delete all 14 source files and 4 test files**
 
 ```bash
 cd backend
@@ -880,18 +882,18 @@ rm -f src/test/java/com/ansible/role/controller/RoleVariableControllerTest.java
 rm -f src/test/java/com/ansible/role/controller/RoleDefaultVariableControllerTest.java
 ```
 
-- [ ] **Step 2: Check for any remaining references to deleted classes**
+- [x] **Step 2: Check for any remaining references to deleted classes**
 
 Run: `cd backend && grep -r "RoleVariable\|RoleDefaultVariable\|RoleVariableRepository\|RoleDefaultVariableRepository\|RoleVariableService\|RoleDefaultVariableService\|RoleVariableController\|RoleDefaultVariableController" src/main/java/ src/test/java/ --include="*.java" -l`
 
 Expected: No files found. If any files reference deleted classes, update them to use the unified Variable.
 
-- [ ] **Step 3: Compile and run all tests**
+- [x] **Step 3: Compile and run all tests**
 
 Run: `cd backend && mvn test -q`
 Expected: BUILD SUCCESS, all tests pass
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 refactor: remove separate role variable entities, services, controllers, and DTOs
@@ -903,31 +905,31 @@ refactor: remove separate role variable entities, services, controllers, and DTO
 
 **Files:** All backend files modified in Tasks 1-7.
 
-- [ ] **Step 1: Run formatting**
+- [x] **Step 1: Run formatting**
 
 Run: `cd backend && mvn spotless:apply -q`
 
-- [ ] **Step 2: Run checkstyle**
+- [x] **Step 2: Run checkstyle**
 
 Run: `cd backend && mvn checkstyle:check -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 3: Run PMD**
+- [x] **Step 3: Run PMD**
 
 Run: `cd backend && mvn pmd:check -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 4: Run SpotBugs**
+- [x] **Step 4: Run SpotBugs**
 
 Run: `cd backend && mvn spotbugs:check -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 5: Run full test suite**
+- [x] **Step 5: Run full test suite**
 
 Run: `cd backend && mvn verify -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 6: Commit any formatting changes**
+- [x] **Step 6: Commit any formatting changes**
 
 ```
 style: apply formatting for variable redesign
@@ -944,7 +946,7 @@ style: apply formatting for variable redesign
 - Delete: `frontend/src/types/entity/RoleVariable.ts`
 - Delete: `frontend/src/api/roleVariable.ts`
 
-- [ ] **Step 1: Update Variable.ts types**
+- [x] **Step 1: Update Variable.ts types**
 
 Replace `frontend/src/types/entity/Variable.ts` with:
 
@@ -1014,7 +1016,7 @@ Key changes:
 - `DetectedVariableRow` uses `scope: VariableScope` and `scopeId` instead of `scopeType` and `targetRoleId`
 - `BatchVariableSaveItem` uses `scope: VariableScope` and `scopeId` instead of `saveAs`/`scope`/`roleId`
 
-- [ ] **Step 2: Update variable.ts API**
+- [x] **Step 2: Update variable.ts API**
 
 Replace `frontend/src/api/variable.ts` with:
 
@@ -1088,7 +1090,7 @@ export async function batchSaveVariables(
 
 Key change: `listVariables` now has `scope` as optional parameter.
 
-- [ ] **Step 3: Update variablePriority.ts**
+- [x] **Step 3: Update variablePriority.ts**
 
 In `frontend/src/utils/variablePriority.ts`, update the priority ranks:
 
@@ -1102,32 +1104,32 @@ const PRIORITY_RANK: Record<VariableScopeKind, number> = {
 };
 ```
 
-- [ ] **Step 4: Delete RoleVariable.ts and roleVariable.ts**
+- [x] **Step 4: Delete RoleVariable.ts and roleVariable.ts**
 
 ```bash
 rm -f frontend/src/types/entity/RoleVariable.ts
 rm -f frontend/src/api/roleVariable.ts
 ```
 
-- [ ] **Step 5: Update variable.test.ts**
+- [x] **Step 5: Update variable.test.ts**
 
 Update `frontend/src/api/variable.test.ts` to use the expanded `VariableScope` type. The existing tests should still work since the API paths haven't changed. Just ensure the `VariableScope` import includes the new values.
 
-- [ ] **Step 6: Update variablePriority.test.ts**
+- [x] **Step 6: Update variablePriority.test.ts**
 
 Update priority tests in `frontend/src/utils/__tests__/variablePriority.test.ts` to match the new rank values (4-3-2-1-0 instead of 5-4-3-2-1).
 
-- [ ] **Step 7: Run frontend tests**
+- [x] **Step 7: Run frontend tests**
 
 Run: `cd frontend && npm run test -- --run`
 Expected: All tests pass
 
-- [ ] **Step 8: Run lint and format**
+- [x] **Step 8: Run lint and format**
 
 Run: `cd frontend && npm run format && npm run lint`
 Expected: No errors
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```
 feat(frontend): unify variable types and API to use 5-value scope enum
@@ -1142,7 +1144,7 @@ feat(frontend): unify variable types and API to use 5-value scope enum
 
 This is the largest task. The VariableManager needs to be rewritten to use the unified variable API for all 5 scopes, removing all references to `roleVariable.ts` API calls.
 
-- [ ] **Step 1: Rewrite VariableManager.tsx**
+- [x] **Step 1: Rewrite VariableManager.tsx**
 
 Key changes to apply:
 
@@ -1177,17 +1179,17 @@ Key changes to apply:
    Environment (4) > HostGroup (3) > Project (2) > Role Vars (1) > Role Defaults (0)
    ```
 
-- [ ] **Step 2: Run frontend tests**
+- [x] **Step 2: Run frontend tests**
 
 Run: `cd frontend && npm run test -- --run`
 Expected: All tests pass
 
-- [ ] **Step 3: Run lint and format**
+- [x] **Step 3: Run lint and format**
 
 Run: `cd frontend && npm run format && npm run lint`
 Expected: No errors
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```
 refactor(frontend): rewrite VariableManager to use unified variable API
@@ -1204,7 +1206,7 @@ refactor(frontend): rewrite VariableManager to use unified variable API
 - Delete: `frontend/src/pages/role/__tests__/RoleVars.test.tsx`
 - Delete: `frontend/src/pages/role/__tests__/RoleDefaults.test.tsx`
 
-- [ ] **Step 1: Remove Vars and Defaults tabs from RoleDetail.tsx**
+- [x] **Step 1: Remove Vars and Defaults tabs from RoleDetail.tsx**
 
 In `frontend/src/pages/role/RoleDetail.tsx`:
 
@@ -1220,7 +1222,7 @@ Remove from `tabItems` array (lines 38-39):
 { key: "defaults", label: "Defaults", children: <RoleDefaults roleId={Number(roleId)} /> },
 ```
 
-- [ ] **Step 2: Delete component and test files**
+- [x] **Step 2: Delete component and test files**
 
 ```bash
 rm -f frontend/src/pages/role/RoleVars.tsx
@@ -1229,22 +1231,22 @@ rm -f frontend/src/pages/role/__tests__/RoleVars.test.tsx
 rm -f frontend/src/pages/role/__tests__/RoleDefaults.test.tsx
 ```
 
-- [ ] **Step 3: Check for any remaining references to deleted modules**
+- [x] **Step 3: Check for any remaining references to deleted modules**
 
 Run: `cd frontend && grep -r "RoleVars\|RoleDefaults\|roleVariable" src/ --include="*.ts" --include="*.tsx" -l`
 Expected: No files found
 
-- [ ] **Step 4: Run frontend tests**
+- [x] **Step 4: Run frontend tests**
 
 Run: `cd frontend && npm run test -- --run`
 Expected: All tests pass
 
-- [ ] **Step 5: Run lint and format**
+- [x] **Step 5: Run lint and format**
 
 Run: `cd frontend && npm run format && npm run lint`
 Expected: No errors
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```
 refactor(frontend): remove RoleVars and RoleDefaults tabs from RoleDetail
@@ -1256,27 +1258,27 @@ refactor(frontend): remove RoleVars and RoleDefaults tabs from RoleDetail
 
 **Files:** None (verification only)
 
-- [ ] **Step 1: Full backend test suite**
+- [x] **Step 1: Full backend test suite**
 
 Run: `cd backend && mvn verify -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 2: Full frontend test suite**
+- [x] **Step 2: Full frontend test suite**
 
 Run: `cd frontend && npm run test -- --run`
 Expected: All tests pass
 
-- [ ] **Step 3: Frontend build**
+- [x] **Step 3: Frontend build**
 
 Run: `cd frontend && npm run build`
 Expected: Build succeeds with no errors
 
-- [ ] **Step 4: Backend compile**
+- [x] **Step 4: Backend compile**
 
 Run: `cd backend && mvn compile -q`
 Expected: BUILD SUCCESS
 
-- [ ] **Step 5: Manual smoke test**
+- [x] **Step 5: Manual smoke test**
 
 Start the dev servers and verify:
 1. Navigate to `/projects/:id/variables` — page loads

@@ -23,6 +23,7 @@ frontend/playwright-report/
 # Claude Code local state
 .claude/settings.local.json
 .claude/worktrees/
+.codex
 
 # Misc
 *.log
