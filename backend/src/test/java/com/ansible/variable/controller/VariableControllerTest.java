@@ -10,6 +10,8 @@ import com.ansible.project.dto.CreateProjectRequest;
 import com.ansible.project.dto.ProjectResponse;
 import com.ansible.project.repository.ProjectMemberRepository;
 import com.ansible.project.repository.ProjectRepository;
+import com.ansible.role.entity.Role;
+import com.ansible.role.repository.RoleRepository;
 import com.ansible.user.dto.RegisterRequest;
 import com.ansible.user.dto.TokenResponse;
 import com.ansible.user.repository.UserRepository;
@@ -36,6 +38,7 @@ class VariableControllerTest extends AbstractIntegrationTest {
   @Autowired private UserRepository userRepository;
   @Autowired private ProjectRepository projectRepository;
   @Autowired private ProjectMemberRepository projectMemberRepository;
+  @Autowired private RoleRepository roleRepository;
   @Autowired private VariableRepository variableRepository;
 
   private String token;
@@ -81,10 +84,15 @@ class VariableControllerTest extends AbstractIntegrationTest {
   }
 
   private Long createVariable(VariableScope scope, Long scopeId, String key, String value) {
+    return createVariable(projectId, scope, scopeId, key, value);
+  }
+
+  private Long createVariable(
+      Long targetProjectId, VariableScope scope, Long scopeId, String key, String value) {
     CreateVariableRequest req = new CreateVariableRequest(scope, scopeId, key, value);
     ResponseEntity<Result<VariableResponse>> resp =
         restTemplate.exchange(
-            "/api/projects/" + projectId + "/variables",
+            "/api/projects/" + targetProjectId + "/variables",
             HttpMethod.POST,
             new HttpEntity<>(req, authHeaders()),
             new ParameterizedTypeReference<>() {});
@@ -101,6 +109,26 @@ class VariableControllerTest extends AbstractIntegrationTest {
             new HttpEntity<>(req, authHeaders()),
             new ParameterizedTypeReference<>() {});
     return resp.getBody().getData().getId();
+  }
+
+  private Long createProject(String name) {
+    CreateProjectRequest req = new CreateProjectRequest();
+    req.setName(name);
+    ResponseEntity<Result<ProjectResponse>> resp =
+        restTemplate.exchange(
+            "/api/projects",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+    return resp.getBody().getData().getId();
+  }
+
+  private Long createRole(Long targetProjectId, String name) {
+    Role role = new Role();
+    role.setProjectId(targetProjectId);
+    role.setName(name);
+    role.setCreatedBy(1L);
+    return roleRepository.save(role).getId();
   }
 
   @Test
@@ -171,6 +199,24 @@ class VariableControllerTest extends AbstractIntegrationTest {
   }
 
   @Test
+  void listVariables_byScopeOnly_filtersOutOtherProjectVariables() {
+    Long otherProjectId = createProject("Other Var Test Project");
+    createVariable(VariableScope.PROJECT, projectId, "PORT", "8080");
+    createVariable(otherProjectId, VariableScope.PROJECT, otherProjectId, "PORT", "9090");
+
+    ResponseEntity<Result<List<VariableResponse>>> resp =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/variables?scope=PROJECT",
+            HttpMethod.GET,
+            new HttpEntity<>(authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(resp.getBody().getData()).hasSize(1);
+    assertThat(resp.getBody().getData().get(0).value()).isEqualTo("8080");
+  }
+
+  @Test
   void getVariable_success() {
     Long varId = createVariable(VariableScope.PROJECT, projectId, "APP_PORT", "8080");
 
@@ -231,5 +277,24 @@ class VariableControllerTest extends AbstractIntegrationTest {
 
     assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.OK);
     assertThat(resp.getBody().getData().scope()).isEqualTo(VariableScope.ENVIRONMENT);
+  }
+
+  @Test
+  void createVariable_roleScopeFromAnotherProject_returns400() {
+    Long otherProjectId = createProject("Other Role Project");
+    Long otherRoleId = createRole(otherProjectId, "cross-project-role");
+    CreateVariableRequest req =
+        new CreateVariableRequest(VariableScope.ROLE_VARS, otherRoleId, "DB_HOST", "localhost");
+
+    ResponseEntity<Result<VariableResponse>> resp =
+        restTemplate.exchange(
+            "/api/projects/" + projectId + "/variables",
+            HttpMethod.POST,
+            new HttpEntity<>(req, authHeaders()),
+            new ParameterizedTypeReference<>() {});
+
+    assertThat(resp.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    assertThat(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, otherRoleId))
+        .isEmpty();
   }
 }

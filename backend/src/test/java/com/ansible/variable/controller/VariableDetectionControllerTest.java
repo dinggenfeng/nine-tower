@@ -149,4 +149,36 @@ class VariableDetectionControllerTest extends AbstractIntegrationTest {
     List<Map<String, Object>> results = response.getBody().getData();
     assertThat(results.get(0).get("success")).isEqualTo(false);
   }
+
+  @Test
+  void batchSave_rejectsScopeIdFromAnotherProject() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setBearerAuth(token);
+
+    var otherProjectReq = Map.of("name", "Other Project " + System.currentTimeMillis());
+    var otherProjectRes = restTemplate.exchange("/api/projects", HttpMethod.POST,
+        new HttpEntity<>(otherProjectReq, headers),
+        new ParameterizedTypeReference<Result<Map<String, Object>>>() {});
+    Long otherProjectId = ((Number) otherProjectRes.getBody().getData().get("id")).longValue();
+
+    var otherRoleReq = Map.of("name", "Other Role");
+    var otherRoleRes = restTemplate.exchange("/api/projects/" + otherProjectId + "/roles", HttpMethod.POST,
+        new HttpEntity<>(otherRoleReq, headers),
+        new ParameterizedTypeReference<Result<Map<String, Object>>>() {});
+    Long otherRoleId = ((Number) otherRoleRes.getBody().getData().get("id")).longValue();
+
+    List<BatchVariableSaveRequest> requests = List.of(
+        new BatchVariableSaveRequest("cross_project_var", VariableScope.ROLE_VARS, otherRoleId, "oops")
+    );
+    var response = restTemplate.exchange("/api/projects/" + projectId + "/variables/batch",
+        HttpMethod.POST, new HttpEntity<>(requests, headers),
+        new ParameterizedTypeReference<Result<List<Map<String, Object>>>>() {});
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    List<Map<String, Object>> results = response.getBody().getData();
+    assertThat(results).hasSize(1);
+    assertThat(results.get(0).get("success")).isEqualTo(false);
+    assertThat(variableRepository.findByScopeAndScopeIdOrderByIdAsc(VariableScope.ROLE_VARS, otherRoleId))
+        .isEmpty();
+  }
 }

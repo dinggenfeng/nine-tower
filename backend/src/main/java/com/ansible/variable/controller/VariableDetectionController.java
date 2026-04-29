@@ -2,11 +2,11 @@ package com.ansible.variable.controller;
 
 import com.ansible.common.Result;
 import com.ansible.security.ProjectAccessChecker;
+import com.ansible.variable.dto.CreateVariableRequest;
 import com.ansible.variable.dto.BatchVariableSaveRequest;
 import com.ansible.variable.dto.DetectedVariableResponse;
-import com.ansible.variable.entity.Variable;
-import com.ansible.variable.repository.VariableRepository;
 import com.ansible.variable.service.VariableDetectionService;
+import com.ansible.variable.service.VariableService;
 import jakarta.validation.Valid;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +27,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class VariableDetectionController {
 
   private final VariableDetectionService detectionService;
-  private final VariableRepository variableRepository;
+  private final VariableService variableService;
   private final ProjectAccessChecker accessChecker;
 
   @GetMapping("/projects/{projectId}/detect-variables")
@@ -56,17 +56,10 @@ public class VariableDetectionController {
       Long projectId, Long userId, int index, BatchVariableSaveRequest req) {
     try {
       Long scopeId = resolveScopeId(projectId, req);
-      if (variableRepository.existsByScopeAndScopeIdAndKey(req.scope(), scopeId, req.key())) {
-        return errorResult(index,
-            "Variable '" + req.key() + "' already exists in " + req.scope() + " scope");
-      }
-      Variable v = new Variable();
-      v.setScope(req.scope());
-      v.setScopeId(scopeId);
-      v.setKey(req.key());
-      v.setValue(req.value() != null ? req.value() : "");
-      v.setCreatedBy(userId);
-      variableRepository.save(v);
+      variableService.createVariable(
+          projectId,
+          new CreateVariableRequest(req.scope(), scopeId, req.key(), req.value() != null ? req.value() : ""),
+          userId);
       return Map.of("index", index, "success", true, "key", req.key());
     } catch (IllegalArgumentException e) {
       return Map.of("index", index, "success", false, "error", e.getMessage());

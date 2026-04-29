@@ -1,0 +1,61 @@
+databaseChangeLog:
+  - changeSet:
+      id: 23
+      author: nine-tower
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: variables
+      changes:
+        - modifyDataType:
+            tableName: variables
+            columnName: key
+            newDataType: VARCHAR(200)
+
+  - changeSet:
+      id: 24
+      author: nine-tower
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: role_variables
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO variables (created_at, updated_at, created_by, scope, scope_id, "key", value)
+              SELECT rv.created_at,
+                     rv.updated_at,
+                     rv.created_by,
+                     'ROLE_VARS',
+                     rv.role_id,
+                     rv.variable_key,
+                     rv.value
+              FROM role_variables rv
+              ON CONFLICT (scope, scope_id, key) DO NOTHING;
+        - dropTable:
+            tableName: role_variables
+            cascadeConstraints: true
+
+  - changeSet:
+      id: 25
+      author: nine-tower
+      preConditions:
+        - onFail: MARK_RAN
+        - tableExists:
+            tableName: role_default_variables
+      changes:
+        - sql:
+            sql: |
+              INSERT INTO variables (created_at, updated_at, created_by, scope, scope_id, "key", value)
+              SELECT rdv.created_at,
+                     rdv.updated_at,
+                     rdv.created_by,
+                     'ROLE_DEFAULTS',
+                     rdv.role_id,
+                     rdv.variable_key,
+                     rdv.value
+              FROM role_default_variables rdv
+              ON CONFLICT (scope, scope_id, key) DO NOTHING;
+        - dropTable:
+            tableName: role_default_variables
+            cascadeConstraints: true

@@ -389,7 +389,7 @@ export default function VariableManager() {
 
   const handleEdit = (v: Variable) => {
     setEditingVar(v);
-    form.setFieldsValue({ key: v.key, value: v.value });
+    form.setFieldsValue({ key: v.key, value: v.value, scope: v.scope, scopeId: v.scopeId });
     setModalOpen(true);
   };
 
@@ -540,11 +540,16 @@ export default function VariableManager() {
       const results = await batchSaveVariables(pid, items);
       const failed = results.filter((r) => !r.success);
       const succeeded = results.filter((r) => r.success);
+      const succeededIndexes = new Set(succeeded.map((result) => result.index));
 
       if (succeeded.length > 0) {
         message.success(`成功保存 ${succeeded.length} 个变量`);
-        setDetectedVars((prev) => prev.filter((_, i) => results[i]?.success));
-        fetchVariables();
+        setDetectedVars((prev) => prev.filter((_, index) => !succeededIndexes.has(index)));
+        if (viewMode === "table") {
+          await fetchVariables();
+        } else {
+          await fetchTreeData();
+        }
       }
       if (failed.length > 0) {
         const msgs = failed.map((f) => f.error).join("; ");
@@ -555,7 +560,7 @@ export default function VariableManager() {
     } finally {
       setSavingVars(false);
     }
-  }, [pid, detectedVars, fetchVariables]);
+  }, [pid, detectedVars, fetchVariables, fetchTreeData, viewMode]);
 
   /** Build scopeId options based on the current scope */
   const scopeIdOptions = useCallback(
@@ -567,6 +572,19 @@ export default function VariableManager() {
       return [];
     },
     [hostGroups, environments, roles]
+  );
+
+  const getScopeObjectLabel = useCallback(
+    (variable: Variable | null): string | undefined => {
+      if (!variable || variable.scope === "PROJECT") {
+        return undefined;
+      }
+      return (
+        scopeIdOptions(variable.scope).find((option) => option.value === variable.scopeId)?.label ??
+        String(variable.scopeId)
+      );
+    },
+    [scopeIdOptions]
   );
 
   const columns = [
@@ -863,6 +881,18 @@ export default function VariableManager() {
         confirmLoading={saving}
       >
         <Form form={form} layout="vertical">
+          {editingVar && (
+            <>
+              <Form.Item label="Scope">
+                <Input value={scopeLabels[editingVar.scope]} disabled />
+              </Form.Item>
+              {editingVar.scope !== "PROJECT" && (
+                <Form.Item label="Scope Target">
+                  <Input value={getScopeObjectLabel(editingVar)} disabled />
+                </Form.Item>
+              )}
+            </>
+          )}
           {!editingVar && (
             <>
               <Form.Item
@@ -889,7 +919,7 @@ export default function VariableManager() {
             </>
           )}
           <Form.Item name="key" label="Key" rules={[{ required: true, message: "请输入变量名" }]}>
-            <Input maxLength={100} placeholder="变量名，如 APP_PORT" />
+            <Input maxLength={200} placeholder="变量名，如 APP_PORT" />
           </Form.Item>
           <Form.Item name="value" label="Value">
             <Input.TextArea rows={3} placeholder="变量值" />

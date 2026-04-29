@@ -25,28 +25,41 @@ public class VariableService {
   private final EnvironmentRepository environmentRepository;
   private final RoleRepository roleRepository;
 
-  private Long resolveProjectId(Variable v) {
-    return switch (v.getScope()) {
-      case PROJECT -> v.getScopeId();
+  private Long resolveProjectId(VariableScope scope, Long scopeId) {
+    return switch (scope) {
+      case PROJECT -> scopeId;
       case HOSTGROUP -> hostGroupRepository
-          .findById(v.getScopeId())
+          .findById(scopeId)
           .orElseThrow(() -> new IllegalArgumentException("Host group not found"))
           .getProjectId();
       case ENVIRONMENT -> environmentRepository
-          .findById(v.getScopeId())
+          .findById(scopeId)
           .orElseThrow(() -> new IllegalArgumentException("Environment not found"))
           .getProjectId();
       case ROLE_VARS, ROLE_DEFAULTS -> roleRepository
-          .findById(v.getScopeId())
+          .findById(scopeId)
           .orElseThrow(() -> new IllegalArgumentException("Role not found"))
           .getProjectId();
     };
+  }
+
+  private Long resolveProjectId(Variable v) {
+    return resolveProjectId(v.getScope(), v.getScopeId());
+  }
+
+  private void validateScopeBelongsToProject(Long projectId, VariableScope scope, Long scopeId) {
+    Long resolvedProjectId = resolveProjectId(scope, scopeId);
+    if (!resolvedProjectId.equals(projectId)) {
+      throw new IllegalArgumentException(
+          "Scope " + scope + " with id " + scopeId + " does not belong to project " + projectId);
+    }
   }
 
   @Transactional
   public VariableResponse createVariable(
       Long projectId, CreateVariableRequest request, Long userId) {
     accessChecker.checkMembership(projectId, userId);
+    validateScopeBelongsToProject(projectId, request.scope(), request.scopeId());
     if (variableRepository.existsByScopeAndScopeIdAndKey(
         request.scope(), request.scopeId(), request.key())) {
       throw new IllegalArgumentException(
@@ -72,11 +85,13 @@ public class VariableService {
           .toList();
     }
     if (scopeId != null) {
+      validateScopeBelongsToProject(projectId, scope, scopeId);
       return variableRepository.findByScopeAndScopeIdOrderByIdAsc(scope, scopeId).stream()
           .map(this::toResponse)
           .toList();
     }
     return variableRepository.findByScopeOrderByIdAsc(scope).stream()
+        .filter(v -> belongsToProject(v, projectId))
         .map(this::toResponse)
         .toList();
   }

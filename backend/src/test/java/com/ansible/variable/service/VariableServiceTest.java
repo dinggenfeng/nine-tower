@@ -290,6 +290,9 @@ class VariableServiceTest {
   @Test
   void createVariable_roleVarsScope_success() {
     when(accessChecker.checkMembership(anyLong(), anyLong())).thenReturn(new ProjectMember());
+    Role role = new Role();
+    role.setProjectId(1L);
+    when(roleRepository.findById(1L)).thenReturn(Optional.of(role));
     when(variableRepository.existsByScopeAndScopeIdAndKey(
         VariableScope.ROLE_VARS, 1L, "app_port")).thenReturn(false);
     when(variableRepository.save(any(Variable.class))).thenAnswer(inv -> {
@@ -306,6 +309,22 @@ class VariableServiceTest {
         v.getScope() == VariableScope.ROLE_VARS
         && v.getScopeId().equals(1L)
         && v.getKey().equals("app_port")));
+  }
+
+  @Test
+  void createVariable_roleVarsScope_fromDifferentProject_throws() {
+    when(accessChecker.checkMembership(anyLong(), anyLong())).thenReturn(new ProjectMember());
+    Role role = new Role();
+    role.setProjectId(2L);
+    when(roleRepository.findById(99L)).thenReturn(Optional.of(role));
+
+    assertThatThrownBy(() ->
+        variableService.createVariable(
+            1L,
+            new CreateVariableRequest(VariableScope.ROLE_VARS, 99L, "app_port", "8080"),
+            1L))
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("does not belong to project");
   }
 
   @Test
